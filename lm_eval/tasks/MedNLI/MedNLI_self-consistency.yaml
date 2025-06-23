@@ -1,0 +1,33 @@
+include: MedNLI.yaml
+tag:
+  - 0-shot
+  - self-consistency
+task: MedNLI_self-consistency
+generation_kwargs:
+  do_sample: true
+  temperature: 1.0
+  top_p: 0.9
+  top_k: 50
+repeats: 10
+filter_list:
+  - name: "score_first" # Only take the first answer
+    filter:
+    - function: "regex"
+      regex_pattern: "/^(?i)(entailment|neutral|contradiction)$/"
+    - function: "take_first"
+  - name: "maj@5" # Self-consistency with k=5
+    filter:
+    - function: "take_first_k"
+      k: 5
+    - function: "regex"
+      regex_pattern: "/^(?i)(entailment|neutral|contradiction)$/"
+    - function: "majority_vote"
+    - function: "take_first"
+  - name: "maj@10" # Self-consistency with every answer, in this case k=10
+    filter:
+    - function: "regex"
+      regex_pattern: "/^(?i)(entailment|neutral|contradiction)$/"
+    - function: "majority_vote"
+    - function: "take_first"
+metadata:
+  version: 1.0
