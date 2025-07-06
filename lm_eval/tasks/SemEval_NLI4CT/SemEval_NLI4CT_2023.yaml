@@ -7,7 +7,10 @@ dataset_kwargs:
   trust_remote_code: true
 output_type: generate_until
 generation_kwargs:
-  stop: ["\n"]
+  do_sample: True
+  temperature: 0.7
+  top_p: 0.8
+  top_k: 20
 training_split: train
 validation_split: dev
 test_split: test
@@ -21,8 +24,9 @@ filter_list:
         regex_pattern: "(?i)(Entailment|Contradiction)"
         group_select: -1
       - function: "take_first"
-doc_to_target: "{{ Label }}"
 doc_to_choice: ["Entailment", "Contradiction"]
+doc_to_target: >
+  "{{ ['Entailment', 'Contradiction'].index(Label) }}"
 #should_decontaminate: true
 #doc_to_decontamination_query: "{{sentence1}} {{sentence2}}"
 metric_list:
