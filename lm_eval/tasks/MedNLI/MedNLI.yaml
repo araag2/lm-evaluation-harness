@@ -27,12 +27,7 @@ doc_to_choice: ["entailment", "neutral", "contradiction"]
 #      - function: "take_first"
 should_decontaminate: true
 doc_to_decontamination_query: "{{sentence1}} {{sentence2}}"
-metric_list: # Doing exact_match for MedNLI as it is a multiple choice task with three options.
-  - metric: exact_match
-    aggregation: mean
-    higher_is_better: true
-    ignore_case: true
-    ignore_punctuation: true
+metric_list:
   - metric: acc
     aggregation: mean
     higher_is_better: true
