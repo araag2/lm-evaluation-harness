@@ -300,6 +300,9 @@ class VLLM(TemplateLM):
         """
         Method to apply a chat template to a list of chat history between user and model.
         """
+        if "{'role':" in chat_history[0]['content']:
+            chat_history = eval(chat_history[0]['content'])
+
         chat_templated = self.tokenizer.apply_chat_template(
             chat_history,
             tokenize=False,

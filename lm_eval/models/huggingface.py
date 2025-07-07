@@ -1417,6 +1417,10 @@ class HFLM(TemplateLM):
         """
         Method to apply a chat template to a list of chat history between user and model.
         """
+        # Chat history is expected to be a list of dictionaries with keys "role" and "content". However, we are sending a string that came from a Dict[str, str] to the tokenizer. We need to ensure that the chat history is in the correct format.
+        if "{'role':" in chat_history[0]['content']:
+            chat_history = eval(chat_history[0]['content'])
+
         try:
             chat_templated = self.tokenizer.apply_chat_template(
                 chat_history,

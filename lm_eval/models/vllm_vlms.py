@@ -161,6 +161,9 @@ class VLLM_VLM(VLLM):
     def apply_chat_template(
         self, chat_history: List[Dict[str, str]], add_generation_prompt=True
     ) -> str:
+        if "{'role':" in chat_history[0]['content']:
+            chat_history = eval(chat_history[0]['content'])
+
         self.chat_applied = True
         if not self.interleave:
             for content in chat_history:
