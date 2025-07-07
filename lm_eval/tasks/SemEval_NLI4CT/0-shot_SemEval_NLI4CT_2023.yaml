@@ -1,0 +1,27 @@
+task: 0-shot_SemEval_NLI4CT_2023
+tag:
+  - 0-shot
+dataset_path: araag2/SemEval_NLI4CT
+dataset_name: 2023_conversational
+dataset_kwargs:
+  trust_remote_code: true
+output_type: multiple_choice
+training_split: train
+validation_split: dev
+test_split: test
+doc_to_text: "{{prompt}}"
+doc_to_choice: ["Entailment", "Contradiction"]
+doc_to_target: !function utils.label_to_index
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: acc_norm
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+metadata:
+  version: 1.0

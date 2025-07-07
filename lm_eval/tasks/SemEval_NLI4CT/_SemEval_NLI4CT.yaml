@@ -2,10 +2,10 @@ group: SemEval_NLI4CT
 task:
   - SemEval_NLI4CT_2023
   - SemEval_NLI4CT_2024
-aggregate_metric_list:
-  - aggregation: mean
-    metric: exact_match
-    weight_by_size: true
-    filter_list: custom-extract
+#aggregate_metric_list:
+#  - aggregation: mean
+#    metric: exact_match
+#    weight_by_size: true
+#    filter_list: custom-extract
 metadata:
   version: 1.0

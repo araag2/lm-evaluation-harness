@@ -9,6 +9,7 @@ from typing import List
 import numpy as np
 import sacrebleu
 
+from sklearn.metrics import precision_score, recall_score
 from lm_eval.api.registry import register_aggregation, register_metric
 
 
@@ -324,6 +325,27 @@ def mcc_fn(items):  # This is a passthrough function
 )
 def f1_fn(items):  # This is a passthrough function
     return items
+
+def precision_fn(refs, preds, **kwargs):
+    return {"precision": precision_score(refs, preds, average="weighted", zero_division=0)}
+
+def recall_fn(refs, preds, **kwargs):
+    return {"recall": recall_score(refs, preds, average="weighted", zero_division=0)}
+
+@register_metric(
+        metric="precision",
+        higher_is_better=True,
+        output_type="multiple_choice",
+        aggregation="precision")
+def precision_metric(refs, preds, **kwargs):
+    return precision_fn(refs, preds, **kwargs)
+
+@register_metric(
+    metric="recall",
+    higher_is_better=True,
+    output_type="multiple_choice")
+def recall_metric(refs, preds, **kwargs):
+    return recall_fn(refs, preds, **kwargs)
 
 
 @register_metric(
