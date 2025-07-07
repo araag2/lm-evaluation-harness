@@ -67,6 +67,19 @@ def f1_score(items):
 
     return np.max(fscore)
 
+@register_aggregation("precision")
+def precision(items):
+    unzipped_list = list(zip(*items))
+    golds = unzipped_list[0]
+    preds = unzipped_list[1]
+    return precision_score(golds, preds, average="weighted", zero_division=0)
+
+@register_aggregation("recall")
+def recall(items):
+    unzipped_list = list(zip(*items))
+    golds = unzipped_list[0]
+    preds = unzipped_list[1]
+    return recall_score(golds, preds, average="weighted", zero_division=0)
 
 @register_aggregation("matthews_corrcoef")
 def matthews_corrcoef(items):
@@ -326,26 +339,21 @@ def mcc_fn(items):  # This is a passthrough function
 def f1_fn(items):  # This is a passthrough function
     return items
 
-def precision_fn(refs, preds, **kwargs):
-    return {"precision": precision_score(refs, preds, average="weighted", zero_division=0)}
-
-def recall_fn(refs, preds, **kwargs):
-    return {"recall": recall_score(refs, preds, average="weighted", zero_division=0)}
-
 @register_metric(
         metric="precision",
         higher_is_better=True,
         output_type="multiple_choice",
         aggregation="precision")
-def precision_metric(refs, preds, **kwargs):
-    return precision_fn(refs, preds, **kwargs)
+def precision_fn(items):
+    return items
 
 @register_metric(
     metric="recall",
     higher_is_better=True,
-    output_type="multiple_choice")
-def recall_metric(refs, preds, **kwargs):
-    return recall_fn(refs, preds, **kwargs)
+    output_type="multiple_choice",
+    aggregation="recall")
+def recall_fn(items):
+    return items
 
 
 @register_metric(

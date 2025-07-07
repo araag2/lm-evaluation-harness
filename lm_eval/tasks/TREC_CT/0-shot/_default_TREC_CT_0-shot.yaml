@@ -16,11 +16,11 @@ metric_list:
     aggregation: mean
     higher_is_better: true
 
-  - metric: precision
+  - metric: !function lm_eval.tasks.TREC_CT_2021_0_shot.utils.precision_fn
     aggregation: mean
     higher_is_better: true
 
-  - metric: recall
+  - metric: !function lm_eval.tasks.TREC_CT_2021_0_shot.utils.recall_fn
     aggregation: mean
     higher_is_better: true
 metadata:
