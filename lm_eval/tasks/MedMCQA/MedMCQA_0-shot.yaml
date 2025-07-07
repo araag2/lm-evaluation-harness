@@ -6,7 +6,7 @@ dataset_name: conversational
 dataset_kwargs:
   trust_remote_code: true
 output_type: multiple_choice
-test_split: test
+test_split: dev
 doc_to_text: "{{ prompt }}"
 doc_to_target: "{{ Label }}"
 doc_to_choice: ["A", "B", "C", "D"]
