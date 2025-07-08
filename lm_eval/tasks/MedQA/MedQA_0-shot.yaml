@@ -1,0 +1,25 @@
+task: MedQA_0-shot
+tag:
+  - 0-shot
+dataset_path: araag2/MedQA
+dataset_name: conversational
+dataset_kwargs:
+  trust_remote_code: true
+output_type: multiple_choice
+test_split: dev
+doc_to_text: "{{ prompt }}"
+doc_to_target: "{{ Label }}"
+doc_to_choice: ["A", "B", "C", "D"]
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: acc_norm
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+metadata:
+  version: 1.0
