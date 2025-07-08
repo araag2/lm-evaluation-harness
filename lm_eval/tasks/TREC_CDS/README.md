@@ -1,16 +1,16 @@
-# TREC Clinical Trials (TREC_CT)
+# Task-name
 
 ## Paper
 
 Title: ``
 
-Paper Link: 
+Paper Link: []()
 
 Abstract:
 
 ``
 
-Homepage: [TREC Biomedical Tracks](https://www.trec-cds.org/)
+Homepage: [GitHub Pages]()
 
 
 ### Citation
@@ -22,15 +22,13 @@ Homepage: [TREC Biomedical Tracks](https://www.trec-cds.org/)
 
 #### Groups
 
-* `TREC_CT`: `The TREC Clinical Trials task group (including the 2021, 2022, and 2023 versions) in which the task is to classify the relationship between a medical premise and a hypothesis as one of the following: not relevant, possibly relevant and definitely relevant.`
+* ``: ``
 
 #### Tags
 
 #### Tasks
 
-* `TREC_CT_2021`: `The TREC Clinical Trials 2021 track.`
-* `TREC_CT_2022`: `The TREC Clinical Trials 2022 track.`
-* `TREC_CT_2023`: `The TREC Clinical Trials 2023 track.`
+* `` : ``
 
 ### Checklist
 

@@ -1,10 +1,15 @@
+task: Trial_Meta-Analysis_type_0-shot
+tag:
+  - 0-shot
+dataset_path: araag2/Trial_Meta-Analysis
+dataset_name: conversational_outcome-type
 dataset_kwargs:
   trust_remote_code: true
 output_type: multiple_choice
 test_split: test
 doc_to_text: "{{ prompt }}"
 doc_to_target: "{{ Label }}"
-doc_to_choice: ["definitely relevant", "possibly relevant", "not relevant"]
+doc_to_choice: ["binary", "continuous"]
 metric_list:
   - metric: acc
     aggregation: mean
