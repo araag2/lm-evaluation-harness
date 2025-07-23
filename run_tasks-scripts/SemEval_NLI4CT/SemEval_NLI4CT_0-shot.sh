@@ -23,7 +23,7 @@ CUDA_VISIBLE_DEVICES=$1 python -m lm_eval\
     --output_path $OUTPUT_PATH \
     --apply_chat_template \
     --write_out \
-    --log_samples \
+    #--log_samples \
     #--limit 2 \
     #--predict_only \
 

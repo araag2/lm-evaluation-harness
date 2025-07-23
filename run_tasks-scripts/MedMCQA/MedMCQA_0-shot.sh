@@ -1,6 +1,8 @@
 #!/bin/bash
 MODEL=hf
-MODEL_ARGS="pretrained=Qwen/Qwen3-8B,max_length=4096,do_sample=True,temperature=0.7,top_p=0.8,top_k=20" # "pretrained=Qwen/Qwen3-8B,max_num_seqs=1,enable_chunked_prefill=True"
+MODEL_ARGS="pretrained=Qwen/Qwen3-14B,max_length=2000"
+# "pretrained=Qwen/Qwen3-8B,max_length=2000,do_sample=True,temperature=0.7,top_p=0.8,top_k=20"  
+# "pretrained=Qwen/Qwen3-8B,max_num_seqs=1,enable_chunked_prefill=True"
 #enable_thinking=True,Temperature=0.6,TopP=0.95,TopK=20,MinP=0
 TASKS=MedMCQA_0-shot
 
