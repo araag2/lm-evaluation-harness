@@ -57,7 +57,7 @@ def eval_models(args, branch=None):
 
     for model in args.models:
         model_type = (
-            "hf-causal"
+            "hf-causal-experimental"
             if model in causal_models
             else "hf-seq2seq"
             if model in seq2seq_models
@@ -67,13 +67,13 @@ def eval_models(args, branch=None):
         # TODO: split_and_pad_windows in AutoSeq2SeqLM doesn"t exist, #527
         tasks = (
             args.tasks
-            if model in causal_models or model_type == "hf-causal"
+            if model in causal_models or model_type == "hf-causal-experimental"
             else list(filter(lambda task: task not in perplexity_tasks, args.tasks))
         )
         # TODO: OOM with auto for seq2seq models, also can OOM with llama
         batch_size = (
             args.batch_size
-            if model in causal_models or model_type == "hf-causal"
+            if model in causal_models or model_type == "hf-causal-experimental"
             else 64
             if args.batch_size == "auto"
             else args.batch_size
@@ -140,17 +140,16 @@ def main():
     args = parse_args()
 
     args.branches = (
-        args.branches.split(",") if isinstance(args.branches, str) else args.branches
+        args.branches.split(",") if type(args.branches) == str else args.branches
     )
-    args.models = (
-        args.models.split(",") if isinstance(args.models, str) else args.models
-    )
+    args.models = args.models.split(",") if type(args.models) == str else args.models
     args.tasks = (
-        ALL_TASKS
+        tasks.ALL_TASKS
         if args.tasks == "all_tasks"
-        else utils.pattern_match(args.tasks.split(","), ALL_TASKS)
-        if isinstance(args.tasks, str)
-        else args.tasks
+        else utils.pattern_match(
+            args.tasks.split(",") if type(args.tasks) == str else args.tasks,
+            tasks.ALL_TASKS,
+        )
     )
 
     global initial_branch

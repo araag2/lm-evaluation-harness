@@ -1,36 +1,27 @@
-from . import (
-    anthropic_llms,
-    api_models,
-    dummy,
-    gguf,
-    hf_audiolm,
-    hf_steered,
-    hf_vlms,
-    huggingface,
-    ibm_watsonx_ai,
-    mamba_lm,
-    nemo_lm,
-    neuralmagic,
-    neuron_optimum,
-    openai_completions,
-    optimum_ipex,
-    optimum_lm,
-    sglang_causallms,
-    sglang_generate_API,
-    textsynth,
-    vllm_causallms,
-    vllm_vlms,
-)
+from . import gpt2
+from . import gpt3
+from . import anthropic_llms
+from . import huggingface
+from . import textsynth
+from . import deepsparse
+from . import dummy
+from . import gguf
+
+MODEL_REGISTRY = {
+    "hf": gpt2.HFLM,
+    "hf-causal": gpt2.HFLM,
+    "hf-causal-experimental": huggingface.AutoCausalLM,
+    "hf-seq2seq": huggingface.AutoSeq2SeqLM,
+    "gpt2": gpt2.GPT2LM,
+    "gpt3": gpt3.GPT3LM,
+    "anthropic": anthropic_llms.AnthropicLM,
+    "textsynth": textsynth.TextSynthLM,
+    "deepsparse": deepsparse.DeepSparseLM,
+    "dummy": dummy.DummyLM,
+    "gguf": gguf.GGUFLM,
+    "optimum-causal": gpt2.OPTIMUMLM,
+}
 
 
-# TODO: implement __all__
-
-
-try:
-    # enable hf hub transfer if available
-    import hf_transfer  # type: ignore # noqa
-    import huggingface_hub.constants  # type: ignore
-
-    huggingface_hub.constants.HF_HUB_ENABLE_HF_TRANSFER = True
-except ImportError:
-    pass
+def get_model(model_name):
+    return MODEL_REGISTRY[model_name]

@@ -1,46 +1,15 @@
 import itertools
-import json
-import logging
 import random
-import time
-from collections import defaultdict
-from typing import TYPE_CHECKING, List, Optional, Union
+
+import lm_eval.metrics
+import lm_eval.models
+import lm_eval.tasks
+import lm_eval.base
+from lm_eval.utils import positional_deprecated, run_task_tests
+from lm_eval.models.gpt2 import HFLM
 
 import numpy as np
-import torch
-
-import lm_eval.api.metrics
-import lm_eval.api.registry
-import lm_eval.api.task
-import lm_eval.models
-from lm_eval.caching.cache import delete_cache
-from lm_eval.evaluator_utils import (
-    consolidate_group_results,
-    consolidate_results,
-    get_sample_size,
-    get_subtask_list,
-    get_task_list,
-    prepare_print_tasks,
-    print_writeout,
-    run_task_tests,
-)
-from lm_eval.loggers import EvaluationTracker
-from lm_eval.loggers.utils import add_env_info, add_tokenizer_info, get_git_commit_hash
-from lm_eval.tasks import TaskManager, get_task_dict
-from lm_eval.utils import (
-    handle_non_serializable,
-    hash_string,
-    positional_deprecated,
-    setup_logging,
-    simple_parse_args_string,
-)
-
-
-if TYPE_CHECKING:
-    from lm_eval.api.model import LM
-    from lm_eval.api.task import Task
-
-eval_logger = logging.getLogger(__name__)
+import transformers
 
 
 @positional_deprecated
@@ -80,9 +49,9 @@ def simple_evaluate(
     """Instantiate and evaluate a model on a list of tasks.
 
     :param model: Union[str, LM]
-        Name of model or LM object, see lm_eval.models.get_model
-    :param model_args: Optional[str, dict]
-        String or dict arguments for each model class, see LM.create_from_arg_string and LM.create_from_arg_object.
+        Name of model, transformers.PreTrainedModel object, or LM object, see lm_eval.models.get_model
+    :param model_args: Optional[str]
+        String arguments for each model class, see LM.create_from_arg_string.
         Ignored if `model` argument is a LM object.
     :param tasks: list[Union[str, dict, Task]]
         List of task names or Task objects. Task objects will be taken to have name task.EVAL_HARNESS_NAME if defined and type(task).__name__ otherwise.
@@ -209,32 +178,21 @@ def simple_evaluate(
         if model_args is None:
             eval_logger.warning("model_args not specified. Using defaults.")
             model_args = ""
-
-        if isinstance(model_args, dict):
-            eval_logger.info(
-                f"Initializing {model} model, with arguments: {model_args}"
-            )
-            lm = lm_eval.api.registry.get_model(model).create_from_arg_obj(
-                model_args,
-                {
-                    "batch_size": batch_size,
-                    "max_batch_size": max_batch_size,
-                    "device": device,
-                },
-            )
-
-        else:
-            eval_logger.info(
-                f"Initializing {model} model, with arguments: {simple_parse_args_string(model_args)}"
-            )
-            lm = lm_eval.api.registry.get_model(model).create_from_arg_string(
-                model_args,
-                {
-                    "batch_size": batch_size,
-                    "max_batch_size": max_batch_size,
-                    "device": device,
-                },
-            )
+        lm = lm_eval.models.get_model(model).create_from_arg_string(
+            model_args,
+            {
+                "batch_size": batch_size,
+                "max_batch_size": max_batch_size,
+                "device": device,
+            },
+        )
+    elif isinstance(model, transformers.PreTrainedModel):
+        lm = lm_eval.models.get_model("hf-causal")(
+            pretrained=model,
+            batch_size=batch_size,
+            max_batch_size=max_batch_size,
+        )
+        no_cache = True
     else:
         if not isinstance(model, lm_eval.api.model.LM):
             raise TypeError(
@@ -366,39 +324,31 @@ def simple_evaluate(
         else:
             model_name = type(model).__name__
 
-        # add info about the model and few shot config
-        results["config"] = {
-            "model": model_name,
-            "model_args": model_args,
-        }
-        # add more detailed model info if available
-        if isinstance(lm, lm_eval.models.huggingface.HFLM):
-            results["config"].update(lm.get_model_info())
-        # add info about execution
-        results["config"].update(
-            {
-                "batch_size": batch_size,
-                "batch_sizes": (
-                    list(lm.batch_sizes.values()) if hasattr(lm, "batch_sizes") else []
-                ),
-                "device": device,
-                "use_cache": use_cache,
-                "limit": limit,
-                "bootstrap_iters": bootstrap_iters,
-                "gen_kwargs": gen_kwargs,
-                "random_seed": random_seed,
-                "numpy_seed": numpy_random_seed,
-                "torch_seed": torch_random_seed,
-                "fewshot_seed": fewshot_random_seed,
-            }
-        )
-        results["git_hash"] = get_git_commit_hash()
-        results["date"] = start_date
-        add_env_info(results)  # additional environment info to results
-        add_tokenizer_info(results, lm)  # additional info about tokenizer
-        return results
-    else:
-        return None
+    # add info about the model and few shot config
+    model_name = None
+    if isinstance(model, str):
+        model_name = model
+    elif isinstance(model, transformers.PreTrainedModel):
+        model_name = "pretrained=" + model.config._name_or_path
+    results["config"] = {
+        "model": model_name,
+        "model_args": model_args,
+        "num_fewshot": num_fewshot,
+        "batch_size": batch_size,
+        "batch_sizes": list(lm.batch_sizes.values())
+        if hasattr(lm, "batch_sizes")
+        else [],
+        "device": device,
+        "no_cache": no_cache,
+        "limit": limit,
+        "bootstrap_iters": bootstrap_iters,
+        "description_dict": description_dict,
+    }
+
+    return results
+
+
+decontaminate_suffix = "_decontaminate"
 
 
 @positional_deprecated

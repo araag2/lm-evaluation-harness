@@ -15,145 +15,43 @@ eval_logger = logging.getLogger(__name__)
 
 
 def anthropic_completion(
-    client,  #: anthropic.Anthropic,
-    model: str,
-    prompt: str,
-    max_tokens_to_sample: int,
-    temperature: float,
-    stop: List[str],
-    **kwargs: Any,
-) -> str:
-    """Wrapper function around the Anthropic completion API client with exponential back-off
-    in case of RateLimitError.
+    client, model, prompt, max_tokens_to_sample, temperature, stop
+):
+    """Query Anthropic API for completion.
 
-    params:
-        client: anthropic.Anthropic
-            Anthropic API client
-        model: str
-            Anthropic model e.g. 'claude-instant-v1', 'claude-2'
-        prompt: str
-            Prompt to feed to the model
-        max_tokens_to_sample: int
-            Maximum number of tokens to sample from the model
-        temperature: float
-            Sampling temperature
-        stop: List[str]
-            List of stop sequences
-        kwargs: Any
-            Additional model_args to pass to the API client
+    Retry with back-off until they respond
     """
+    import anthropic
 
-    try:
-        import anthropic
-    except ModuleNotFoundError as exception:
-        raise type(exception)(
-            "attempted to use 'anthropic' LM type, but package `anthropic` is not installed. \
-please install anthropic via `pip install 'lm-eval[anthropic]'` or `pip install -e '.[anthropic]'`",
-        )
+    backoff_time = 3
+    while True:
+        try:
+            response = client.completions.create(
+                prompt=f"{anthropic.HUMAN_PROMPT} {prompt}{anthropic.AI_PROMPT}",
+                model=model,
+                # NOTE: Claude really likes to do CoT, and overly aggressive stop sequences
+                #       (e.g. gsm8k's ":") may truncate a lot of the input.
+                stop_sequences=[anthropic.HUMAN_PROMPT] + stop,
+                max_tokens_to_sample=max_tokens_to_sample,
+                temperature=temperature,
+            )
+            print(response)
+            return response.completion
+        except RuntimeError:
+            # TODO: I don't actually know what error Anthropic raises when it times out
+            #       So err update this error when we find out.
+            import traceback
 
-    def _exception_callback(e: Exception, sleep_time: float) -> None:
-        eval_logger.warning(
-            f"RateLimitError occurred: {e.__cause__}\n Retrying in {sleep_time} seconds"
-        )
-
-    @retry_on_specific_exceptions(
-        on_exceptions=[anthropic.RateLimitError],
-        max_retries=None,  # retry forever, consider changing
-        on_exception_callback=_exception_callback,
-    )
-    def completion():
-        response = client.completions.create(
-            prompt=f"{anthropic.HUMAN_PROMPT} {prompt}{anthropic.AI_PROMPT}",
-            model=model,
-            # NOTE: Claude really likes to do CoT, and overly aggressive stop sequences
-            #       (e.g. gsm8k's ":") may truncate a lot of the input.
-            stop_sequences=[anthropic.HUMAN_PROMPT] + stop,
-            max_tokens_to_sample=max_tokens_to_sample,
-            temperature=temperature,
-            **kwargs,
-        )
-        return response.completion
-
-    return completion()
+            traceback.print_exc()
+            time.sleep(backoff_time)
+            backoff_time *= 1.5
 
 
-def anthropic_chat(
-    client,  #: anthropic.Anthropic,
-    model: str,
-    prompt: str,
-    max_tokens: int,
-    temperature: float,
-    stop: List[str],
-    **kwargs: Any,
-) -> str:
-    """Wrapper function around the Anthropic completion API client with exponential back-off
-    in case of RateLimitError.
+class AnthropicLM(BaseLM):
+    REQ_CHUNK_SIZE = 20
 
-    params:
-        client: anthropic.Anthropic
-            Anthropic API client
-        model: str
-            Anthropic model e.g. 'claude-3-opus-20240229', 'claude-3-sonnet-20240229'
-        prompt: str
-            Prompt to feed to the model
-        max_tokens: int
-            Maximum number of tokens to sample from the model
-        temperature: float
-            Sampling temperature
-        stop: List[str]
-            List of stop sequences
-        kwargs: Any
-            Additional model_args to pass to the API client
-    """
-
-    try:
-        import anthropic
-    except ModuleNotFoundError as exception:
-        raise type(exception)(
-            "attempted to use 'anthropic' LM type, but package `anthropic` is not installed. \
-please install anthropic via `pip install 'lm-eval[anthropic]'` or `pip install -e '.[anthropic]'`",
-        )
-
-    def _exception_callback(e: Exception, sleep_time: float) -> None:
-        eval_logger.warning(
-            f"RateLimitError occurred: {e.__cause__}\n Retrying in {sleep_time} seconds"
-        )
-
-    @retry_on_specific_exceptions(
-        on_exceptions=[
-            anthropic.RateLimitError,
-            anthropic.APIConnectionError,
-            anthropic.APIStatusError,
-        ],
-        max_retries=None,  # retry forever, consider changing
-        on_exception_callback=_exception_callback,
-    )
-    def messages():
-        response = client.messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            messages=[{"role": "user", "content": f"{prompt}"}],
-            **kwargs,
-        )
-        return response.content[0].text
-
-    return messages()
-
-
-@register_model("anthropic-completions")
-class AnthropicLM(LM):
-    REQ_CHUNK_SIZE = 20  # TODO: not used
-
-    def __init__(
-        self,
-        batch_size: int = 1,
-        model: str = "claude-2.0",
-        max_tokens_to_sample: int = 256,
-        temperature: float = 0,  # defaults to 1
-        **kwargs,  # top_p, top_k, etc.
-    ) -> None:
-        """Anthropic API wrapper.
+    def __init__(self, model="claude-2"):
+        """
 
         :param model: str
             Anthropic model e.g. 'claude-instant-v1', 'claude-2'
@@ -165,22 +63,10 @@ class AnthropicLM(LM):
             Additional model_args to pass to the API client
         """
         super().__init__()
-
-        try:
-            import anthropic
-        except ModuleNotFoundError as exception:
-            raise type(exception)(
-                "attempted to use 'anthropic' LM type, but package `anthropic` is not installed. \
-please install anthropic via `pip install 'lm-eval[anthropic]'` or `pip install -e '.[anthropic]'`",
-            )
+        import anthropic
 
         self.model = model
-        # defaults to os.environ.get("ANTHROPIC_API_KEY")
-        self.client = anthropic.Anthropic()
-        self.temperature = temperature
-        self.max_tokens_to_sample = max_tokens_to_sample
-        self.tokenizer = self.client.get_tokenizer()
-        self.kwargs = kwargs
+        self.client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
     @property
     def eot_token_id(self):
