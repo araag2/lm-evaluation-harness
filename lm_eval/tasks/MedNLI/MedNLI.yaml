@@ -1,0 +1,42 @@
+task: MedNLI
+tag:
+  - 0-shot
+dataset_path: presencesw/mednli
+dataset_name: null
+dataset_kwargs:
+  trust_remote_code: true
+#process_docs: !function utils.process_docs
+output_type: multiple_choice
+training_split: train
+validation_split: validation
+test_split: test
+description: |
+  You are a medical expert tasked with determining the relationship between a medical premise and a hypothesis. The task is to classify the relationship as one of the following: entailment, neutral, or contradiction. The premise is a medical statement, and the hypothesis is a medical hypothesis about what can be infered from that statement.
+doc_to_text: "\nMedical Premise: {{sentence1}}\n\nHypothesis: {{sentence2}}\n\nAnswer:"
+doc_to_target: !function utils.label_to_index
+doc_to_choice: ["entailment", "neutral", "contradiction"]
+#fewshot_split: validation
+#num_fewshot: 0
+#filter_list:
+#  - name: "score_first" # Only take the first answer
+#    filter:
+#      - function: "map_fn"
+#        fn: "str"
+#      - function: "regex"
+#        regex_pattern: "^(?i)(entailment|neutral|contradiction)$"
+#      - function: "take_first"
+should_decontaminate: true
+doc_to_decontamination_query: "{{sentence1}} {{sentence2}}"
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: acc_norm
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+metadata:
+  version: 1.0

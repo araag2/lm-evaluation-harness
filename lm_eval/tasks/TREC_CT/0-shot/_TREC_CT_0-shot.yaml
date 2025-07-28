@@ -1,0 +1,7 @@
+group: TREC_CT_0-shot
+task:
+  - TREC_CT_2021_0-shot
+  - TREC_CT_2022_0-shot
+  - TREC_CT_2023_0-shot
+metadata:
+  version: 1.0
