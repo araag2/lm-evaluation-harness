@@ -14,7 +14,7 @@ OUTPUT_PATH=/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/output
 echo -e "-------------------------------\n"
 echo -e "Running MedQA_0-shot eval for:\n Model = $MODEL\n TASKS = $TASKS\n Output PATH = $OUTPUT_PATH\n"
 
-CUDA_VISIBLE_DEVICES=$1 python -m lm_eval\
+python -m lm_eval\
     --model $MODEL\
     --model_args $MODEL_ARGS \
     --tasks $TASKS \
@@ -23,8 +23,8 @@ CUDA_VISIBLE_DEVICES=$1 python -m lm_eval\
     --output_path $OUTPUT_PATH \
     --apply_chat_template \
     --write_out \
+    --log_samples \
     #--limit 2 \
-    #--log_samples \
     #--predict_only \
 
 echo "Done with $TASKS"
