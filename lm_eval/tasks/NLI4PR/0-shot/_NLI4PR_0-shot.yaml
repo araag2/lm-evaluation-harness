@@ -1,0 +1,8 @@
+group: NLI4PR_0-shot
+tag:
+  - 0-shot
+task:
+ - NLI4PR_patient-lang_0-shot
+ - NLI4PR_medical-lang_0-shot
+metadata:
+  version: 1.0

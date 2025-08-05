@@ -1,0 +1,5 @@
+task: NLI4PR_patient-lang_0-shot
+include: _default_NLI4PR_0-shot.yaml
+doc_to_text: !function utils.patient_lang_doc_to_text
+metadata:
+  version: 1.0

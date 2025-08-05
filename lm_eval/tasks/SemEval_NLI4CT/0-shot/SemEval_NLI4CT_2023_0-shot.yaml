@@ -1,6 +1,7 @@
 task: SemEval_NLI4CT_2023_0-shot
 dataset_path: araag2/SemEval_NLI4CT
-dataset_name: 2023_conversational
+dataset_name: 2023_processed
 include: _default_SemEval_NLI4CT_0-shot.yaml
+doc_to_text: !function utils.doc_to_text
 metadata:
   version: 1.0

@@ -21,8 +21,8 @@ CUDA_VISIBLE_DEVICES=$1 python -m lm_eval\
     --batch_size $BATCH_SIZE \
     --seed $SEED \
     --output_path $OUTPUT_PATH \
-    --apply_chat_template \
     --write_out \
+    #--apply_chat_template \
     #--limit 2 \
     #--log_samples \
     #--predict_only \

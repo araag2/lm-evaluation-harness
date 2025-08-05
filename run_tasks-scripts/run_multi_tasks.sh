@@ -49,10 +49,10 @@ for TASK in "${TASK_LIST[@]}"; do
     --batch_size $BATCH_SIZE \
     --seed $SEED \
     --output_path $OUTPUT_PATH \
-    --apply_chat_template \
-    --write_out
+    --write_out \
+    --log_samples \
+    #--apply_chat_template \
     #--limit 2 \
-    #--log_samples \
     #--predict_only \
 
   STATUS=$?

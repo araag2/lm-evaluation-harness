@@ -1,6 +1,6 @@
 task: TREC_Prec-Med_2018_0-shot
 dataset_path: araag2/TREC_Precision-Medicine
-dataset_name: 2018_conversational
+dataset_name: 2018_processed
 include: _default_TREC_Prec-Med_0-shot.yaml
 metadata:
   version: 1.0
