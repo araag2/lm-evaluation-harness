@@ -6,8 +6,9 @@ def fix_formatting(text):
     """
     Fix excessive whitespace in the text.
     """
-    text = re.sub(r'\n\n {3,}', '\n  ', text).sub(r'\n {3,}', ' ', text).sub(r'[\[\]\']', '', text)
-    return text.strip()
+    text = re.sub(r'\n\n {3,}', '\n  ', text)
+    text = re.sub(r'\n {3,}', ' ', text)
+    return re.sub(r'[\[\]\']', '', text).strip()
 
 def doc_to_text(doc):
     res = baseline_prompt

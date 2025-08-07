@@ -11,5 +11,5 @@ baseline_prompt = "You are a medical expert tasked with determining wether a Cli
 def doc_to_text(doc):
     res = baseline_prompt
     for key in ["Title", "Summary", "Detailed_description", "Eligibility", "Patient"]:
-      res = res.replace(f"{{{{{key}}}}}", doc[key])
+        res = res.replace(f"{{{{{key}}}}}", doc[key])
     return res

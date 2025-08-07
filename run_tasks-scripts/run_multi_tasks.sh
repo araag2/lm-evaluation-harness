@@ -4,19 +4,29 @@ MODEL=hf
 MODEL_ARGS="pretrained=Qwen/Qwen3-8B,max_length=20000,do_sample=True,temperature=0.7,top_p=0.8,top_k=20"
 
 # Tasks List (space-separated)
+#TASK_LIST=(
+#    MedMCQA_0-shot # Works
+#    MedNLI_0-shot # Works
+#    MedQA_0-shot # Works
+#    NLI4PR_0-shot # Bad Utils Import
+#    PubMedQA_0-shot # Works
+#    Trial_Meta-Analysis_type_0-shot  # Bad Utils Import
+#    Evidence_Inference_v2_0-shot # Works
+#    HINT_0-shot # Bad use of regex
+#    SemEval_NLI4CT_0-shot # Bad Utils Import
+#    TREC_CDS_0-shot # Bad Utils Import
+#    TREC_CT_0-shot # Bad Utils Import 
+#    TREC_Prec-Med_0-shot # Bad Utils Import
+#)
+
 TASK_LIST=(
-    MedMCQA_0-shot
-    MedNLI_0-shot
-    MedQA_0-shot
-    NLI4PR_0-shot
-    PubMedQA_0-shot
-    SemEval_NLI4CT_0-shot
-    TREC_CDS_0-shot
-    TREC_CT_0-shot
-    TREC_Prec-Med_0-shot
-    Trial_Meta-Analysis_type_0-shot
-    Evidence_Inference_v2_0-shot
-    HINT_0-shot
+    NLI4PR_0-shot # Bad Utils Import
+    Trial_Meta-Analysis_type_0-shot  # Bad Utils Import
+    HINT_0-shot # Bad use of regex
+    SemEval_NLI4CT_0-shot # Bad Utils Import
+    TREC_CDS_0-shot # Bad Utils Import
+    TREC_CT_0-shot # Bad Utils Import 
+    TREC_Prec-Med_0-shot # Bad Utils Import
 )
 
 # Generation Params

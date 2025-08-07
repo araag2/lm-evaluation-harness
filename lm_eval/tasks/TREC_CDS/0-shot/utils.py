@@ -3,5 +3,10 @@ baseline_prompt = "You are a medical expert tasked with performing clinical deci
 def doc_to_text(doc):
     res = baseline_prompt
     for key in ["Title", "Abstract", "Body", "Question", "Patient_Summary"]:
-      res = res.replace(f"{{{{{key}}}}}", doc[key])
+        res = res.replace(f"{{{{{key}}}}}", doc[key])
     return res
+
+#def process_results(doc, results):
+#    print(f'Doc = \n\n{doc}\n Results = \n\n{results}\n')
+#    return results
+#    #return {"acc" : None, "p@10" : None, "R-Prec" : None, "NDCG@10" : None}

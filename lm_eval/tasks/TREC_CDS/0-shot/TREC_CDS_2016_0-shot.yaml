@@ -1,6 +1,6 @@
 task: TREC_CDS_2016_0-shot
 dataset_path: araag2/TREC_Clincial-Decision-Support
-dataset_name: 2016_conversational
+dataset_name: 2016_processed
 include: _default_TREC_CDS_0-shot.yaml
 metadata:
   version: 1.0

@@ -17,6 +17,29 @@ T = TypeVar("T")
 
 eval_logger = logging.getLogger(__name__)
 
+### New Metrics Defined for my benchmark of lm-evaluation-harness ###
+#-----------------------Aggregations----------------------------------#
+@register_aggregation("p10")
+def p10_score(items):
+    unzipped_list = list(zip(*items))
+    print(f"golds = \n{unzipped_list[0]}\npreds = \n{unzipped_list[1]}")
+    golds = unzipped_list[0]
+    preds = unzipped_list[1]
+
+    return 0
+
+#-----------------------Metrics---------------------------------------#
+
+@register_metric(
+    metric="p10",
+    higher_is_better=True,
+    output_type="multiple_choice",
+    aggregation="p10",
+)
+def p10_fn(items):  # This is a passthrough function
+    return items
+
+#-----------------------------------------------------------------------#
 
 # Register Aggregations First
 @register_aggregation("bypass")

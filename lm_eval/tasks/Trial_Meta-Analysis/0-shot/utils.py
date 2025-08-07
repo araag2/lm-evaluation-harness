@@ -3,5 +3,5 @@ baseline_type_prompt = "You are an expert medical assistant specialized in judgi
 def type_doc_to_text(doc):
     res = baseline_type_prompt
     for key in ["Context", "outcome"]:
-      res = res.replace(f"{{{{{key}}}}}", doc[key])
-    return res
+        res = res.replace(f"{{{{{key}}}}}", doc[key])
+    return res  

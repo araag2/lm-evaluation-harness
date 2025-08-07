@@ -6,8 +6,8 @@ doc_to_text: !function utils.doc_to_text
 doc_to_target: "{{ Label }}"
 doc_to_choice: ["definitely relevant", "possibly relevant", "not relevant"]
 metric_list:
-  - metric: acc
-    aggregation: mean
+  - metric: p10
+    aggregation: p10
     higher_is_better: true
     ignore_case: true
     ignore_punctuation: true
