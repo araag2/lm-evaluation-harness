@@ -1649,6 +1649,10 @@ class ConfigurableTask(Task):
                     if "brier_score" in use_metric
                     else {}
                 ),
+                **({"P@10" : (doc, gold, pred)} if "P@10" in use_metric else {}),
+                **({"R-prec": (None)} if "R-prec" in use_metric else {}),
+                **({"nDCG": (None)} if "nDCG" in use_metric else {}),
+                **({"MAP": (None)} if "MAP" in use_metric else {}),
             }
 
             if "acc_mutual_info" in use_metric:

@@ -1,3 +1,4 @@
+import sys
 import logging
 import math
 import os
@@ -18,25 +19,71 @@ T = TypeVar("T")
 eval_logger = logging.getLogger(__name__)
 
 ### New Metrics Defined for my benchmark of lm-evaluation-harness ###
-#-----------------------Aggregations----------------------------------#
-@register_aggregation("p10")
-def p10_score(items):
-    unzipped_list = list(zip(*items))
-    print(f"golds = \n{unzipped_list[0]}\npreds = \n{unzipped_list[1]}")
-    golds = unzipped_list[0]
-    preds = unzipped_list[1]
+#-----------------------------------------------------------------------#
+@register_aggregation("P@10")
+def P10_score(items):
+    unziped_items = list(zip(*items))
+    docs, golds, preds = unziped_items[0], unziped_items[1], unziped_items[2]
+    eval_logger.info("Calculating P@10 score")
+    #print(f"doc: {docs}, golds: {golds}, preds: {preds}")
 
-    return 0
-
-#-----------------------Metrics---------------------------------------#
+    return 10
 
 @register_metric(
-    metric="p10",
+    metric="P@10",
     higher_is_better=True,
-    output_type="multiple_choice",
-    aggregation="p10",
+    output_type=["multiple_choice"], #TO:DO to implement to other types, need to set inputs in api.task.py
+    aggregation="P@10",
 )
-def p10_fn(items):  # This is a passthrough function
+def P10_fn(items):  # This is a passthrough function
+    return items
+
+#-----------------------------------------------------------------------#
+
+@register_aggregation("R-prec")
+def R_prec_score(items):
+    eval_logger.info("Calculating R-Prec score")
+    return 3.14
+
+@register_metric(
+    metric="R-prec",
+    higher_is_better=True,
+    output_type=["multiple_choice"],  # TO:DO to implement to other types, need to set inputs in api.task.py
+    aggregation="R-prec",
+)
+def R_prec_fn(items):  # This is a passthrough function
+    return items
+
+#-----------------------------------------------------------------------#
+
+@register_aggregation("nDCG")
+def nDCG_score(items):
+    eval_logger.info("Calculating nDCG score")
+    return 2.71
+
+@register_metric(
+    metric="nDCG",
+    higher_is_better=True,
+    output_type=["multiple_choice"],  # TO:DO to implement to other types, need to set inputs in api.task.py
+    aggregation="nDCG",
+)
+def nDCG_fn(items):  # This is a passthrough function
+    return items
+
+#-----------------------------------------------------------------------#
+
+@register_aggregation("MAP")
+def MAP_score(items):
+    eval_logger.info("Calculating MAP score")
+    return 1.41
+
+@register_metric(
+    metric="MAP",
+    higher_is_better=True,
+    output_type=["multiple_choice"],  # TO:DO to implement to other types, need to set inputs in api.task.py
+    aggregation="MAP",
+)
+def MAP_fn(items):  # This is a passthrough function
     return items
 
 #-----------------------------------------------------------------------#
@@ -153,7 +200,7 @@ def ter(items):
 
 
 @register_aggregation("brier_score")
-def brier_score(items):  # This is a passthrough function
+def brier_score(items):
     gold, predictions = list(zip(*items))
     bs, num_class = np.array(predictions).shape
 
@@ -650,3 +697,10 @@ def aggregate_subtask_metrics(metrics, sizes, weight_by_size=True):
     assert len(metrics) == len(sizes)
 
     return sum([metric * size for metric, size in zip(metrics, sizes)]) / sum(sizes)
+
+
+#from lm_eval.api.registry import METRIC_AGGREGATION_REGISTRY, AGGREGATION_REGISTRY, HIGHER_IS_BETTER_REGISTRY, METRIC_REGISTRY
+#print(f'METRIC_REGISTRY: {METRIC_REGISTRY}')
+#print(f'HIGHER_IS_BETTER_REGISTRY: {HIGHER_IS_BETTER_REGISTRY}')
+#print(f'AGGREGATION_REGISTRY: {AGGREGATION_REGISTRY}')
+#print(f'METRIC_AGGREGATION_REGISTRY: {METRIC_AGGREGATION_REGISTRY}')
