@@ -2,5 +2,21 @@ task: TREC_CT_2021_0-shot
 dataset_path: araag2/TREC_Clinical-Trials
 dataset_name: 2021_processed
 include: _default_TREC_CT_0-shot.yaml
+metric_list:
+  - metric: nDCG@10
+    aggregation: nDCG@10
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: P@10
+    aggregation: P@10
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: RecRank
+    aggregation: RecRank
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
 metadata:
   version: 1.0

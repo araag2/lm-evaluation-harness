@@ -1649,10 +1649,15 @@ class ConfigurableTask(Task):
                     if "brier_score" in use_metric
                     else {}
                 ),
-                **({"P@10" : (doc, gold, pred)} if "P@10" in use_metric else {}),
-                **({"R-prec": (None)} if "R-prec" in use_metric else {}),
-                **({"nDCG": (None)} if "nDCG" in use_metric else {}),
-                **({"MAP": (None)} if "MAP" in use_metric else {}),
+                **({"P@5" : (doc, gold, pred, prob_norm)} if "P@5" in use_metric else {}),
+                **({"P@10" : (doc, gold, pred, prob_norm)} if "P@10" in use_metric else {}),
+                **({"P@15" : (doc, gold, pred, prob_norm)} if "P@15" in use_metric else {}),
+                **({"R-Prec": (doc, gold, pred, prob_norm)} if "R-Prec" in use_metric else {}),
+                **({"MAP": (doc, gold, pred, prob_norm)} if "MAP" in use_metric else {}),
+                **({"nDCG": (doc, gold, pred, prob_norm)} if "nDCG" in use_metric else {}),
+                **({"nDCG@5": (doc, gold, pred, prob_norm)} if "nDCG@5" in use_metric else {}),
+                **({"nDCG@10": (doc, gold, pred, prob_norm)} if "nDCG@10" in use_metric else {}),
+                **({"RecRank": (doc, gold, pred, prob_norm)} if "RecRank" in use_metric else {}),
             }
 
             if "acc_mutual_info" in use_metric:

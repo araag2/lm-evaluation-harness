@@ -11,7 +11,7 @@ test_split: test
 doc_to_text: !function utils.doc_to_text
 doc_to_target: "{{ Label }}"
 output_type: multiple_choice
-doc_to_choice: ["entailment", "neutral", "contradiction"]
+doc_to_choice: ["contradiction", "neutral", "entailment"]
 #output_type: generate_until
 #generation_kwargs:
 #  until:

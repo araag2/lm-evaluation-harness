@@ -6,6 +6,7 @@ import random
 import re
 import string
 from collections.abc import Iterable
+from collections import defaultdict
 from typing import Callable, List, Optional, Sequence, TypeVar
 
 import numpy as np
@@ -20,14 +21,90 @@ eval_logger = logging.getLogger(__name__)
 
 ### New Metrics Defined for my benchmark of lm-evaluation-harness ###
 #-----------------------------------------------------------------------#
+def items_to_query_id_dict(items, pos_label_index):
+    """
+    Group a list of items by query ID and extract the probability score of the positive label.
+
+    Each item is a tuple: (doc, gold, pred, prob_norm), where `prob_norm` is a list of normalized
+    probability scores. The function groups them by `doc["query_id"]` and pairs each entry
+    with the positive label probability.
+
+    Args:
+        items: List of tuples. Each tuple contains:
+            - doc: Dictionary containing at least a "query_id" key.
+            - gold: Ground truth label (int).
+            - pred: Predicted label (int).
+            - prob_norm: List of floats representing normalized probability scores.
+        pos_label_index_index: Index for the positive label probability within `prob_norm`.
+
+    Returns:
+        A dict mapping `query_id` to a list of tuples: (doc, gold, pred, positive_label_prob).
+    """
+    scores_by_query_id = defaultdict(list)
+    for doc, gold, pred, prob_norm in items:
+        score = prob_norm[pos_label_index] if isinstance(pos_label_index, int) else sum(prob_norm[i] for i in pos_label_index)
+        scores_by_query_id[doc["query_id"]].append((doc, gold, pred, score))
+    return scores_by_query_id
+
+def score_per_query_id(items, score_function_fn, cutoff_fn = None):
+    """
+    Compute an average score per query using a generic scoring function and cutoff logic.
+
+    Groups items by query ID, sorts them by positive-label probability, applies a cutoff
+    function to select the top items, computes per-query scores, and returns their mean.
+
+    Args:
+        items: List of tuples as expected by `group_by_query`.
+        score_function_fn: Scoring function from `sklearn.metrics` (e.g. precision_score),
+            must accept y_true and y_pred lists and return a float.
+        cutoff_fn: Function that takes the sorted list of items for a query and returns
+            an integer cutoff count to evaluate.
+
+    Returns:
+        The mean score across all query IDs. If no items are provided, returns 0.0.
+    """
+
+    # Assuming the last label in available choices is the positive label
+    grouped = items_to_query_id_dict(items, pos_label_index=len(items[0][3]) - 1)  # <query_id, (doc, gold, pred, prob_norm[pos_label_index])>
+    scores = []
+
+    for qid, docs in grouped.items():
+        sorted_items = sorted(docs, key=lambda x: x[3], reverse=True)
+
+        if cutoff_fn:
+            sorted_items = sorted_items[:cutoff_fn(sorted_items)]
+        
+        # In TREC, 1 (maybe) or 2 (yes) are consolidated the positive labels
+        y_true = [1 if gold > 0 else 0 for _, gold, _, _ in sorted_items] 
+        y_pred = [1 if pred > 0 else 0 for _, _, pred, _ in sorted_items]
+        
+        scores.append(score_function_fn(y_true, y_pred, zero_division=0))
+
+        # TO:DO Optional debug prints (remove later)
+        print(f"[DEBUG] Query {qid} – y_true: {y_true}, y_pred: {y_pred}")
+        for doc, gold, pred, prob in sorted_items:
+            print(f"[DEBUG] doc_id: {doc['doc_id']}, Gold: {gold}, Pred: {pred}, Prob: {prob}")
+        print(f"[DEBUG] Query {qid} – Score: {scores[-1]}")
+    
+    return mean(scores) if scores else 0.0
+
 @register_aggregation("P@10")
 def P10_score(items):
-    unziped_items = list(zip(*items))
-    docs, golds, preds = unziped_items[0], unziped_items[1], unziped_items[2]
-    eval_logger.info("Calculating P@10 score")
-    #print(f"doc: {docs}, golds: {golds}, preds: {preds}")
+    """
+    Calculate Precision at 10 (P@10) as an aggregation metric. 
+    P@10 is the proportion of relevant items in the top 10 items for each query_id.    
 
-    return 10
+    Args:
+        items (list): A list of tuples, where each tuple contains:
+            - doc (dict): Document information, including 'query_id'.
+            - gold (int): The ground truth label.
+            - pred (int): The predicted label.
+            - prob_norm (list[float]): Normalized probability score for each multiple choice option.
+    Returns:
+        float: The mean P@10 score across all query_ids.
+    """
+    from sklearn.metrics import precision_score
+    return score_per_query_id(items, score_function_fn=precision_score, cutoff_fn=lambda x: min(10, len(x)))
 
 @register_metric(
     metric="P@10",
@@ -40,26 +117,142 @@ def P10_fn(items):  # This is a passthrough function
 
 #-----------------------------------------------------------------------#
 
-@register_aggregation("R-prec")
-def R_prec_score(items):
-    eval_logger.info("Calculating R-Prec score")
-    return 3.14
+@register_aggregation("P@5")
+def P5_score(items):
+    from sklearn.metrics import precision_score
+    return score_per_query_id(items, score_function_fn=precision_score, cutoff_fn=lambda x: min(5, len(x)))
 
 @register_metric(
-    metric="R-prec",
+    metric="P@5",
+    higher_is_better=True,
+    output_type=["multiple_choice"], #TO:DO to implement to other types, need to set inputs in api.task.py
+    aggregation="P@5",
+)
+def P5_fn(items):  # This is a passthrough function
+    return items
+
+#-----------------------------------------------------------------------#
+
+@register_aggregation("P@15")
+def P15_score(items):
+    from sklearn.metrics import precision_score
+    return score_per_query_id(items, score_function_fn=precision_score, cutoff_fn=lambda x: min(15, len(x)))
+
+@register_metric(
+    metric="P@15",
+    higher_is_better=True,
+    output_type=["multiple_choice"], #TO:DO to implement to other types, need to set inputs in api.task.py
+    aggregation="P@15",
+)
+def P15_fn(items):  # This is a passthrough function
+    return items
+
+#-----------------------------------------------------------------------#
+
+@register_aggregation("R-Prec")
+def R_prec_score(items):
+    """
+    Calculate R-Precision (R-Prec) as an aggregation metric.
+    R-Prec is the proportion of relevant items in the top R items for each query_id, where R is the number of relevant items for that query_id.   
+
+    Args:
+        items (list): A list of tuples, where each tuple contains:
+            - doc (dict): Document information, including 'query_id'.
+            - gold (int): The ground truth label.
+            - pred (int): The predicted label.
+            - prob_norm (list[float]): Normalized probability score for each multiple choice option.
+    Returns:
+        float: The mean R-Precision score across all query_ids.
+    """
+    from sklearn.metrics import precision_score
+    def cutoff_fn(docs):
+        return sum(1 for _, gold, *_ in docs if gold > 0)
+    return score_per_query_id(items, score_function_fn=precision_score, cutoff_fn=cutoff_fn)
+
+@register_metric(
+    metric="R-Prec",
     higher_is_better=True,
     output_type=["multiple_choice"],  # TO:DO to implement to other types, need to set inputs in api.task.py
-    aggregation="R-prec",
+    aggregation="R-Prec",
 )
 def R_prec_fn(items):  # This is a passthrough function
     return items
 
 #-----------------------------------------------------------------------#
 
+@register_aggregation("MAP")
+def MAP_score(items):
+    from sklearn.metrics import average_precision_score
+    grouped = items_to_query_id_dict(items, pos_label_index=1 if len(items[0][3]) == 2 else [1,2])
+    ap_scores = []
+    for qid, docs in grouped.items():
+        # Sort by descending model confidence score
+        sorted_items = sorted(docs, key=lambda x: x[1], reverse=True)
+
+        y_true = [1 if gold > 0 else 0 for _, gold, _, _ in sorted_items] 
+        y_score = [score for _, _, _, score in sorted_items]
+
+        ap = average_precision_score(y_true, y_score)
+        ap_scores.append(ap)
+        print(f"[DEBUG] Query {qid} – AP: {ap}")
+    return mean(ap_scores) if ap_scores else 0.0
+
+@register_metric(
+    metric="MAP",
+    higher_is_better=True,
+    output_type=["multiple_choice"],  # TO:DO to implement to other types, need to set inputs in api.task.py
+    aggregation="MAP",
+)
+def MAP_fn(items):  # This is a passthrough function
+    return items
+
+#-----------------------------------------------------------------------#
+
+def calculate_nDCG(items, k=None):
+    """
+    Calculate Normalized Discounted Cumulative Gain (nDCG) as an aggregation metric.
+    nDCG evaluates the quality of the ranking of items based on predicted scores.
+
+    Args:
+        items (list): A list of tuples, where each tuple contains:
+            - doc (dict): Document information, including 'query_id'.
+            - gold (int): The ground truth label.
+            - pred (int): The predicted label.
+            - prob_norm (list[float]): Normalized probability score for each multiple choice option.
+        k (int, optional): The cutoff rank for nDCG calculation. If None, uses all items.
+
+    Returns:
+        float: The mean nDCG score across all query_ids. If no items are provided, returns 0.0.
+    """
+    from sklearn.metrics import ndcg_score
+    scores_by_query_id = defaultdict(list)
+    pos_label_index = len(items[0][3]) - 1
+    for doc, gold, _, prob_norm in items:    
+        scores_by_query_id[doc["query_id"]].append((doc, gold, prob_norm[pos_label_index]))
+
+    ndcg_scores = []
+
+    for qid, docs in scores_by_query_id.items():
+        # Sort items by predicted score in descending order
+        sorted_items = sorted(docs, key=lambda x: x[2], reverse=True)
+
+        # Prepare y_true and y_score for nDCG calculation
+        y_true = [[gold] for _, gold, _ in sorted_items]
+        y_score = [[prob_norm] for _, _, prob_norm in sorted_items]
+
+        # Compute nDCG score for the current query
+        ndcg_scores.append(ndcg_score(y_true, y_score, k=k))
+
+        # Optional: Debugging output
+        print(f"[DEBUG] Query {qid} – nDCG: {ndcg_scores[-1]}")
+        for doc, gold, pred, prob in sorted_items:
+            print(f"[DEBUG] doc_id: {doc['doc_id']}, Gold: {gold}, Pred: {pred}, Prob: {prob}")
+
+    return mean(ndcg_scores) if ndcg_scores else 0.0
+
 @register_aggregation("nDCG")
 def nDCG_score(items):
-    eval_logger.info("Calculating nDCG score")
-    return 2.71
+    return calculate_nDCG(items)
 
 @register_metric(
     metric="nDCG",
@@ -72,18 +265,52 @@ def nDCG_fn(items):  # This is a passthrough function
 
 #-----------------------------------------------------------------------#
 
-@register_aggregation("MAP")
-def MAP_score(items):
-    eval_logger.info("Calculating MAP score")
-    return 1.41
+@register_aggregation("nDCG@5")
+def nDCG5_score(items):
+    return calculate_nDCG(items, k=5)
 
 @register_metric(
-    metric="MAP",
+    metric="nDCG@5",
     higher_is_better=True,
     output_type=["multiple_choice"],  # TO:DO to implement to other types, need to set inputs in api.task.py
-    aggregation="MAP",
+    aggregation="nDCG@5",
 )
-def MAP_fn(items):  # This is a passthrough function
+def nDCG5_fn(items):  # This is a passthrough function
+    return items
+
+@register_aggregation("nDCG@10")
+def nDCG10_score(items):
+    return calculate_nDCG(items, k=10)
+
+@register_metric(
+    metric="nDCG@10",
+    higher_is_better=True,
+    output_type=["multiple_choice"],  # TO:DO to implement to other types, need to set inputs in api.task.py
+    aggregation="nDCG@10",
+)
+def nDCG10_fn(items):  # This is a passthrough function
+    return items
+
+#-----------------------------------------------------------------------#
+
+@register_aggregation("RecRank")
+def RecRank_score(items):
+    def reciprocal_rank_fn(y_true, y_pred=None, zero_division=0):
+        """Compute Reciprocal Rank: inverse of first relevant item's rank."""
+        try:
+            rank = next(i for i, v in enumerate(y_true, start=1) if v == 1)
+            return 1.0 / rank
+        except StopIteration:
+            return 0.0
+    return score_per_query_id(items, score_function_fn=reciprocal_rank_fn, cutoff_fn=None)
+
+@register_metric(
+    metric="RecRank",
+    higher_is_better=True,
+    output_type=["multiple_choice"],  # TO:DO to implement to other types, need to set inputs in api.task.py
+    aggregation="RecRank",
+)
+def RecRank_fn(items):  # This is a passthrough function
     return items
 
 #-----------------------------------------------------------------------#
@@ -627,6 +854,10 @@ def stderr_for_metric(
         chrf,
         ter,
         nanmean,
+        #P10_score, # TO:DO Custom Metrics Added
+        #R_prec_score,
+        #nDCG_score,
+        #MAP_score,
     ]
 
     if metric in bootstrappable:

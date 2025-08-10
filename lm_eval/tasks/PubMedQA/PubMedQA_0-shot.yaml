@@ -9,7 +9,7 @@ output_type: multiple_choice
 test_split: labeled
 doc_to_text: !function utils.doc_to_text
 doc_to_target: "{{ Label }}"
-doc_to_choice: ["Yes", "Maybe", "No"]
+doc_to_choice: ["No", "Maybe", "Yes"]
 metric_list:
   - metric: acc
     aggregation: mean

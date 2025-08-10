@@ -1,7 +1,7 @@
 group: TREC_Prec-Med_0-shot
 task:
   - TREC_Prec-Med_2017_0-shot
-  - TREC_Prec-Med_2018_0-shot
-  - TREC_Prec-Med_2019_0-shot
+  #- TREC_Prec-Med_2018_0-shot
+  #- TREC_Prec-Med_2019_0-shot
 metadata:
   version: 1.0

@@ -24,7 +24,7 @@ CUDA_VISIBLE_DEVICES=$1 python -m lm_eval\
     --apply_chat_template \
     --write_out \
     --log_samples \
-    #--limit 2 \
+    --limit 2 \
     #--predict_only \
 
 echo "Done with $TASKS"

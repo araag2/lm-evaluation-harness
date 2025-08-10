@@ -1,6 +1,6 @@
 #!/bin/bash
 MODEL=hf
-MODEL_ARGS="pretrained=Qwen/Qwen3-8B,max_length=20000,do_sample=True,temperature=0.7,top_p=0.8,top_k=20" # "pretrained=Qwen/Qwen3-8B,max_num_seqs=1,enable_chunked_prefill=True"
+MODEL_ARGS="pretrained=Qwen/Qwen3-8B,max_length=4000,do_sample=True,temperature=0.7,top_p=0.8,top_k=20" # "pretrained=Qwen/Qwen3-8B,max_num_seqs=1,enable_chunked_prefill=True"
 #enable_thinking=True,Temperature=0.6,TopP=0.95,TopK=20,MinP=0
 TASKS=TREC_CDS_0-shot
 
@@ -22,8 +22,8 @@ CUDA_VISIBLE_DEVICES=$1 python -m lm_eval\
     --seed $SEED \
     --output_path $OUTPUT_PATH \
     --limit 3 \
+    --log_samples \
     #--write_out \
-    #--log_samples \
     #--apply_chat_template \
     #--predict_only \
 

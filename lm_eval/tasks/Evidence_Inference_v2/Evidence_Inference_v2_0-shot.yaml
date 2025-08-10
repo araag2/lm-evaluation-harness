@@ -9,7 +9,7 @@ output_type: multiple_choice
 test_split: test
 doc_to_text: !function utils.doc_to_text
 doc_to_target: "{{ Label }}"
-doc_to_choice: ["significantly increased", "no significant difference", "significantly decreased"]
+doc_to_choice: ["significantly decreased", "no significant difference", "significantly increased"]
 metric_list:
   - metric: acc
     aggregation: mean
