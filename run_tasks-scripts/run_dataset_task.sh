@@ -1,6 +1,6 @@
 #!/bin/bash
 MODEL=vllm
-MODEL_ARGS="pretrained=Qwen/Qwen3-8B,max_length=20000"
+MODEL_ARGS="pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=20000"
 BATCH_SIZE=auto
 SEED=0
 
@@ -11,8 +11,8 @@ DEFAULT_DATASET="MedNLI"
 
 DEFAULT_TASK_LIST=( # Can use comma-separated list on command prompt
     0-shot
-    SC
-    CoT
+    #SC
+    #CoT
 )
 
 DATASET=${1:-$DEFAULT_DATASET}     # first arg = dataset, fallback to default
@@ -63,9 +63,9 @@ for TASK in "${TASK_LIST[@]}"; do
 
     STATUS=$?
     if [ $STATUS -eq 0 ]; then
-        echo "[SUCCESS] Completed: $TASK"
+        echo "[SUCCESS] Completed: $DATASET_AND_TASK"
     else
-        echo "[ERROR] Failed: $TASK (exit code $STATUS)"
+        echo "[ERROR] Failed: $DATASET_AND_TASK (exit code $STATUS)"
     fi
 
     echo -e "-------------------------------\n"
