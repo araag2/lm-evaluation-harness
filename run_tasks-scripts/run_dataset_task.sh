@@ -7,7 +7,9 @@ SEED=0
 BASE_OUTPUT_DIR="/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/outputs"
 DEFAULT_DATASET="MedNLI"
 
-DEFAULT_TASK_LIST=(
+# Available Datasets: Evidence_Inference_v2, HINT, MedMCQA, MedNLI, MedQA, NLI4PR, PubMedQA, SemEval_NLI4CT, TREC_CDS, TREC_CT, TREC_Prec-Med, Trial_Meta-Analysis_type
+
+DEFAULT_TASK_LIST=( # Can use comma-separated list on command prompt
     0-shot
     SC
     CoT
@@ -54,7 +56,7 @@ for TASK in "${TASK_LIST[@]}"; do
         --seed $SEED \
         --output_path $OUTPUT_PATH \
         --write_out \
-        --log_samples \
+        --log_samples
         #--apply_chat_template \
         #--limit 10 \
         #--predict_only \
