@@ -12,41 +12,6 @@ doc_to_text: !function utils.doc_to_text
 doc_to_target: "{{ Label }}"
 output_type: multiple_choice
 doc_to_choice: ["contradiction", "neutral", "entailment"]
-#output_type: generate_until
-#generation_kwargs:
-#  until:
-#    - "entailment"
-#    - "neutral"
-#    - "contradiction"
-#  do_sample: True
-#  temperature: 0.7
-#  top_p: 0.8
-#  top_k: 20
-#filter_list:
-#  - name: extract-first-label
-#    filter:
-#      - function: "regex"
-#        regex_pattern: "(entailment|neutral|contradiction)"
-#        group_select: 1
-#      - function: "take_first"
-#      - function: "map"
-#        mapping:
-#          "entailment": "entailment"
-#          "neutral": "neutral"
-#          "contradiction": "contradiction"
-#        default: "neutral"
-#generation_kwargs:
-#  until:
-#    - "\n"
-#    - "</s>"
-#    - "<|im_end|>"
-#filter_list:
-#  - name: extract-last
-#    filter:
-#      - function: "regex"
-#        regex_pattern: "(?:.*)(entailment|neutral|contradiction)"
-#        group_select: 1
-#      - function: "take_first"
 metric_list:
   - metric: acc
     aggregation: mean

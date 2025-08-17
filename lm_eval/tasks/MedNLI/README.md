@@ -43,8 +43,8 @@ Homepage: [GitHub Pages](https://jgc128.github.io/mednli/)
 
 #### Tasks
 
-* `MedNLI` : `MedNLI in base 0-shot setting`
-* `MedNLI_self-consistency` : `MedNLI 0-shot with self-consistency sampling`
+* `MedNLI_0-shot` : `MedNLI in base 0-shot setting`
+* `MedNLI_0-shot_SC` : `MedNLI 0-shot with self-consistency sampling`
 
 ### Checklist
 

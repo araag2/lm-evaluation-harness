@@ -16,7 +16,7 @@ def extract_metrics(result_dict, prefix=""):
             metrics[f"{prefix}{metric_name}"] = v
     return metrics
 
-def collect_results(folders):
+def collect_results(folders, file_filter=None):
     results = []
 
     for folder in folders:
@@ -25,6 +25,9 @@ def collect_results(folders):
             for file in files:
                 if not file.endswith(".json") or not file.startswith("results_"):
                     continue
+
+                if file_filter and file_filter not in file:
+                    continue   # Skip files that don’t match filter
 
                 path = os.path.join(root, file)
                 with open(path, "r") as f:
@@ -127,6 +130,8 @@ def main():
     parser.add_argument("--output_dir", required=True, help="Directory to save outputs")
     parser.add_argument("--output_name", required=True, help="Base name for output files (no extension)")
     parser.add_argument("--input_folders", nargs="+", required=True, help="List of folders to search for results")
+    parser.add_argument("--file_filter", default=None, help="Only process JSON files containing this string in the name")
+
 
     args = parser.parse_args()
 
