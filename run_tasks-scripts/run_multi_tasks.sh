@@ -1,7 +1,7 @@
 #!/bin/bash
 # Model Configuration
-MODEL=hf
-MODEL_ARGS="pretrained=google/gemma-3n-E4B-it,max_length=20000,do_sample=True,temperature=0.7,top_p=0.8,top_k=20"
+MODEL=vllm
+MODEL_ARGS="pretrained=google/gemma-3n-E4B-it,max_model_len=40000,do_sample=True,temperature=0.7,top_p=0.8,top_k=20"
 
 # Tasks List (space-separated)
 TASK_LIST=(
@@ -21,8 +21,8 @@ TASK_LIST=(
 
 INFERENCE_MODES=(
     0-shot
-    #SC
-    #CoT
+    SC
+    CoT
 )
 
 # Generation Params

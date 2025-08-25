@@ -11,18 +11,15 @@ test_split: test
 doc_to_text: !function utils.doc_to_text
 doc_to_target: "{{ Label }}"
 output_type: generate_until
-#doc_to_choice: ["contradiction", "neutral", "entailment"]
 generation_kwargs:
   until:
-    #- "\n\n"
-    - <|im_end|>
-    - <|endoftext|>
+    - "<|im_end|>"
+    - "<|endoftext|>"
     - "<|end_of_text|>"
     - "<|eot_id|>"
     - "<end_of_turn>"
     - "<eos>"
     - "</s>"
-#  max_tokens: 100
   do_sample: true
   temperature: 1.2
   top_p: 0.9

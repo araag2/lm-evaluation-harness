@@ -1,14 +1,14 @@
-task: MedNLI_CoT
+task: Evidence_Inference_v2_0-shot
 tag:
-  - chain-of-thought
-dataset_path: araag2/MedNLI
+  - self-consistency
+dataset_path: araag2/Evidence_Inference_v2
 dataset_name: processed
 dataset_kwargs:
   trust_remote_code: true
 training_split: train
 validation_split: dev
 test_split: test
-doc_to_text: !function utils.doc_to_text_reasoning
+doc_to_text: !function utils.doc_to_text
 doc_to_target: "{{ Label }}"
 output_type: generate_until
 generation_kwargs:
@@ -21,14 +21,23 @@ generation_kwargs:
     - "<eos>"
     - "</s>"
   do_sample: true
-  temperature: 0.7
+  temperature: 1.2
   top_p: 0.9
   top_k: 50
+repeats: 11
 filter_list:
   - name: "score_first"
     filter:
     - function: "regex"
-      regex_pattern: "(?s:.*)([cC]ontradiction|[nN]eutral|[eE]ntailment)"
+      regex_pattern: "(?s:.*)([Ss]ignificantly [Dd]ecreased|[Nn]o [Ss]ignificant [Dd]ifference|[Ss]ignificantly [Ii]ncreased)"
+    - function: "take_first"
+  - name: "maj@11"
+    filter:
+    - function: "regex"
+      regex_pattern: "(?s:.*)([Ss]ignificantly [Dd]ecreased|[Nn]o [Ss]ignificant [Dd]ifference|[Ss]ignificantly [Ii]ncreased)"
+    - function: "take_first_k"
+      k: 11
+    - function: "majority_vote"
     - function: "take_first"
 metric_list:
   - metric: exact_match

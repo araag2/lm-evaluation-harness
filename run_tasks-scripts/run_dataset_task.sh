@@ -1,6 +1,6 @@
 #!/bin/bash
 MODEL=vllm
-MODEL_ARGS="pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=20000"
+MODEL_ARGS="pretrained=Qwen/Qwen3-4B-Instruct-2507,max_model_len=40000"
 BATCH_SIZE=auto
 SEED=0
 
@@ -56,7 +56,8 @@ for TASK in "${TASK_LIST[@]}"; do
         --seed $SEED \
         --output_path $OUTPUT_PATH \
         --write_out \
-        --log_samples
+        --log_samples \
+        --limit 50
         #--apply_chat_template \
         #--limit 10 \
         #--predict_only \

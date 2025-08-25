@@ -1,7 +1,7 @@
-task: MedNLI_CoT
+task: Evidence_Inference_v2_0-shot
 tag:
-  - chain-of-thought
-dataset_path: araag2/MedNLI
+  - self-consistency
+dataset_path: araag2/Evidence_Inference_v2
 dataset_name: processed
 dataset_kwargs:
   trust_remote_code: true
@@ -28,7 +28,7 @@ filter_list:
   - name: "score_first"
     filter:
     - function: "regex"
-      regex_pattern: "(?s:.*)([cC]ontradiction|[nN]eutral|[eE]ntailment)"
+      regex_pattern: "(?s:.*)([Ss]ignificantly [Dd]ecreased|[Nn]o [Ss]ignificant [Dd]ifference|[Ss]ignificantly [Ii]ncreased)"
     - function: "take_first"
 metric_list:
   - metric: exact_match
