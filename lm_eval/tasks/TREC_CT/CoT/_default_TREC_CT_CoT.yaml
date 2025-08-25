@@ -1,0 +1,36 @@
+dataset_kwargs:
+  trust_remote_code: true
+training_split: train
+validation_split: dev
+test_split: test
+doc_to_text: !function utils.doc_to_text_reasoning
+doc_to_target: "{{ Label }}"
+output_type: generate_until
+generation_kwargs:
+  until:
+    - "<|im_end|>"
+    - "<|endoftext|>"
+    - "<|end_of_text|>"
+    - "<|eot_id|>"
+    - "<end_of_turn>"
+    - "<eos>"
+    - "</s>"
+  do_sample: true
+  temperature: 0.7
+  top_p: 0.9
+  top_k: 50
+filter_list:
+  - name: "score_first"
+    filter:
+    - function: "regex"
+      regex_pattern: "(?s:.*)([Nn]ot relevant|[Pp]ossibly relevant|[Dd]efinitely relevant)"
+    - function: "take_first"
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+    ignore_numbers: false
+metadata:
+  version: 1.0

@@ -1,0 +1,6 @@
+task: TREC_CT_2021_CoT
+dataset_path: araag2/TREC_Clinical-Trials
+dataset_name: 2021_processed
+include: _default_TREC_CT_CoT.yaml
+metadata:
+  version: 1.0

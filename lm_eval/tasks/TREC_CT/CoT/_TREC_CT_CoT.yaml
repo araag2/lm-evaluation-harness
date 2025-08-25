@@ -1,0 +1,9 @@
+group: TREC_CT_CoT
+task:
+  - TREC_CT_2021_CoT
+  - TREC_CT_2022_CoT
+  - TREC_CT_2023_CoT
+tag:
+  - chain-of-thought
+metadata:
+  version: 1.0
