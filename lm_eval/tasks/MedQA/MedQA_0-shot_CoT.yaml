@@ -1,7 +1,7 @@
-task: Evidence_Inference_v2_SC
+task: MedQA_CoT
 tag:
-  - self-consistency
-dataset_path: araag2/Evidence_Inference_v2
+  - chain-of-thought
+dataset_path: araag2/MedQA
 dataset_name: processed
 dataset_kwargs:
   trust_remote_code: true
@@ -21,23 +21,14 @@ generation_kwargs:
     - "<eos>"
     - "</s>"
   do_sample: true
-  temperature: 1.2
+  temperature: 0.7
   top_p: 0.9
   top_k: 50
-repeats: 11
 filter_list:
   - name: "score_first"
     filter:
     - function: "regex"
-      regex_pattern: "(?s:.*)([Ss]ignificantly [Dd]ecreased|[Nn]o [Ss]ignificant [Dd]ifference|[Ss]ignificantly [Ii]ncreased)"
-    - function: "take_first"
-  - name: "maj@11"
-    filter:
-    - function: "regex"
-      regex_pattern: "(?s:.*)([Ss]ignificantly [Dd]ecreased|[Nn]o [Ss]ignificant [Dd]ifference|[Ss]ignificantly [Ii]ncreased)"
-    - function: "take_first_k"
-      k: 11
-    - function: "majority_vote"
+      regex_pattern: "(?s:.*)([ A | B | C | D ])"
     - function: "take_first"
 metric_list:
   - metric: exact_match
@@ -48,3 +39,4 @@ metric_list:
     ignore_numbers: false
 metadata:
   version: 1.0
+

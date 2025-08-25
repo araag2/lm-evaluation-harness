@@ -1,0 +1,8 @@
+group: SemEval_NLI4CT_SC
+task:
+ - SemEval_NLI4CT_2023_SC
+ - SemEval_NLI4CT_2024_SC
+tag:
+ - self-consistency
+metadata:
+  version: 1.0

@@ -1,0 +1,9 @@
+group: TREC_CT_SC
+task:
+  - TREC_CT_2021_SC
+  - TREC_CT_2022_SC
+  - TREC_CT_2023_SC
+tag:
+  - self-consistency
+metadata:
+  version: 1.0

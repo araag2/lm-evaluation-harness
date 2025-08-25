@@ -1,0 +1,9 @@
+group: TREC_Prec-Med_SC
+task:
+  - TREC_Prec-Med_2017_SC
+  #- TREC_Prec-Med_2018_SC
+  #- TREC_Prec-Med_2019_SC
+tag:
+  - self-consistency
+metadata:
+  version: 1.0

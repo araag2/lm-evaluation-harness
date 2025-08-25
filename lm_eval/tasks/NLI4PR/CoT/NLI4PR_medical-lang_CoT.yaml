@@ -1,0 +1,5 @@
+task: NLI4PR_medical-lang_CoT
+include: _default_NLI4PR_CoT.yaml
+doc_to_text: !function utils.medical_lang_doc_to_text_reasoning
+metadata:
+  version: 1.0

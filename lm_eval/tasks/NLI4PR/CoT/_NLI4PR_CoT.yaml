@@ -1,0 +1,8 @@
+group: NLI4PR_CoT
+tag:
+  - chain-of-thought
+task:
+ - NLI4PR_patient-lang_CoT
+ - NLI4PR_medical-lang_CoT
+metadata:
+  version: 1.0

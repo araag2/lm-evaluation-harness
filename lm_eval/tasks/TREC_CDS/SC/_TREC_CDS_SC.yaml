@@ -1,0 +1,9 @@
+group: TREC_CDS_SC
+task:
+  - TREC_CDS_2014_SC
+  - TREC_CDS_2015_SC
+  - TREC_CDS_2016_SC
+tag:
+  - self-consistency
+metadata:
+  version: 1.0

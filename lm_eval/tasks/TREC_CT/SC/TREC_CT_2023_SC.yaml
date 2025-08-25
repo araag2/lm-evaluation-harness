@@ -1,0 +1,6 @@
+task: TREC_CT_2023_SC
+dataset_path: araag2/TREC_Clinical-Trials
+dataset_name: 2023_processed
+include: _default_TREC_CT_SC.yaml
+metadata:
+  version: 1.0

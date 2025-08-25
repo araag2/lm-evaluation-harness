@@ -1,8 +1,3 @@
-task: Evidence_Inference_v2_SC
-tag:
-  - self-consistency
-dataset_path: araag2/Evidence_Inference_v2
-dataset_name: processed
 dataset_kwargs:
   trust_remote_code: true
 training_split: train
@@ -29,12 +24,12 @@ filter_list:
   - name: "score_first"
     filter:
     - function: "regex"
-      regex_pattern: "(?s:.*)([Ss]ignificantly [Dd]ecreased|[Nn]o [Ss]ignificant [Dd]ifference|[Ss]ignificantly [Ii]ncreased)"
+      regex_pattern: "(?s:.*)([Nn]ot relevant|[Pp]ossibly relevant|[Dd]efinitely relevant)"
     - function: "take_first"
   - name: "maj@11"
     filter:
     - function: "regex"
-      regex_pattern: "(?s:.*)([Ss]ignificantly [Dd]ecreased|[Nn]o [Ss]ignificant [Dd]ifference|[Ss]ignificantly [Ii]ncreased)"
+      regex_pattern: "(?s:.*)([Nn]ot relevant|[Pp]ossibly relevant|[Dd]efinitely relevant)"
     - function: "take_first_k"
       k: 11
     - function: "majority_vote"

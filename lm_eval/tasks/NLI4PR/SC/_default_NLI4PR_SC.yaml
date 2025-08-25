@@ -1,14 +1,10 @@
-task: Evidence_Inference_v2_SC
-tag:
-  - self-consistency
-dataset_path: araag2/Evidence_Inference_v2
+dataset_path: araag2/NLI4PR
 dataset_name: processed
 dataset_kwargs:
   trust_remote_code: true
 training_split: train
 validation_split: dev
 test_split: test
-doc_to_text: !function utils.doc_to_text
 doc_to_target: "{{ Label }}"
 output_type: generate_until
 generation_kwargs:
@@ -29,12 +25,12 @@ filter_list:
   - name: "score_first"
     filter:
     - function: "regex"
-      regex_pattern: "(?s:.*)([Ss]ignificantly [Dd]ecreased|[Nn]o [Ss]ignificant [Dd]ifference|[Ss]ignificantly [Ii]ncreased)"
+      regex_pattern: "(?s:.*)([cC]ontradiction|[eE]ntailment)"
     - function: "take_first"
   - name: "maj@11"
     filter:
     - function: "regex"
-      regex_pattern: "(?s:.*)([Ss]ignificantly [Dd]ecreased|[Nn]o [Ss]ignificant [Dd]ifference|[Ss]ignificantly [Ii]ncreased)"
+      regex_pattern: "(?s:.*)([cC]ontradiction|[eE]ntailment)"
     - function: "take_first_k"
       k: 11
     - function: "majority_vote"

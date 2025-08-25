@@ -1,0 +1,32 @@
+task: TREC_Prec-Med_2017_SC
+dataset_path: araag2/TREC_Precision-Medicine
+dataset_name: 2017_processed
+include: _default_TREC_Prec-Med_SC.yaml
+metric_list:
+  - metric: P@5
+    aggregation: P@5
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: P@10
+    aggregation: P@10
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: P@15
+    aggregation: P@15
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: R-Prec
+    aggregation: R-Prec
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  #- metric: nDCG
+  #  aggregation: nDCG
+  #  higher_is_better: true
+  #  ignore_case: true
+  #  ignore_punctuation: true 
+metadata:
+  version: 1.0

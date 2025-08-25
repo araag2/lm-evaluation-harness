@@ -2,5 +2,7 @@ group: SemEval_NLI4CT_0-shot
 task:
  - SemEval_NLI4CT_2023_0-shot
  - SemEval_NLI4CT_2024_0-shot
+tag:
+ - 0-shot
 metadata:
   version: 1.0

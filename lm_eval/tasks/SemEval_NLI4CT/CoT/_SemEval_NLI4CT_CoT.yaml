@@ -1,0 +1,8 @@
+group: SemEval_NLI4CT_CoT
+task:
+ - SemEval_NLI4CT_2023_CoT
+ - SemEval_NLI4CT_2024_CoT
+tag:
+ - chain-of-thought
+metadata:
+  version: 1.0

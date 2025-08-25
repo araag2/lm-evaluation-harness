@@ -1,0 +1,8 @@
+group: NLI4PR_SC
+tag:
+  - self-consistency
+task:
+ - NLI4PR_patient-lang_SC
+ - NLI4PR_medical-lang_SC
+metadata:
+  version: 1.0

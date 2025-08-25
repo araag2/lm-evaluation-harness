@@ -1,0 +1,6 @@
+task: TREC_CDS_2014_SC
+dataset_path: araag2/TREC_Clincial-Decision-Support
+dataset_name: 2014_processed
+include: _default_TREC_CDS_SC.yaml
+metadata:
+  version: 1.0

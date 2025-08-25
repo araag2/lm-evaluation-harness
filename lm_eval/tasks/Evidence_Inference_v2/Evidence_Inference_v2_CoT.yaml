@@ -1,6 +1,6 @@
-task: Evidence_Inference_v2_0-shot
+task: Evidence_Inference_v2_CoT
 tag:
-  - self-consistency
+  - chain-of-thought
 dataset_path: araag2/Evidence_Inference_v2
 dataset_name: processed
 dataset_kwargs:
