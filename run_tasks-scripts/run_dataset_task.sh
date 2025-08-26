@@ -1,6 +1,6 @@
 #!/bin/bash
 MODEL=vllm
-MODEL_ARGS="pretrained=Qwen/Qwen3-4B-Instruct-2507,max_model_len=40000"
+MODEL_ARGS="pretrained=Qwen/Qwen3-4B-Instruct-2507,max_model_len=20000"
 BATCH_SIZE=auto
 SEED=0
 
