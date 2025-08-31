@@ -1,10 +1,22 @@
 #!/bin/bash
-MODEL=vllm
-MODEL_ARGS="pretrained=Qwen/Qwen3-4B-Instruct-2507,max_model_len=20000"
+# ================================
+# Models Configuration
+# ================================
+MODEL=hf
+
+MODELS=(
+    "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000"
+    "pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=20000"
+    "pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=20000"
+    "pretrained=google/gemma-3n-E4B-it,max_length=20000"
+    "pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=20000"
+)
+
+MODEL_ARGS="pretrained=Qwen/Qwen3-4B-Instruct-2507"
 BATCH_SIZE=auto
 SEED=0
 
-BASE_OUTPUT_DIR="/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/outputs"
+BASE_OUTPUT_DIR="/cfs/home/u021010/PhD/active_dev/outputs"
 DEFAULT_DATASET="MedNLI"
 
 # Available Datasets: Evidence_Inference_v2, HINT, MedMCQA, MedNLI, MedQA, NLI4PR, PubMedQA, SemEval_NLI4CT, TREC_CDS, TREC_CT, TREC_Prec-Med, Trial_Meta-Analysis_type
@@ -30,46 +42,48 @@ fi
 
 OUTPUT_BASE_PATH="${BASE_OUTPUT_DIR}/${DATASET}"
 
-echo "=================================================="
-echo "[INFO] Running evaluations:"
-echo "Dataset = $DATASET"
-echo "Model = $MODEL"
-echo "Model Args = $MODEL_ARGS"
-echo "Output Base Path = $OUTPUT_BASE_PATH/"
-echo "Tasks = ${TASK_LIST[*]}"
-echo "=================================================="
+for MODEL_ARGS in "${MODELS[@]}"; do
+    echo "=================================================="
+    echo "[INFO] Running evaluations:"
+    echo "Dataset = $DATASET"
+    echo "Model = $MODEL"
+    echo "Model Args = $MODEL_ARGS"
+    echo "Output Base Path = $OUTPUT_BASE_PATH/"
+    echo "Tasks = ${TASK_LIST[*]}"
+    echo "=================================================="
 
-for TASK in "${TASK_LIST[@]}"; do
-    OUTPUT_PATH="${OUTPUT_BASE_PATH}/${TASK}"
+    for TASK in "${TASK_LIST[@]}"; do
+        OUTPUT_PATH="${OUTPUT_BASE_PATH}/${TASK}"
 
-    DATASET_AND_TASK="${DATASET}_${TASK}"
+        DATASET_AND_TASK="${DATASET}_${TASK}"
 
-    echo "--------------------------------------------------"
-    echo "[INFO] Running Task: $DATASET_AND_TASK"
-    echo "--------------------------------------------------"
+        echo "--------------------------------------------------"
+        echo "[INFO] Running Task: $DATASET_AND_TASK"
+        echo "--------------------------------------------------"
 
-    python -m lm_eval \
-        --model $MODEL \
-        --model_args $MODEL_ARGS \
-        --tasks $DATASET_AND_TASK \
-        --batch_size $BATCH_SIZE \
-        --seed $SEED \
-        --output_path $OUTPUT_PATH \
-        --write_out \
-        --log_samples \
-        --limit 50
-        #--apply_chat_template \
-        #--limit 10 \
-        #--predict_only \
+        python -m lm_eval \
+            --model $MODEL \
+            --model_args $MODEL_ARGS \
+            --tasks $DATASET_AND_TASK \
+            --batch_size $BATCH_SIZE \
+            --seed $SEED \
+            --output_path $OUTPUT_PATH \
+            --write_out \
+            --log_samples \
+            --limit 1
+            #--apply_chat_template \
+            #--limit 10 \
+            #--predict_only \
 
-    STATUS=$?
-    if [ $STATUS -eq 0 ]; then
-        echo "[SUCCESS] Completed: $DATASET_AND_TASK"
-    else
-        echo "[ERROR] Failed: $DATASET_AND_TASK (exit code $STATUS)"
-    fi
+        STATUS=$?
+        if [ $STATUS -eq 0 ]; then
+            echo "[SUCCESS] Completed: $DATASET_AND_TASK"
+        else
+            echo "[ERROR] Failed: $DATASET_AND_TASK (exit code $STATUS)"
+        fi
 
-    echo -e "-------------------------------\n"
+        echo -e "-------------------------------\n"
+    done
 done
 
 echo "[INFO] All Tasks completed."

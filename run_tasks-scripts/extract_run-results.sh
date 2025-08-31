@@ -1,9 +1,10 @@
 #!/bin/bash
 
-OUTPUT_PATH=/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/template_outputs/
+OUTPUT_PATH=/cfs/home/u021010/PhD/active_dev/outputs/template_outputs/
 OUTPUT_NAME=meeting_summary
 
-INPUT_FOLDERS_BASE=/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/outputs
+INPUT_FOLDERS_BASE=/cfs/home/u021010/PhD/active_dev/outputs/0-shot_only
+
 INPUT_FOLDERS=(
   "."
 )
