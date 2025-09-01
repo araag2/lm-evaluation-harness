@@ -315,6 +315,41 @@ def RecRank_fn(items):  # This is a passthrough function
 
 #-----------------------------------------------------------------------#
 
+@register_aggregation("Rouge-L")
+def rouge_l(items):
+    from rouge_score import rouge_scorer
+    """
+    Rouge-L is a metric for evaluating the quality of summaries by comparing them
+    to reference summaries. It measures the longest common subsequence (LCS) between
+    the generated summary and the reference summary, taking into account both precision
+    and recall.
+
+    Higher is better
+    """
+    refs = list(zip(*items))[0]
+    preds = list(zip(*items))[1]
+
+    scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=True)
+
+    # Compute average Rouge-L F1 across all examples
+    scores = [
+        scorer.score(ref, pred)["rougeL"].fmeasure
+        for ref, pred in zip(refs, preds)
+    ]
+    return sum(scores) / len(scores) if scores else 0.0
+
+@register_metric(
+    metric="Rouge-L",
+    higher_is_better=True,
+    output_type="generate_until",
+    aggregation="Rouge-L",
+)
+def rouge_l_fn(items):  # This is a passthrough function
+    return items
+
+
+#-----------------------------------------------------------------------#
+
 # Register Aggregations First
 @register_aggregation("bypass")
 def bypass_agg(arr):

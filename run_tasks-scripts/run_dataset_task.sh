@@ -61,7 +61,7 @@ for MODEL_ARGS in "${MODELS[@]}"; do
         echo "[INFO] Running Task: $DATASET_AND_TASK"
         echo "--------------------------------------------------"
 
-        python -m lm_eval \
+        CUDA_VISIBLE_DEVICES=0 python -m lm_eval \
             --model $MODEL \
             --model_args $MODEL_ARGS \
             --tasks $DATASET_AND_TASK \
