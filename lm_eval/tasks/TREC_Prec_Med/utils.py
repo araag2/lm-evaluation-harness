@@ -15,7 +15,7 @@ pos_answers = ["not relevant", "possibly relevant", "definitely relevant"]
 def label_to_index(doc) -> int:
     return pos_answers.index(doc["Label"])
 
-relevant_keys = ["Title", "Summary", "Detailed_description", "Eligibility", "Disease", "Gene", "Demographic", "Other"]
+relevant_keys = ["Title", "Summary", "Detailed_description", "Eligibility", "Disease", "Gene", "Demographic"]
 
 def doc_to_text(doc, reasoning = False):
     res = reasoning_prompt if reasoning else baseline_prompt

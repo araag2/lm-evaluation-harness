@@ -47,6 +47,8 @@ if TYPE_CHECKING:
     pass
 
 eval_logger = logging.getLogger(__name__)
+import torch.multiprocessing as mp
+mp.set_start_method("spawn", force=True)
 
 
 def _vllm_mp_worker(

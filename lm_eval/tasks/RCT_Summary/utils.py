@@ -1,13 +1,8 @@
-baseline_prompt="You are a medical expert tasked with determining the relationship between a medical premise and a hypothesis.\n\nMedical Premise: {{Premise}}\n\nHypothesis: {{Hypothesis}}\n\nPlease provide your judgement (entailment, neutral or contradiction), corresponding to the correct option that associates the premise and hypothesis. Be as accurate as possible.\nAnswer: "
+baseline_prompt="You are a medical reviewer tasked with generating conclusion sections based on scientifical biomedical articles.\n\nTitle: {{Title}}\n\nAbstract: {{Abstract}}\n\nBased on the Title and Abstract of this medical article, generate the Conclusion Section. Only output the newly generated section.\nAnswer: "
 
-reasoning_prompt="You are a medical expert tasked with determining the logical relationship between a medical premise and a hypothesis. The possible relationships are:\n- Entailment: The premise directly supports the hypothesis as true.\n- Neutral: The premise does not provide enough information to confirm or deny the hypothesis.\n- Contradiction: The premise directly conflicts with the hypothesis. \n\nMedical Premise: {{Premise}}\n\nHypothesis: {{Hypothesis}}\n\nPlease provide your judgement (Entailment, Neutral or Contradiction), corresponding to the correct option that associates the premise and hypothesis. Be as accurate as possible.\nLet's think step by step: "
+reasoning_prompt="You are a medical reviewer tasked with generating conclusion sections based on scientifical biomedical articles.\n\nTitle: {{Title}}\n\nAbstract: {{Abstract}}\n\nBased on the Title and Abstract of this medical article, generate the Conclusion Section. Only output the newly generated section. Be as accurate as possible.\nLet's think step by step: "
 
-pos_answers = ['entailment', 'neutral', 'contradiction']
-
-def label_to_index(doc) -> int:
-    return pos_answers.index(doc["Label"])
-
-relevant_keys = ["Premise", "Hypothesis"]
+relevant_keys = ["Title", "Abstract"]
 
 def doc_to_text(doc, reasoning = False):
     res = reasoning_prompt if reasoning else baseline_prompt

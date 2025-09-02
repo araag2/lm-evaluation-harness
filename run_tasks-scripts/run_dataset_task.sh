@@ -6,26 +6,25 @@ MODEL=hf
 
 MODELS=(
     "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000"
-    "pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=20000"
-    "pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=20000"
-    "pretrained=google/gemma-3n-E4B-it,max_length=20000"
-    "pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=20000"
+    #"pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=20000"
+    #"pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=20000"
+    #"pretrained=google/gemma-3n-E4B-it,max_length=20000"
+    #"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=20000"
 )
-
-MODEL_ARGS="pretrained=Qwen/Qwen3-4B-Instruct-2507"
-BATCH_SIZE=auto
-SEED=0
-
-BASE_OUTPUT_DIR="/cfs/home/u021010/PhD/active_dev/outputs"
-DEFAULT_DATASET="MedNLI"
-
-# Available Datasets: Evidence_Inference_v2, HINT, MedMCQA, MedNLI, MedQA, NLI4PR, PubMedQA, SemEval_NLI4CT, TREC_CDS, TREC_CT, TREC_Prec-Med, Trial_Meta-Analysis_type
 
 DEFAULT_TASK_LIST=( # Can use comma-separated list on command prompt
     0-shot
     #SC
     #CoT
 )
+
+BASE_OUTPUT_DIR="/cfs/home/u021010/PhD/active_dev/outputs"
+
+# Available Datasets: Evidence_Inference_v2, HINT, MedMCQA, MedNLI, MedQA, NLI4PR, PubMedQA, SemEval_NLI4CT, TREC_CDS, TREC_CT, TREC_Prec-Med, Trial_Meta-Analysis_type
+DEFAULT_DATASET="MedNLI"
+BATCH_SIZE=auto
+SEED=0
+
 
 DATASET=${1:-$DEFAULT_DATASET}     # first arg = dataset, fallback to default
 shift                              # move to next args (task list)
@@ -61,7 +60,7 @@ for MODEL_ARGS in "${MODELS[@]}"; do
         echo "[INFO] Running Task: $DATASET_AND_TASK"
         echo "--------------------------------------------------"
 
-        CUDA_VISIBLE_DEVICES=0 python -m lm_eval \
+        CUDA_VISIBLE_DEVICES=2 python -m lm_eval \
             --model $MODEL \
             --model_args $MODEL_ARGS \
             --tasks $DATASET_AND_TASK \
@@ -70,7 +69,7 @@ for MODEL_ARGS in "${MODELS[@]}"; do
             --output_path $OUTPUT_PATH \
             --write_out \
             --log_samples \
-            --limit 1
+            --limit 2
             #--apply_chat_template \
             #--limit 10 \
             #--predict_only \

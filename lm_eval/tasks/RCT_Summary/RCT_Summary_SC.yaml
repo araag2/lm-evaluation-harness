@@ -1,7 +1,7 @@
-task: MedNLI_SC
+task: RCT_Summary_SC
 tag:
   - self-consistency
-dataset_path: araag2/MedNLI
+dataset_path: araag2/RCT_Summary
 dataset_name: processed
 dataset_kwargs:
   trust_remote_code: true
@@ -9,7 +9,7 @@ training_split: train
 validation_split: dev
 test_split: test
 doc_to_text: !function utils.doc_to_text
-doc_to_target: "{{ Label }}"
+doc_to_target: "{{ Target }}"
 output_type: generate_until
 generation_kwargs:
   until:
@@ -40,7 +40,19 @@ filter_list:
     - function: "majority_vote"
     - function: "take_first"
 metric_list:
+  - metric: Rouge-L
+    aggregation: Rouge-L
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+    ignore_numbers: false
   - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+    ignore_numbers: false
+  - metric: partial_match
     aggregation: mean
     higher_is_better: true
     ignore_case: true

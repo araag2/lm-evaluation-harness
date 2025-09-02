@@ -6,7 +6,8 @@ import sys
 from functools import partial
 from pathlib import Path
 from typing import Union
-
+import torch.multiprocessing as mp
+mp.set_start_method("spawn", force=True)
 
 def try_parse_json(value: str) -> Union[str, dict, None]:
     if value is None:

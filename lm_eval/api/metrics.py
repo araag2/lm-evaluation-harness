@@ -81,10 +81,10 @@ def score_per_query_id(items, score_function_fn, cutoff_fn = None):
         scores.append(score_function_fn(y_true, y_pred, zero_division=0))
 
         # TO:DO Optional debug prints (remove later)
-        print(f"[DEBUG] Query {qid} – y_true: {y_true}, y_pred: {y_pred}")
-        for doc, gold, pred, prob in sorted_items:
-            print(f"[DEBUG] doc_id: {doc['doc_id']}, Gold: {gold}, Pred: {pred}, Prob: {prob}")
-        print(f"[DEBUG] Query {qid} – Score: {scores[-1]}")
+        #print(f"[DEBUG] Query {qid} – y_true: {y_true}, y_pred: {y_pred}")
+        #for doc, gold, pred, prob in sorted_items:
+        #    print(f"[DEBUG] doc_id: {doc['doc_id']}, Gold: {gold}, Pred: {pred}, Prob: {prob}")
+        #print(f"[DEBUG] Query {qid} – Score: {scores[-1]}")
     
     return mean(scores) if scores else 0.0
 
@@ -194,7 +194,7 @@ def MAP_score(items):
 
         ap = average_precision_score(y_true, y_score)
         ap_scores.append(ap)
-        print(f"[DEBUG] Query {qid} – AP: {ap}")
+        #print(f"[DEBUG] Query {qid} – AP: {ap}")
     return mean(ap_scores) if ap_scores else 0.0
 
 @register_metric(
@@ -232,7 +232,7 @@ def calculate_nDCG(items, k=None):
 
     ndcg_scores = []
 
-    for qid, docs in scores_by_query_id.items():
+    for _, docs in scores_by_query_id.items():
         # Sort items by predicted score in descending order
         sorted_items = sorted(docs, key=lambda x: x[2], reverse=True)
 
@@ -240,13 +240,17 @@ def calculate_nDCG(items, k=None):
         y_true = [[gold] for _, gold, _ in sorted_items]
         y_score = [[prob_norm] for _, _, prob_norm in sorted_items]
 
-        # Compute nDCG score for the current query
+        # Failsafe: if only one doc or all gold labels are identical, skip sklearn and set nDCG = 1.0
+        if len(y_true) < 2 or sum([g[0] for g in y_true]) < 2:
+            ndcg_scores.append(0.0)
+            continue
+
         ndcg_scores.append(ndcg_score(y_true, y_score, k=k))
 
         # Optional: Debugging output
-        print(f"[DEBUG] Query {qid} – nDCG: {ndcg_scores[-1]}")
-        for doc, gold, pred, prob in sorted_items:
-            print(f"[DEBUG] doc_id: {doc['doc_id']}, Gold: {gold}, Pred: {pred}, Prob: {prob}")
+        #print(f"[DEBUG] Query {qid} – nDCG: {ndcg_scores[-1]}")
+        #for doc, gold, pred, prob in sorted_items:
+        #    print(f"[DEBUG] doc_id: {doc['doc_id']}, Gold: {gold}, Pred: {pred}, Prob: {prob}")
 
     return mean(ndcg_scores) if ndcg_scores else 0.0
 
@@ -315,7 +319,7 @@ def RecRank_fn(items):  # This is a passthrough function
 
 #-----------------------------------------------------------------------#
 
-@register_aggregation("Rouge-L")
+@register_aggregation("rouge_l")
 def rouge_l(items):
     from rouge_score import rouge_scorer
     """
@@ -339,10 +343,10 @@ def rouge_l(items):
     return sum(scores) / len(scores) if scores else 0.0
 
 @register_metric(
-    metric="Rouge-L",
+    metric="rouge_l",
     higher_is_better=True,
     output_type="generate_until",
-    aggregation="Rouge-L",
+    aggregation="rouge_l",
 )
 def rouge_l_fn(items):  # This is a passthrough function
     return items
