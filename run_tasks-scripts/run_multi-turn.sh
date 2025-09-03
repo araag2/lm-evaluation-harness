@@ -37,7 +37,8 @@ for PAIR_MODELS in "${PAIRS_OF_MODELS[@]}"; do
     echo "Base Output Dir = $BASE_OUTPUT_DIR"
     echo "=================================================="
 
-    OUTPUT_PATH="${BASE_OUTPUT_DIR}/${TASK_REASON}_to_${TASK_ANSWER}/${MODEL_REASON}_to_${MODEL_ANSWER}"
+    OUTPUT_PATH="${BASE_OUTPUT_DIR}/$(echo ${TASK_REASON} | tr ':' '_')/$(echo ${MODEL_REASON#pretrained=} | tr '/' '_')/"
+
     mkdir -p "$OUTPUT_PATH"
 
     VLLM_WORKER_MULTIPROC_METHOD=spawn CUDA_VISIBLE_DEVICES=1 python -m lm_eval.multi-turn_cross-consistency \
@@ -50,7 +51,8 @@ for PAIR_MODELS in "${PAIRS_OF_MODELS[@]}"; do
         --output_path $OUTPUT_PATH \
         --batch_size $BATCH_SIZE \
         --seed $SEED \
-        --limit 2 #DEBUG ONLY
+        --log_samples
+        #--limit 2 #DEBUG ONLY
 
 
     STATUS=$?

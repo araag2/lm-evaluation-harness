@@ -3,6 +3,7 @@ import json
 import argparse
 import importlib
 
+from datetime import datetime
 from typing import Dict, List, Tuple, Any, Union
 from lm_eval import evaluator, tasks
 from datasets import Dataset, DatasetDict
@@ -34,17 +35,19 @@ def extract_reasoning_text(sample:dict) -> str:
     raise ValueError(f"Could not extract reasoning text from sample: {sample}")
 
 def inject_reasoning_into_dataset(base_dataset: List[dict], reasoning_samples: List[dict], reasoning_field: str = "Reasoning_Chain") -> List[dict]:
-    if len(base_dataset) != len(reasoning_samples):
-        raise ValueError(f"Base dataset and reasoning samples must have the same length. {len(base_dataset)=} {len(reasoning_samples)=}")
-    res = copy.deepcopy(base_dataset)
-    for doc, reasoning_chain in zip(res, reasoning_samples):
-        doc[reasoning_field] = extract_reasoning_text(reasoning_chain)
-    return res
+    res = copy.deepcopy(base_dataset["test"].select(range(len(reasoning_samples))))
+    reasoning_texts = [extract_reasoning_text(sample) for sample in reasoning_samples]
+    it = iter(reasoning_texts)
+
+    return res.map(lambda x: {**x, reasoning_field: next(it)})
+
 
 def build_patched_task(answering_task_name:str, dataset_with_reasoning: List[dict], doc_to_text_func) -> Any:
     original_task = tasks.get_task_dict([answering_task_name])[answering_task_name]
 
     patched = copy.deepcopy(original_task)
+    print(dataset_with_reasoning)
+    print(dataset_with_reasoning[0].keys())
     patched.dataset = dataset_list_to_dataset_dict(dataset_with_reasoning)
     patched.doc_to_text = doc_to_text_func
 
@@ -69,19 +72,20 @@ def run_reasoning(args: argparse.Namespace) -> Dict[str, Dict[str, List[dict]]]:
 
     for model_name in args.reasoning_models:
         for task in args.reasoning_tasks:
+            full_task_name = task.replace(":", "_")
 
             print(f"\n[Step 1: Reasoning] Running model: {model_name} for task {task} with args: {args}")
             results = evaluator.simple_evaluate(
                 model=args.provider,
                 model_args=model_name,
-                tasks=[task.replace(":", "_")],
+                tasks=[full_task_name],
                 batch_size=args.batch_size,
                 limit=args.limit,
                 log_samples=args.log_samples,
                 random_seed=args.seed
             )
 
-            res_per_model_task[model_name][task] = results["samples"][task]
+            res_per_model_task[model_name][task] = results["samples"][full_task_name]
     #print(res_per_model_task)
     return res_per_model_task
 
@@ -109,7 +113,7 @@ def run_answering_for_dataset(
         batch_size=args.batch_size,
         limit=args.limit,
         log_samples=args.log_samples,
-        seed=args.seed,
+        random_seed=args.seed,
     )
 
     return results
@@ -131,8 +135,8 @@ def mode_multi_turn(args: argparse.Namespace) -> None:
     reasoning_task = args.reasoning_tasks[0]
 
     reasoning_outputs = run_reasoning(args)[reasoning_model][reasoning_task]
-    base_dataset = load_base_dataset_from_task(reasoning_task)
-    dataset_with_reasoning = inject_reasoning_into_dataset(base_dataset, reasoning_outputs, reasoning_model, reasoning_task)
+    base_dataset = load_base_dataset_from_task(reasoning_task.replace(":", "_"))
+    dataset_with_reasoning = inject_reasoning_into_dataset(base_dataset, reasoning_outputs)
 
     results = {}
     for answering_task_spec in args.answering_tasks:
@@ -174,7 +178,7 @@ def mode_cross_consistency(args: argparse.Namespace) -> None:
 
         for reasoning_model in args.reasoning_models:
             samples = reasoning_outputs[reasoning_model][reasoning_task]
-            enriched = inject_reasoning_into_dataset(base_dataset, samples, reasoning_field="Reasoning_Chain")
+            enriched = inject_reasoning_into_dataset(base_dataset, samples)
 
             tbase, _ = parse_task_spec(reasoning_task)
 
@@ -233,7 +237,7 @@ def main():
     # Gen kwargs
     parser.add_argument('--batch_size', default="auto")
     parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument("--limit", type=int, default=2, help="limit #eval docs for quick tests")
+    parser.add_argument("--limit", type=int, default=None, help="limit #eval docs for quick tests")
     parser.add_argument('--write_out', action='store_true')
     parser.add_argument('--log_samples', action='store_true')
 
@@ -257,12 +261,10 @@ def main():
         out = mode_cross_consistency(args)
 
     print("\n==== RESULTS (summary keys only) ====")
-    print(json.dumps({
-        k: v for k, v in out.items() if k != "results"
-    }, indent=2))
+    print(json.dumps({k: v for k, v in out.items() if k != "results"}, indent=2))
 
     if args.output_path:
-        with open(args.output_path, "w") as f:
+        with open(f"{args.output_path}{datetime.now().strftime('%Y-%m-%dT%H-%M')}.json", "w") as f:
             json.dump(out, f, indent=4)
         print(f"\n✅ Results written to {args.output_path}")
 
