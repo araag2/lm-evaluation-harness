@@ -4,8 +4,13 @@
 # ================================
 PROVIDER=vllm
 
+#"pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000"
+#"pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=20000"
+#"pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=20000"
+#"pretrained=google/gemma-3n-E4B-it,max_length=20000"
+#"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=20000"
 PAIRS_OF_MODELS=(
-    "pretrained=Qwen/Qwen3-0.6B|pretrained=Qwen/Qwen3-0.6B"
+    "pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=10000|pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=10000"
 )
 
 # Available Datasets: Evidence_Inference_v2, HINT, MedMCQA, MedNLI, MedQA, NLI4PR, PubMedQA, SemEval_NLI4CT, TREC_CDS, TREC_CT, TREC_Prec-Med, Trial_Meta-Analysis_type
