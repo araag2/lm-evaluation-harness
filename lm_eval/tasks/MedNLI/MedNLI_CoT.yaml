@@ -21,7 +21,7 @@ generation_kwargs:
     - "<eos>"
     - "</s>"
   do_sample: true
-  max_gen_toks: 5000
+  max_gen_toks: 500
   temperature: 0.7
   top_p: 0.9
   top_k: 50

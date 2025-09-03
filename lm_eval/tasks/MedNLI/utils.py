@@ -2,7 +2,7 @@ baseline_prompt="You are a medical expert tasked with determining the relationsh
 
 reasoning_prompt="You are a medical expert tasked with determining the logical relationship between a medical premise and a hypothesis. The possible relationships are:\n- Entailment: The premise directly supports the hypothesis as true.\n- Neutral: The premise does not provide enough information to confirm or deny the hypothesis.\n- Contradiction: The premise directly conflicts with the hypothesis. \n\nMedical Premise: {{Premise}}\n\nHypothesis: {{Hypothesis}}\n\nPlease provide your judgement (Entailment, Neutral or Contradiction), corresponding to the correct option that associates the premise and hypothesis. Be as accurate as possible.\nLet's think step by step: "
 
-answer_selection_prompt=""
+answer_selection_prompt="You are a medical expert tasked with determining the logical relationship between a medical premise and a hypothesis. The possible relationships are:\n- Entailment: The premise directly supports the hypothesis as true.\n- Neutral: The premise does not provide enough information to confirm or deny the hypothesis.\n- Contradiction: The premise directly conflicts with the hypothesis. \n\nMedical Premise: {{Premise}}\n\nHypothesis: {{Hypothesis}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nGiven the Premise, the Hypothesis and with special atention to the presented Reasoning Chain, provide your judgement (entailment, neutral or contradiction), corresponding to the correct option that associates the premise and hypothesis. Be as accurate as possible.\nAnswer: "
 
 pos_answers = ['entailment', 'neutral', 'contradiction']
 
@@ -20,6 +20,6 @@ def doc_to_text(doc, prompt = baseline_prompt):
 def doc_to_text_reasoning(doc):
     return doc_to_text(doc, reasoning_prompt)
 
-def doc_to_answer_selection(doc):
-    print(doc)
+def doc_to_text_answer_selection(doc):
+    relevant_keys.append("Reasoning_Chain")
     return doc_to_text(doc, answer_selection_prompt)

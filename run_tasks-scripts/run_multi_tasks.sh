@@ -18,6 +18,8 @@ MODELS=(
 # Qwen/Qwen3-4B-Instruct-2507
 # google/gemma-3n-E4B-it
 # mistralai/Ministral-8B-Instruct-2410
+#Qwen/Qwen3-0.6B -> Test Model
+#arnir0/Tiny-LLM -> Test Model
 
 
 # Tasks List (space-separated)
