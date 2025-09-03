@@ -1,0 +1,51 @@
+task: MedNLI_Multi-Turn
+tag:
+  - chain-of-thought
+dataset_path: araag2/MedNLI
+dataset_name: processed
+dataset_kwargs:
+  trust_remote_code: true
+training_split: train
+validation_split: dev
+test_split: test
+turns:
+# First turn: reasoning generation
+  - name: reasoning_generation
+    doc_to_text: !function utils.doc_to_text_reasoning
+    doc_to_target: "{{ Label }}"
+    output_type: generate_until
+    generation_kwargs:
+      until:
+        - "<|im_end|>"
+        - "<|endoftext|>"
+        - "<|end_of_text|>"
+        - "<|eot_id|>"
+        - "<end_of_turn>"
+        - "<eos>"
+        - "</s>"
+      do_sample: true
+      max_gen_toks: 5000
+      temperature: 0.7
+      top_p: 0.9
+      top_k: 50
+    save_to_context: reasoning_text
+
+# Second turn: Generate Responses from list of Responses
+  - name: answer selection
+    doc_to_text: !function utils.doc_to_text_answer_selection
+    doc_to_target: "{{ Label }}"
+    output_type: multiple_choice
+    doc_to_choice: ["contradiction", "neutral", "entailment"]
+    metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: acc_norm
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+metadata:
+  version: 1.0

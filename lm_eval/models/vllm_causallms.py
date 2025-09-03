@@ -1,6 +1,5 @@
 import copy
 import gc
-import inspect
 import logging
 import os
 from importlib.metadata import version
@@ -33,7 +32,7 @@ from lm_eval.utils import (
 
 try:
     import ray
-    from vllm import LLM, SamplingParams
+    from vllm import LLM, SamplingParams, TokensPrompt
     from vllm.lora.request import LoRARequest
     from vllm.transformers_utils.tokenizer import get_tokenizer
     from vllm.utils import get_open_port
@@ -47,8 +46,6 @@ if TYPE_CHECKING:
     pass
 
 eval_logger = logging.getLogger(__name__)
-import torch.multiprocessing as mp
-mp.set_start_method("spawn", force=True)
 
 
 def _vllm_mp_worker(
@@ -81,7 +78,7 @@ def _vllm_mp_worker(
     try:
         llm = LLM(**model_args)
         res = llm.generate(
-            prompt_token_ids=requests,
+            [TokensPrompt(prompt_token_ids=request) for request in requests],
             sampling_params=sampling_params,
             lora_request=lora_request,
         )
@@ -125,7 +122,7 @@ class VLLM(TemplateLM):
         prefix_token_id: Optional[int] = None,
         tensor_parallel_size: int = 1,
         quantization: Optional[str] = None,
-        max_gen_toks: int = 256,
+        max_gen_toks: int = 2048,
         swap_space: int = 4,
         batch_size: Union[str, int] = 1,
         max_batch_size=None,
@@ -198,6 +195,12 @@ class VLLM(TemplateLM):
             self.batch_size = "auto"
             eval_logger.info("Manual batching is not compatible with data parallelism.")
 
+        if "gemma" in pretrained.lower():
+            add_bos_token = True
+            eval_logger.info(
+                "Found 'gemma' in model name, a BOS token will be used as Gemma series models underperform without it."
+            )
+
         from transformers import AutoConfig
 
         self._config = AutoConfig.from_pretrained(
@@ -216,11 +219,6 @@ class VLLM(TemplateLM):
             "enable_thinking", enable_thinking
         )
         self.add_bos_token = add_bos_token
-        if "gemma" in pretrained.lower():
-            self.add_bos_token = True
-            eval_logger.info(
-                "Found 'gemma' in model name, a BOS token will be used as Gemma series models underperform without it."
-            )
 
         if parse_version(version("vllm")) >= parse_version("0.8.3"):
             kwargs_resolve_hf_chat_template = {
@@ -241,13 +239,6 @@ class VLLM(TemplateLM):
                     model_config = engine_args.create_model_config()
 
                     kwargs_resolve_hf_chat_template["model_config"] = model_config
-
-            # https://github.com/vllm-project/vllm/pull/18259
-            if (
-                "trsut_remote_code"
-                in inspect.signature(resolve_hf_chat_template).parameters
-            ):
-                kwargs_resolve_hf_chat_template["trsut_remote_code"] = trust_remote_code
             else:
                 kwargs_resolve_hf_chat_template["trust_remote_code"] = trust_remote_code
 
@@ -397,7 +388,7 @@ class VLLM(TemplateLM):
             ):
                 llm = LLM(**model_args)
                 return llm.generate(
-                    prompt_token_ids=requests,
+                    [TokensPrompt(prompt_token_ids=request) for request in requests],
                     sampling_params=sampling_params,
                     lora_request=lora_request,
                 )
@@ -486,7 +477,7 @@ class VLLM(TemplateLM):
 
         else:
             outputs = self.model.generate(
-                prompt_token_ids=requests,
+                [TokensPrompt(prompt_token_ids=request) for request in requests],
                 sampling_params=sampling_params,
                 use_tqdm=True if self.batch_size == "auto" else False,
                 lora_request=self.lora_request,

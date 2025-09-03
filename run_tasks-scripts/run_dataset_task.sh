@@ -2,23 +2,23 @@
 # ================================
 # Models Configuration
 # ================================
-MODEL=hf
+MODEL=vllm
 
 MODELS=(
-    "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000"
+    #"pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000"
     #"pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=20000"
     #"pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=20000"
-    #"pretrained=google/gemma-3n-E4B-it,max_length=20000"
+    "pretrained=google/gemma-3n-E4B-it,max_length=20000"
     #"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=20000"
 )
 
 DEFAULT_TASK_LIST=( # Can use comma-separated list on command prompt
-    0-shot
+    #0-shot
     #SC
-    #CoT
+    CoT
 )
 
-BASE_OUTPUT_DIR="/cfs/home/u021010/PhD/active_dev/outputs"
+BASE_OUTPUT_DIR="/cfs/home/u021010/PhD/active_dev/outputs/CoT-Debug"
 
 # Available Datasets: Evidence_Inference_v2, HINT, MedMCQA, MedNLI, MedQA, NLI4PR, PubMedQA, SemEval_NLI4CT, TREC_CDS, TREC_CT, TREC_Prec-Med, Trial_Meta-Analysis_type
 DEFAULT_DATASET="MedNLI"
@@ -60,7 +60,7 @@ for MODEL_ARGS in "${MODELS[@]}"; do
         echo "[INFO] Running Task: $DATASET_AND_TASK"
         echo "--------------------------------------------------"
 
-        CUDA_VISIBLE_DEVICES=2 python -m lm_eval \
+        VLLM_WORKER_MULTIPROC_METHOD=spawn CUDA_VISIBLE_DEVICES=5 python -m lm_eval \
             --model $MODEL \
             --model_args $MODEL_ARGS \
             --tasks $DATASET_AND_TASK \

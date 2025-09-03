@@ -46,6 +46,7 @@ ALL_OUTPUT_TYPES = [
     "multiple_choice",
     "loglikelihood_rolling",
     "generate_until",
+    "cross_consistency"
 ]
 
 eval_logger = logging.getLogger(__name__)
@@ -102,7 +103,7 @@ class TaskConfig(dict):
 
     def __post_init__(self) -> None:
         if self.generation_kwargs is not None:
-            if self.output_type != "generate_until":
+            if self.output_type != "generate_until" and self.output_type != "cross_consistency":
                 eval_logger.warning(
                     f"[{self.task}] passed `generation_kwargs`, but not using `output_type: generate_until`!"
                 )
@@ -118,7 +119,7 @@ class TaskConfig(dict):
                 )
                 self.generation_kwargs["until"] = [self.fewshot_delimiter]
         else:
-            if self.output_type == "generate_until":
+            if self.output_type == "generate_until" or self.output_type == "cross_consistency":
                 # ensure that we greedily generate in absence of explicit arguments otherwise
                 self.generation_kwargs = {
                     "until": (
@@ -1494,7 +1495,7 @@ class ConfigurableTask(Task):
 
                 arguments.extend(aux_arguments)
 
-        elif self.OUTPUT_TYPE == "generate_until":
+        elif self.OUTPUT_TYPE == "generate_until" or self.OUTPUT_TYPE == "cross_consistency":
             arguments = (ctx, deepcopy(self.config.generation_kwargs))
 
         multimodal_arg = {}
@@ -1685,6 +1686,20 @@ class ConfigurableTask(Task):
                 # cast gold to the same type as result
                 gold = type(result)(gold)
 
+            def normalize_text(s, ignore_case=False, ignore_punctuation=False, ignore_numbers=False):
+                if s is None:
+                    return s
+                s = str(s).strip()
+                if ignore_case:
+                    s = s.lower()
+                if ignore_punctuation:
+                    # remove punctuation (keep alnum and whitespace and underscores)
+                    s = re.sub(r"[^\w\s]", " ", s)
+                if ignore_numbers:
+                    s = re.sub(r"\d+", "", s)
+                s = re.sub(r"\s+", " ", s).strip()
+                return s
+
             for metric in self._metric_fn_list.keys():
                 if self.multiple_target:
                     # in the case where we have multiple targets,
@@ -1703,6 +1718,7 @@ class ConfigurableTask(Task):
                             **self._metric_fn_kwargs[metric],
                         )[metric]
                         result_score = 1.0 if scores > 0.0 else 0.0
+
                     else:
                         for gold_option in gold:
                             try:
@@ -1725,6 +1741,19 @@ class ConfigurableTask(Task):
                             result_score = 1.0
                         else:
                             result_score = 0.0
+                
+                elif metric == "acc":
+
+                    metric_kwargs = self._metric_fn_kwargs.get(metric, {})
+
+                    ignore_case = bool(metric_kwargs.get("ignore_case", False))
+                    ignore_punctuation = bool(metric_kwargs.get("ignore_punctuation", False))
+                    ignore_numbers = bool(metric_kwargs.get("ignore_numbers", False))
+                    
+                    norm_target = normalize_text(gold, ignore_case, ignore_punctuation, ignore_numbers)
+                    norm_cand = normalize_text(result, ignore_case, ignore_punctuation, ignore_numbers)
+                    result_score = 1.0 if norm_target == norm_cand else 0.0
+
                 else:
                     try:
                         result_score = self._metric_fn_list[metric](
@@ -1734,6 +1763,7 @@ class ConfigurableTask(Task):
                         )
                     except TypeError:  # needed for now in order to use a different interface between our own metrics and HF Evaluate metrics
                         result_score = self._metric_fn_list[metric]([gold, result])
+
                 if isinstance(result_score, dict):
                     # TODO: this handles the case where HF evaluate returns a dict.
                     # This allows for multiple metrics to be returned from the same function
@@ -1892,3 +1922,52 @@ class PerplexityTask(Task):
     def count_words(cls, doc) -> int:
         """Downstream tasks with custom word boundaries should override this!"""
         return len(re.split(r"\s+", doc))
+
+
+from collections import Counter
+from lm_eval import evaluator
+#from lm_eval.models import get_model
+
+class CrossConsistencyCoT(Task):
+    OUTPUT_TYPE = "generate_until"  # assuming generation-based prompts
+
+    def process_results(self, doc, results):
+        chains = []
+
+        for model_id in self.config.model_list:
+            print(model_id)
+            #print(get_model(model_id['type'], **model_id['args']))
+
+        return 0
+
+        #    model = get_model(model_id['type'], **model_id['args'])
+        #    result = evaluator.simple_evaluate(
+        #        model=model,
+        #        tasks=[self.name],
+        #        num_fewshot=self.num_fewshot,
+        #        limit=1,
+        #        log_samples=False
+        #    )
+        #    chains.append(result[0]['generation'] or result[0]['resps'][0])
+        #
+        #combined = self.integrate_chains(chains)
+        #final = self.extract_final_answer(combined)
+        #return {"chains": chains, "combined_chain": combined, "final_answer": final}
+
+    def extract_chain(self, text: str) -> str:
+        # Customize (e.g., split from "Answer:" or markers)
+        parts = text.split("Answer:")
+        return parts[0].strip() if len(parts) > 1 else text.strip()
+
+    def extract_final_answer(self, chain: str) -> str:
+        # Simplest heuristic: last non-empty line
+        lines = [l for l in chain.strip().splitlines() if l]
+        return lines[-1] if lines else ""
+
+    def integrate_chains(self, chains: list[str]) -> str:
+        # Example: voting-based consensus + detailed log
+        answers = [self.extract_final_answer(c) for c in chains]
+        most_common = Counter(answers).most_common(1)[0][0]
+        header = f"Consensus answer: {most_common}"
+        body = "\n\n".join(f"Chain {i+1}:\n{c}" for i, c in enumerate(chains))
+        return f"{header}\n\n{body}"
