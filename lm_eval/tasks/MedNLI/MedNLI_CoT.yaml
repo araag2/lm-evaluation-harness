@@ -13,6 +13,7 @@ doc_to_target: "{{ Label }}"
 output_type: generate_until
 generation_kwargs:
   until:
+    - "<END>"
     - "<|im_end|>"
     - "<|endoftext|>"
     - "<|end_of_text|>"

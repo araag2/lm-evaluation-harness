@@ -1,29 +1,64 @@
+# =============================
+# Medical Language Prompts
+# =============================
+
 medical_baseline_prompt = "You are an medical expert AI assistant specialized in natural language inference for clinical trial recruitment. The task is to determine if a patient's medical profile (written in medical language) entails or contradicts the eligibility criteria of a given Clinical Trial Report.\n\nClinical Trial Report Context: {{CTR_Context}}\n\nPatient Description: {{Description_Medical-Language}}\n\nPlease provide your judgement in a single word (Entailment or Contradiction), corresponding to the correct option that associates the Clinical Trial and the Patient Description.\nAnswer: "
 
-patient_baseline_prompt = "You are an medical expert AI assistant specialized in natural language inference for clinical trial recruitment. The task is to determine if a patient's self-described medical profile (written in their own everyday language) entails or contradicts the eligibility criteria of a given Clinical Trial Report.\n\nClinical Trial Report Context: {{CTR_Context}}\n\nPatient Description: {{Description_Patient-Language}}\n\nPlease provide your judgement in a single word (Entailment or Contradiction), corresponding to the correct option that associates the Clinical Trial and the Patient Description.\nAnswer: "
+medical_reasoning_prompt = "You are an medical expert AI assistant specialized in natural language inference for clinical trial recruitment. The task is to determine if a patient's medical profile (written in medical language) entails or contradicts the eligibility criteria of a given Clinical Trial Report.\n\nClinical Trial Report Context: {{CTR_Context}}\n\nPatient Description: {{Description_Medical-Language}}\n\nPlease provide your judgement in a single word (Entailment or Contradiction), corresponding to the correct option that associates the Clinical Trial and the Patient Description. Let's think step by step, and at the very end write your answer in the form: \nAnswer: [Entailment / Contradiction] <END>"
 
-medical_reasoning_prompt = medical_baseline_prompt[:-10] + "\nLet's think step by step:"
+answer_selection_prompt = "You are an medical expert AI assistant specialized in natural language inference for clinical trial recruitment. The task is to determine if a patient's medical profile (written in medical language) entails or contradicts the eligibility criteria of a given Clinical Trial Report.\n\nClinical Trial Report Context: {{CTR_Context}}\n\nPatient Description: {{Description_Medical-Language}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nGiven the Clinical Trial Report Context, the Patient Description and with special atention to the presented Reasoning Chain, provide your judgement in a single word (Entailment or Contradiction), corresponding to the correct option that associates the Clinical Trial and the Patient Description.\nFinal Answer: "
 
-patient_reasoning_prompt = patient_baseline_prompt[:-10] + "\nLet's think step by step:"  
+verify_reasoning_prompt = "You are an medical expert AI assistant specialized in natural language inference for clinical trial recruitment. The task is to determine if a patient's medical profile (written in medical language) entails or contradicts the eligibility criteria of a given Clinical Trial Report.\n\nClinical Trial Report Context: {{CTR_Context}}\n\nPatient Description: {{Description_Medical-Language}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nPlease verify if the Reasoning Chain makes logical sense, and support the correct conclusion. Let's think step by step, and after explaining your verification reasoning, provide your answer in the form: \nVerified Answer: [Entailment / Contradiction] <END>"
+
+answer_selection_after_verification_prompt = "You are an medical expert AI assistant specialized in natural language inference for clinical trial recruitment. The task is to determine if a patient's medical profile (written in medical language) entails or contradicts the eligibility criteria of a given Clinical Trial Report.\n\nClinical Trial Report Context: {{CTR_Context}}\n\nPatient Description: {{Description_Medical-Language}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nVerification of the Reasoning Chain: {{Verified_Reasoning_Chain}}\n\nGiven the Clinical Trial Report Context, the Patient Description, the initial Reasoning Chain and the Verification of the Reasoning Chain, provide your judgement in a single word (Entailment or Contradiction), corresponding to the correct option that associates the Clinical Trial and the Patient Description.\nFinal Answer: "
+
+# =============================
+# Patient Language Prompts
+# =============================
+
+replace_pairs = [("medical language", "their own everyday language"), ("medical profile (written in medical language)", "self-described medical profile (written in their own everyday language)"), ("{{Description_Medical-Language}}", "{{Description_Patient-Language}}")]
+
+def replace_prompt_parts(prompt: str) -> str:
+    for old, new in replace_pairs:
+        prompt = prompt.replace(old, new)
+    return prompt
+
+patient_baseline_prompt = replace_prompt_parts(medical_baseline_prompt)
+
+patient_reasoning_prompt = replace_prompt_parts(medical_reasoning_prompt)
+
+patient_answer_selection_prompt = replace_prompt_parts(answer_selection_prompt)
+
+patient_verify_reasoning_prompt = replace_prompt_parts(verify_reasoning_prompt)
+
+patient_answer_selection_after_verification_prompt = replace_prompt_parts(answer_selection_after_verification_prompt)
 
 pos_answers = ["Contradiction", "Entailment"]
 
 def label_to_index(doc) -> int:
     return pos_answers.index(doc["Label"])
 
-def doc_to_text(doc, res, opts):
-    for key in opts:
-        res = res.replace(f"{{{{{key}}}}}", doc[key])
+
+def doc_to_text(doc, prompt, relevant_keys):
+    res = prompt
+    for key in relevant_keys:
+      res = res.replace(f"{{{{{key}}}}}", doc[key])
     return res
 
-def medical_lang_doc_to_text(doc, reasoning=False):
-    return doc_to_text(doc, medical_reasoning_prompt if reasoning else medical_baseline_prompt, ["CTR_Context", "Description_Medical-Language"])
+def medical_lang_doc_to_text(doc):
+    return doc_to_text(doc, medical_baseline_prompt, ["CTR_Context", "Description_Medical-Language"])
 
-def patient_lang_doc_to_text(doc, reasoning=False):
-    return doc_to_text(doc, patient_reasoning_prompt if reasoning else patient_baseline_prompt, ["CTR_Context", "Description_Patient-Language"])
+def patient_lang_doc_to_text(doc):
+    return doc_to_text(doc, patient_baseline_prompt, ["CTR_Context", "Description_Patient-Language"])
 
 def medical_lang_doc_to_text_reasoning(doc):
-    return medical_lang_doc_to_text(doc, reasoning=True)
+    return doc_to_text(doc, medical_reasoning_prompt, ["CTR_Context", "Description_Medical-Language"])
 
 def patient_lang_doc_to_text_reasoning(doc):
-    return patient_lang_doc_to_text(doc, reasoning=True)
+    return doc_to_text(doc, patient_reasoning_prompt, ["CTR_Context", "Description_Patient-Language"])
+
+def medical_lang_doc_to_text_answer_selection(doc):
+    return doc_to_text(doc, answer_selection_prompt, ["CTR_Context", "Description_Medical-Language", "Reasoning_Chain"])
+
+def patient_lang_doc_to_text_answer_selection(doc):
+    return doc_to_text(doc, patient_answer_selection_prompt, ["CTR_Context", "Description_Patient-Language", "Reasoning_Chain"])

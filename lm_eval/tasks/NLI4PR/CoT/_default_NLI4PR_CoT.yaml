@@ -9,6 +9,7 @@ doc_to_target: "{{ Label }}"
 output_type: generate_until
 generation_kwargs:
   until:
+    - "<END>"
     - "<|im_end|>"
     - "<|endoftext|>"
     - "<|end_of_text|>"
@@ -17,6 +18,7 @@ generation_kwargs:
     - "<eos>"
     - "</s>"
   do_sample: true
+  max_gen_toks: 1000
   temperature: 0.7
   top_p: 0.9
   top_k: 50
@@ -27,7 +29,7 @@ filter_list:
       regex_pattern: "(?s:.*)([cC]ontradiction|[eE]ntailment)"
     - function: "take_first"
 metric_list:
-  - metric: exact_match
+  - metric: acc
     aggregation: mean
     higher_is_better: true
     ignore_case: true

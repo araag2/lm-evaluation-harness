@@ -1,5 +1,6 @@
-task: MedNLI_SC
+task: MedNLI_CoT_SC
 tag:
+  - chain-of-thought
   - self-consistency
 dataset_path: araag2/MedNLI
 dataset_name: processed
@@ -8,11 +9,12 @@ dataset_kwargs:
 training_split: train
 validation_split: dev
 test_split: test
-doc_to_text: !function utils.doc_to_text
+doc_to_text: !function utils.doc_to_text_reasoning
 doc_to_target: "{{ Label }}"
 output_type: generate_until
 generation_kwargs:
   until:
+    - "<END>"
     - "<|im_end|>"
     - "<|endoftext|>"
     - "<|end_of_text|>"
@@ -21,16 +23,12 @@ generation_kwargs:
     - "<eos>"
     - "</s>"
   do_sample: true
+  max_gen_toks: 1000
   temperature: 1.2
   top_p: 0.9
   top_k: 50
 repeats: 11
 filter_list:
-  - name: "score_first"
-    filter:
-    - function: "regex"
-      regex_pattern: "(?s:.*)([cC]ontradiction|[nN]eutral|[eE]ntailment)"
-    - function: "take_first"
   - name: "maj@11"
     filter:
     - function: "regex"

@@ -13,9 +13,9 @@ MODELS=(
 )
 
 DEFAULT_TASK_LIST=( # Can use comma-separated list on command prompt
-    #0-shot
+    0-shot
     #SC
-    CoT
+    #CoT
 )
 
 BASE_OUTPUT_DIR="/cfs/home/u021010/PhD/active_dev/outputs/CoT-Debug"
@@ -60,7 +60,7 @@ for MODEL_ARGS in "${MODELS[@]}"; do
         echo "[INFO] Running Task: $DATASET_AND_TASK"
         echo "--------------------------------------------------"
 
-        VLLM_WORKER_MULTIPROC_METHOD=spawn CUDA_VISIBLE_DEVICES=5 python -m lm_eval \
+        VLLM_WORKER_MULTIPROC_METHOD=spawn CUDA_VISIBLE_DEVICES=0    python -m lm_eval \
             --model $MODEL \
             --model_args $MODEL_ARGS \
             --tasks $DATASET_AND_TASK \

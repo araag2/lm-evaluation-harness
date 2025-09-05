@@ -15,11 +15,17 @@ PAIRS_OF_MODELS=(
 
 # Available Datasets: Evidence_Inference_v2, HINT, MedMCQA, MedNLI, MedQA, NLI4PR, PubMedQA, SemEval_NLI4CT, TREC_CDS, TREC_CT, TREC_Prec-Med, Trial_Meta-Analysis_type
 PAIRS_OF_TASK_LIST=(
-    "MedNLI:CoT|MedNLI:0-shot"
+    "MedNLI:CoT_SC|MedNLI:0-shot"
 )
+
+MODE=multi-turn_CoT-SC
+# multi-turn_SC
+# multi-turn_CoT-SC
+# cross-consistency
 
 BASE_OUTPUT_DIR="/cfs/home/u021010/PhD/active_dev/outputs/Multi-Turn-Debug/"
 
+CUDA_DEVICES=0
 BATCH_SIZE=auto
 SEED=0
 
@@ -46,9 +52,9 @@ for PAIR_MODELS in "${PAIRS_OF_MODELS[@]}"; do
 
     mkdir -p "$OUTPUT_PATH"
 
-    VLLM_WORKER_MULTIPROC_METHOD=spawn CUDA_VISIBLE_DEVICES=1 python -m lm_eval.multi-turn_cross-consistency \
+    VLLM_WORKER_MULTIPROC_METHOD=spawn CUDA_VISIBLE_DEVICES=$CUDA_DEVICES python -m lm_eval.reasoning_modes \
         --provider $PROVIDER \
-        --mode multi-turn \
+        --mode $MODE \
         --reasoning_models $MODEL_REASON \
         --answering_models $MODEL_ANSWER \
         --reasoning_tasks $TASK_REASON \
@@ -56,7 +62,10 @@ for PAIR_MODELS in "${PAIRS_OF_MODELS[@]}"; do
         --output_path $OUTPUT_PATH \
         --batch_size $BATCH_SIZE \
         --seed $SEED \
-        --log_samples
+        --log_samples \
+        --limit 2
+        #--limit 10
+        #--limit 2
         #--limit 2 #DEBUG ONLY
 
 

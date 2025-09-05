@@ -27,16 +27,15 @@ def load_base_dataset_from_task(task_name: str) -> List[str]:
     task_def = tasks.get_task_dict([task_name])[task_name]
     return dataset_list_to_dataset_dict(list(task_def.dataset["test"]))
 
-def extract_reasoning_text(sample:dict) -> str:
-    if "resps" in sample and sample["resps"]:
-        if isinstance(sample["resps"], list) and sample["resps"]:
-            return sample["resps"][0][0]
+def extract_reasoning_text(sample: dict) -> str:
+    if "resps" in sample and sample["resps"] and isinstance(sample["resps"], list):
+        return [resp[0] for resp in sample["resps"]]
 
     raise ValueError(f"Could not extract reasoning text from sample: {sample}")
 
 def inject_reasoning_into_dataset(base_dataset: List[dict], reasoning_samples: List[dict], reasoning_field: str = "Reasoning_Chain") -> List[dict]:
     res = copy.deepcopy(base_dataset["test"].select(range(len(reasoning_samples))))
-    reasoning_texts = [extract_reasoning_text(sample) for sample in reasoning_samples]
+    reasoning_texts = [extract_reasoning_text(sample)[0] for sample in reasoning_samples]
     it = iter(reasoning_texts)
 
     return res.map(lambda x: {**x, reasoning_field: next(it)})
@@ -122,7 +121,7 @@ def run_answering_for_dataset(
 # Modes
 # -------------------------
 
-def mode_multi_turn(args: argparse.Namespace) -> None:
+def mode_multi_turn_CoT(args: argparse.Namespace) -> Dict:
     if len(args.reasoning_models) != 1 or len(args.answering_models) != 1:
         print(f"[WARNING] For multi-turn mode, please provide exactly one reasoning model and one answering model. {args.reasoning_models=} {args.answering_models=}")
 
@@ -162,7 +161,10 @@ def mode_multi_turn(args: argparse.Namespace) -> None:
         "results": results,
     }
 
-def mode_cross_consistency(args: argparse.Namespace) -> None:
+def mode_multi_turn_SC(args: argparse.Namespace) -> Dict:
+    pass
+
+def mode_cross_consistency(args: argparse.Namespace) -> Dict:
     """
     N models produce reasoning for each reasoning task.
     M models answer each answering task consuming the reasoning produced by every (model, task) from Reasoning Generation.
@@ -223,10 +225,6 @@ def mode_cross_consistency(args: argparse.Namespace) -> None:
 
 
 
-    
-
-
-
 def main():
     parser = argparse.ArgumentParser()
     # Model Args
@@ -247,24 +245,30 @@ def main():
 
     # Modes
     parser.add_argument("--mode", type=str, default="multi-turn",
-                        choices=["multi-turn", "cross-consistency"])
+                        choices=["multi-turn_CoT", "multi-turn_SC", "cross-consistency"])
 
     # Output Args
     parser.add_argument('--output_path', type=str, default="/cfs/home/u021010/PhD/active_dev/outputs/CoT-Debug/")
     args = parser.parse_args()
 
-    reasoning_chain_outputs = run_reasoning(args)
-
-    if args.mode == "multi-turn":
-        out = mode_multi_turn(args)
-    else:
-        out = mode_cross_consistency(args)
+    match args.mode:
+        case "multi-turn_CoT":
+            out = mode_multi_turn_CoT(args)
+        case "multi-turn_SC":
+            out = mode_multi_turn_SC(args)
+        case "cross-consistency":
+            out = mode_cross_consistency(args)
+        case _:
+            raise ValueError(f"Unknown mode: {args.mode}")
 
     print("\n==== RESULTS (summary keys only) ====")
     print(json.dumps({k: v for k, v in out.items() if k != "results"}, indent=2))
 
     if args.output_path:
-        with open(f"{args.output_path}{datetime.now().strftime('%Y-%m-%dT%H-%M')}.json", "w") as f:
+        #with open(f"{args.output_path}Summary_{datetime.now().strftime('%Y-%m-%dT%H-%M')}.json", "w") as f:
+            #no_samples_out = {**out}.pop("results")
+            #json.dump(out, f, indent=4)
+        with open(f"{args.output_path}Samples_{datetime.now().strftime('%Y-%m-%dT%H-%M')}.json", "w") as f:
             json.dump(out, f, indent=4)
         print(f"\n✅ Results written to {args.output_path}")
 
