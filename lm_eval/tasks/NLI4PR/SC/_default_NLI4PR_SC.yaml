@@ -9,6 +9,7 @@ doc_to_target: "{{ Label }}"
 output_type: generate_until
 generation_kwargs:
   until:
+    - "<END>"
     - "<|im_end|>"
     - "<|endoftext|>"
     - "<|end_of_text|>"
@@ -17,6 +18,7 @@ generation_kwargs:
     - "<eos>"
     - "</s>"
   do_sample: true
+  max_gen_toks: 1000  
   temperature: 1.2
   top_p: 0.9
   top_k: 50

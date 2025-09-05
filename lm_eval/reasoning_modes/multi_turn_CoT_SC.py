@@ -33,7 +33,10 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
 
     base_dataset = load_base_dataset_from_task(answering_task.replace(":", "_"))
 
+    print(f'Reasoning chain lists: {reasoning_chains_per_document}')
+
     for reasoning_chain_list in reasoning_chains_per_document:
+
         dataset_with_reasoning = inject_reasoning_into_dataset(base_dataset, reasoning_chain_list)
 
         raw_output = run_answering_for_dataset(
@@ -44,15 +47,18 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
             doc_to_text_module= doc_to_text_module
         )
 
-
         for sample in raw_output["samples"][full_task_name]:
             doc_id = sample["doc_id"]
             if doc_id not in predictions_per_input_doc:
                 predictions_per_input_doc[doc_id] = {
-                    "doc" : sample["doc"],
+                    "doc" : copy.deepcopy(sample["doc"]),
                     "preds": [],
                     "pred_probs": [],
                 }
+
+                predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"] = []
+
+            predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(f'{sample["doc"]["Reasoning_Chain"][:100]}  +  ..........  +  {sample["doc"]["Reasoning_Chain"][-100:]}')
 
             pred_probs = [prob[0][0] for prob in sample["resps"]]
 
@@ -62,6 +68,7 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
     results_per_doc = {}
     for doc_id, info in predictions_per_input_doc.items():
         pred = majority_vote(info["preds"])
+        predictions_per_input_doc[doc_id]["majority_pred"] = doc_to_choice[pred]
         pred_probs = [0.0 for _ in doc_to_choice]
 
         # Aggrate probabilities by averaging them but only from the majority voted class
@@ -71,7 +78,6 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
                     pred_probs[i] += probs[i]
         pred_probs = [(p / info["preds"].count(pred), False) for p in pred_probs]
 
-        # Crashing here because of wrong formatting
         results_per_doc[doc_id] = task_def.process_results(info["doc"], pred_probs)
 
     # Aggregate metrics across all docs using the task aggregation
@@ -88,4 +94,5 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
         "reasoning_task": reasoning_task,
         "answering_task": answering_task,
         "results": aggregated_metrics,
+        "samples" : predictions_per_input_doc
     }

@@ -27,3 +27,11 @@ def doc_to_text_reasoning(doc):
 def doc_to_text_answer_selection(doc):
     relevant_keys.append("Reasoning_Chain")
     return doc_to_text(doc, answer_selection_prompt)
+
+def doc_to_text_verify_reasoning(doc):
+    relevant_keys.append("Reasoning_Chain")
+    return doc_to_text(doc, verify_reasoning_prompt)
+
+def doc_to_text_answer_selection_after_verify_reasoning(doc):
+    relevant_keys += ["Reasoning_Chain", "Verified_Reasoning_Chain"]
+    return doc_to_text(doc, answer_selection_after_verification_prompt)

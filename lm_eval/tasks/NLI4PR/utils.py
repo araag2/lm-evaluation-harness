@@ -33,6 +33,8 @@ patient_verify_reasoning_prompt = replace_prompt_parts(verify_reasoning_prompt)
 
 patient_answer_selection_after_verification_prompt = replace_prompt_parts(answer_selection_after_verification_prompt)
 
+# ====================
+
 pos_answers = ["Contradiction", "Entailment"]
 
 def label_to_index(doc) -> int:
@@ -62,3 +64,15 @@ def medical_lang_doc_to_text_answer_selection(doc):
 
 def patient_lang_doc_to_text_answer_selection(doc):
     return doc_to_text(doc, patient_answer_selection_prompt, ["CTR_Context", "Description_Patient-Language", "Reasoning_Chain"])
+
+def medical_lang_doc_to_text_verify_reasoning(doc):
+    return doc_to_text(doc, verify_reasoning_prompt, ["CTR_Context", "Description_Medical-Language", "Reasoning_Chain"])
+
+def patient_lang_doc_to_text_verify_reasoning(doc):
+    return doc_to_text(doc, patient_verify_reasoning_prompt, ["CTR_Context", "Description_Patient-Language", "Reasoning_Chain"])
+
+def medical_lang_doc_to_text_answer_selection_after_verify_reasoning(doc):
+    return doc_to_text(doc, answer_selection_after_verification_prompt, ["CTR_Context", "Description_Medical-Language", "Reasoning_Chain", "Verified_Reasoning_Chain"])
+
+def patient_lang_doc_to_text_answer_selection_after_verify_reasoning(doc):
+    return doc_to_text(doc, patient_answer_selection_after_verification_prompt, ["CTR_Context", "Description_Patient-Language", "Reasoning_Chain", "Verified_Reasoning_Chain"])

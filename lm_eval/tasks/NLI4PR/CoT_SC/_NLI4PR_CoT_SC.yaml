@@ -1,0 +1,9 @@
+group: NLI4PR_CoT_SC
+tag:
+  - chain-of-thought
+  - self-consistency
+task:
+ - NLI4PR_patient-lang_CoT_SC
+ - NLI4PR_medical-lang_CoT_SC
+metadata:
+  version: 1.0
