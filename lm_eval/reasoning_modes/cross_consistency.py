@@ -20,7 +20,7 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
     """
 
 
-    if len(args.args.reasoning_models) < 1 or len(args.answering_models) < 1:
+    if len(args.reasoning_models) < 1 or len(args.answering_models) < 1:
         print("[WARNING] Provide at least one reasoning model and one answering model.")
 
     # For cross-consistency the answering models list is unused (we verify using reasoning models)
@@ -46,7 +46,7 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
     for model_name in args.reasoning_models:
         samples = reasoning_outputs_per_model[model_name][reasoning_task]
 
-        per_model_datasets_inject[model_name] = inject_reasoning_into_dataset(base_dataset, extract_reasoning_text_from_dicts(samples))
+        per_model_datasets_inject[model_name] = inject_reasoning_into_dataset(base_dataset, samples)
 
 
     print(f"[Step 2: Verification] Running verification for models: {args.reasoning_models} on task {reasoning_task}")
@@ -69,7 +69,7 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
                 doc_to_text_func_name= "doc_to_text_verify_reasoning"
             )
 
-            per_model_reasoning_verification_outputs[reasoning_model][answering_model] = raw_output["samples"][reasoning_full_task_name]
+            per_model_reasoning_verification_outputs[reasoning_model][answering_model] = inject_reasoning_into_dataset(reasoning_dataset, raw_output["samples"][reasoning_full_task_name], reasoning_field="Verified_Reasoning_Chain")
 
     print(f"[Step 3: Aggregation] Aggregating {len(args.reasoning_models)}x{len(args.answering_models)} verification outputs per document.")
 

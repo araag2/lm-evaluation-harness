@@ -40,39 +40,26 @@ pos_answers = ["Contradiction", "Entailment"]
 def label_to_index(doc) -> int:
     return pos_answers.index(doc["Label"])
 
+relevant_keys = ["CTR_Context", "Description_Medical-Language", "Description_Patient-Language", "Reasoning_Chain", "Verified_Reasoning_Chain"]
 
-def doc_to_text(doc, prompt, relevant_keys):
+def doc_to_text_process(doc, prompt):
     res = prompt
     for key in relevant_keys:
-      res = res.replace(f"{{{{{key}}}}}", doc[key])
+      if key in doc:
+        res = res.replace(f"{{{{{key}}}}}", doc[key])
     return res
 
-def medical_lang_doc_to_text(doc):
-    return doc_to_text(doc, medical_baseline_prompt, ["CTR_Context", "Description_Medical-Language"])
+def doc_to_text(doc):
+    return doc_to_text_process(doc, patient_baseline_prompt if "Description_Patient-Language" in doc else medical_baseline_prompt)
 
-def patient_lang_doc_to_text(doc):
-    return doc_to_text(doc, patient_baseline_prompt, ["CTR_Context", "Description_Patient-Language"])
+def doc_to_text_reasoning(doc):
+    return doc_to_text_process(doc, patient_reasoning_prompt if "Description_Patient-Language" in doc else medical_reasoning_prompt)
 
-def medical_lang_doc_to_text_reasoning(doc):
-    return doc_to_text(doc, medical_reasoning_prompt, ["CTR_Context", "Description_Medical-Language"])
+def doc_to_text_answer_selection(doc):
+    return doc_to_text_process(doc, patient_answer_selection_prompt if "Description_Patient-Language" in doc else answer_selection_prompt)
 
-def patient_lang_doc_to_text_reasoning(doc):
-    return doc_to_text(doc, patient_reasoning_prompt, ["CTR_Context", "Description_Patient-Language"])
+def doc_to_text_verify_reasoning(doc):
+    return doc_to_text_process(doc, patient_verify_reasoning_prompt if "Description_Patient-Language" in doc else verify_reasoning_prompt)
 
-def medical_lang_doc_to_text_answer_selection(doc):
-    return doc_to_text(doc, answer_selection_prompt, ["CTR_Context", "Description_Medical-Language", "Reasoning_Chain"])
-
-def patient_lang_doc_to_text_answer_selection(doc):
-    return doc_to_text(doc, patient_answer_selection_prompt, ["CTR_Context", "Description_Patient-Language", "Reasoning_Chain"])
-
-def medical_lang_doc_to_text_verify_reasoning(doc):
-    return doc_to_text(doc, verify_reasoning_prompt, ["CTR_Context", "Description_Medical-Language", "Reasoning_Chain"])
-
-def patient_lang_doc_to_text_verify_reasoning(doc):
-    return doc_to_text(doc, patient_verify_reasoning_prompt, ["CTR_Context", "Description_Patient-Language", "Reasoning_Chain"])
-
-def medical_lang_doc_to_text_answer_selection_after_verify_reasoning(doc):
-    return doc_to_text(doc, answer_selection_after_verification_prompt, ["CTR_Context", "Description_Medical-Language", "Reasoning_Chain", "Verified_Reasoning_Chain"])
-
-def patient_lang_doc_to_text_answer_selection_after_verify_reasoning(doc):
-    return doc_to_text(doc, patient_answer_selection_after_verification_prompt, ["CTR_Context", "Description_Patient-Language", "Reasoning_Chain", "Verified_Reasoning_Chain"])
+def doc_to_text_answer_selection_after_verify_reasoning(doc):
+    return doc_to_text_process(doc, patient_answer_selection_after_verification_prompt if "Description_Patient-Language" in doc else answer_selection_after_verification_prompt)

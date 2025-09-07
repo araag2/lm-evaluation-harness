@@ -133,7 +133,7 @@ def run_answering_for_dataset(
         doc_to_text_module: str,
         doc_to_text_func_name: str = "doc_to_text_answer_selection"
     ) -> dict:
-        
+
     doc_to_text_func = getattr(importlib.import_module(doc_to_text_module), doc_to_text_func_name)
 
     patched_task = build_patched_task(answering_task_name, dataset_with_reasoning, doc_to_text_func)

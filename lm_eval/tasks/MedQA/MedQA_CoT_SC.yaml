@@ -31,11 +31,11 @@ filter_list:
   - name: "maj@11"
     filter:
     - function: "regex"
-      regex_pattern: "(?s:.*)([ A | B | C | D ])"
+      regex_pattern: "(?s:.*)(A|B|C|D)"
     - function: "take_first_k"
       k: 11
     - function: "majority_vote"
-    - function: "take_first"
+    - function: "take_last"
 metric_list:
   - metric: acc
     aggregation: mean

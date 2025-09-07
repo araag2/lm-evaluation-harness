@@ -3,6 +3,8 @@ import json
 import argparse
 import importlib
 import os
+import pprint
+import numpy as np
 
 from datetime import datetime
 from typing import Dict, List, Tuple, Any, Union
@@ -18,6 +20,17 @@ from lm_eval.reasoning_modes.cross_consistency import mode_cross_consistency
 def safe_open_w(path: str) -> object:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     return open(path, 'w', encoding='utf8')
+
+def make_json_serializable(obj):
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, set):
+        return list(obj)
+    return str(obj)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -63,8 +76,11 @@ def main():
         #with open(f"{args.output_path}Summary_{datetime.now().strftime('%Y-%m-%dT%H-%M')}.json", "w") as f:
             #no_samples_out = {**out}.pop("results")
             #json.dump(out, f, indent=4)
+
+        #pprint.pprint(out)
+
         with safe_open_w(f"{args.output_path}Samples_{datetime.now().strftime('%Y-%m-%dT%H-%M')}.json") as f:
-            json.dump(out, f, indent=4)
+            json.dump(out, f, indent=4, default=make_json_serializable)
         print(f"\n✅ Results written to {args.output_path}")
         
 if __name__ == "__main__":
