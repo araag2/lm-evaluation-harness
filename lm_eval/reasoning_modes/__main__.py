@@ -13,7 +13,7 @@ from lm_eval.reasoning_modes.multi_turn_CoT import mode_multi_turn_CoT
 
 from lm_eval.reasoning_modes.multi_turn_CoT_SC import mode_multi_turn_CoT_SC
 
-#from lm_eval.reasoning_modes.cross_consistency import mode_Cross_Consistency
+from lm_eval.reasoning_modes.cross_consistency import mode_cross_consistency
 
 def safe_open_w(path: str) -> object:
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -51,8 +51,8 @@ def main():
             out = mode_multi_turn_CoT(args)
         case "multi-turn_CoT-SC":
             out = mode_multi_turn_CoT_SC(args)
-        #case "cross-consistency":
-        #   out = mode_Cross_Consistency(args)
+        case "cross-consistency":
+            out = mode_cross_consistency(args)
         case _:
             raise ValueError(f"Unknown mode: {args.mode}")
         

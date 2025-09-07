@@ -1,11 +1,5 @@
-import collections
+
 from lm_eval.reasoning_modes.reasoning_utils import *
-
-
-def majority_vote(predictions: list) -> str:
-    """Aggregate predictions using majority voting."""
-    counter = collections.Counter(predictions)
-    return counter.most_common(1)[0][0]
 
 def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
     if len(args.reasoning_models) != 1 or len(args.answering_models) != 1:
@@ -58,7 +52,7 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
 
                 predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"] = []
 
-            predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(f'{sample["doc"]["Reasoning_Chain"][:100]}  +  ..........  +  {sample["doc"]["Reasoning_Chain"][-100:]}')
+            predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(shorten_reasoning_chain(sample["doc"]["Reasoning_Chain"]), 100)
 
             pred_probs = [prob[0][0] for prob in sample["resps"]]
 

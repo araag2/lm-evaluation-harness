@@ -1,3 +1,4 @@
+import collections
 import copy
 import importlib
 import argparse
@@ -6,15 +7,24 @@ from typing import Dict, List, Tuple, Any
 from datasets import Dataset, DatasetDict
 from lm_eval import evaluator, tasks
 
+def majority_vote(predictions: list) -> int:
+    """Aggregate predictions using majority voting and return the winning index."""
+    counter = collections.Counter(predictions)
+    return counter.most_common(1)[0][0]
+
+def shorten_reasoning_chain(chain: str, edge_length: int = 100) -> str:
+    """Shorten a reasoning chain for logging purposes."""
+    return f'{chain[:edge_length]}  +  ..........  +  {chain[-edge_length:]}'
+
 # -------------------------
 # Dataset Helpers
 # -------------------------
 
-def dataset_list_to_dataset_dict(dataset_list: list[dict]) -> DatasetDict:
+def dataset_list_to_dataset_dict(dataset_list: list[dict], split_name: str = "test") -> DatasetDict:
     """Convert a list of dictionaries into a DatasetDict."""
     if isinstance(dataset_list, DatasetDict):
         return dataset_list
-    return DatasetDict({"test": Dataset.from_list(dataset_list)})
+    return DatasetDict({split_name: Dataset.from_list(dataset_list)})
 
 
 def parse_task_spec(task_spec: str) -> Tuple[str, str]:
@@ -29,7 +39,9 @@ def parse_task_spec(task_spec: str) -> Tuple[str, str]:
 def load_base_dataset_from_task(task_name: str) -> DatasetDict:
     """Load the base dataset for a given task name."""
     task_def = tasks.get_task_dict([task_name])[task_name]
-    return dataset_list_to_dataset_dict(list(task_def.dataset["test"] if "test" in task_def.dataset else task_def.dataset["labeled"]))
+    if "test" not in task_def.dataset and "labeled" in task_def.dataset:
+        return dataset_list_to_dataset_dict(list(task_def.dataset["labeled"]), split_name="labeled")
+    return dataset_list_to_dataset_dict(list(task_def.dataset["test"]), split_name="test")
 
 # -------------------------
 # Reasoning Chain Helpers

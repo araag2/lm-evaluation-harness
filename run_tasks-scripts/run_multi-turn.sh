@@ -16,16 +16,20 @@ PAIRS_OF_MODELS=(
 
 # Available Datasets: Evidence_Inference_v2, HINT, MedMCQA, MedNLI, MedQA, NLI4PR, PubMedQA, SemEval_NLI4CT, TREC_CDS, TREC_CT, TREC_Prec-Med, Trial_Meta-Analysis_type
 
-#"MedNLI:CoT|MedNLI:0-shot"
-#"SemEval_NLI4CT:CoT|SemEval_NLI4CT:0-shot"
+#"MedNLI:CoT|MedNLI:0-shot" WORKS
+#"HINT:CoT|HINT:0-shot" WORKS 
+#"MedMCQA:CoT|MedMCQA:0-shot" X 
+#"MedQA:CoT|MedQA:0-shot"  X
+#"PubMedQA:CoT|PubMedQA:0-shot" WORKS
+#"Evidence_Inference_v2:CoT|Evidence_Inference_v2:0-shot" WORKS
+#"NLI4PR_patient-lang_CoT|NLI4PR_patient-lang_0-shot" X
+#"NLI4PR_medical-lang_CoT|NLI4PR_medical-lang_0-shot" X
+#"SemEval_NLI4CT_2023_CoT|SemEval_NLI4CT_2023_0-shot" X
+#"SemEval_NLI4CT_2024_CoT|SemEval_NLI4CT_2024_0-shot" X
 
 PAIRS_OF_TASK_LIST=(
-    "MedNLI:CoT|MedNLI:0-shot"
-    "HINT:CoT|HINT:0-shot"
     "MedMCQA:CoT|MedMCQA:0-shot"
     "MedQA:CoT|MedQA:0-shot"
-    "PubMedQA:CoT|PubMedQA:0-shot"
-    "Evidence_Inference_v2:CoT|Evidence_Inference_v2:0-shot"
     "NLI4PR_patient-lang_CoT|NLI4PR_patient-lang_0-shot"
     "NLI4PR_medical-lang_CoT|NLI4PR_medical-lang_0-shot"
     "SemEval_NLI4CT_2023_CoT|SemEval_NLI4CT_2023_0-shot"
