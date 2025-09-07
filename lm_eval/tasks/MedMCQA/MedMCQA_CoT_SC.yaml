@@ -1,12 +1,14 @@
-task: PubMedQA_CoT_SC
+task: MedMCQA_CoT_SC
 tag:
   - chain-of-thought
   - self-consistency
-dataset_path: araag2/PubMedQA
+dataset_path: araag2/MedMCQA
 dataset_name: processed
 dataset_kwargs:
   trust_remote_code: true
-test_split: labeled
+training_split: train
+validation_split: dev
+test_split: test
 doc_to_text: !function utils.doc_to_text_reasoning
 doc_to_target: "{{ Label }}"
 output_type: generate_until
@@ -27,13 +29,10 @@ generation_kwargs:
   top_k: 50
 repeats: 11
 filter_list:
-  - name: "maj@11"
+  - name: "score_first"
     filter:
     - function: "regex"
-      regex_pattern: "(?s:.*)([Nn]o|[Mm]aybe|[Yy]es)"
-    - function: "take_first_k"
-      k: 11
-    - function: "majority_vote"
+      regex_pattern: "(?s:.*)([ A | B | C | D ])"
     - function: "take_first"
 metric_list:
   - metric: acc

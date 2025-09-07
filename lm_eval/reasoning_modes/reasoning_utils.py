@@ -29,7 +29,7 @@ def parse_task_spec(task_spec: str) -> Tuple[str, str]:
 def load_base_dataset_from_task(task_name: str) -> DatasetDict:
     """Load the base dataset for a given task name."""
     task_def = tasks.get_task_dict([task_name])[task_name]
-    return dataset_list_to_dataset_dict(list(task_def.dataset["test"]))
+    return dataset_list_to_dataset_dict(list(task_def.dataset["test"] if "test" in task_def.dataset else task_def.dataset["labeled"]))
 
 # -------------------------
 # Reasoning Chain Helpers

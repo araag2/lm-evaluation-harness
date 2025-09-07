@@ -5,8 +5,9 @@ dataset_path: araag2/MedQA
 dataset_name: processed
 dataset_kwargs:
   trust_remote_code: true
-output_type: multiple_choice
-test_split: dev
+training_split: train
+validation_split: dev
+test_split: test
 doc_to_text: !function utils.doc_to_text
 doc_to_target: "{{ Label }}"
 doc_to_choice: ["A", "B", "C", "D"]
@@ -19,11 +20,6 @@ metric_list:
   - metric: acc_norm
     aggregation: mean
     higher_is_better: true
-    ignore_case: true
-    ignore_punctuation: true
-  - metric: debug_test
-    aggregation: mean
-    higher_is_better: false
     ignore_case: true
     ignore_punctuation: true
 metadata:

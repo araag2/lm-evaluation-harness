@@ -1,15 +1,14 @@
-task: MedNLI_CoT_SC
+task: MedQA_SC
 tag:
-  - chain-of-thought
   - self-consistency
-dataset_path: araag2/MedMCQA
+dataset_path: araag2/MedQA
 dataset_name: processed
 dataset_kwargs:
   trust_remote_code: true
 training_split: train
 validation_split: dev
 test_split: test
-doc_to_text: !function utils.doc_to_text_reasoning
+doc_to_text: !function utils.doc_to_text
 doc_to_target: "{{ Label }}"
 output_type: generate_until
 generation_kwargs:
@@ -29,10 +28,13 @@ generation_kwargs:
   top_k: 50
 repeats: 11
 filter_list:
-  - name: "score_first"
+  - name: "maj@11"
     filter:
     - function: "regex"
       regex_pattern: "(?s:.*)([ A | B | C | D ])"
+    - function: "take_first_k"
+      k: 11
+    - function: "majority_vote"
     - function: "take_first"
 metric_list:
   - metric: acc

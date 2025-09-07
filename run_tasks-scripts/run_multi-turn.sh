@@ -4,30 +4,50 @@
 # ================================
 PROVIDER=vllm
 
-#"pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000"
-#"pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=20000"
-#"pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=20000"
-#"pretrained=google/gemma-3n-E4B-it,max_length=20000"
-#"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=20000"
+#"pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=25000|pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=25000"
+#"pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000|pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000"
+#"pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=25000|pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=25000"
+#"pretrained=google/gemma-3n-E4B-it,max_length=25000|pretrained=google/gemma-3n-E4B-it,max_length=25000"
+#"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=25000|pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=25000"
+
 PAIRS_OF_MODELS=(
-    "pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=10000|pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=10000"
+    "pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=25000|pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=25000"
 )
 
 # Available Datasets: Evidence_Inference_v2, HINT, MedMCQA, MedNLI, MedQA, NLI4PR, PubMedQA, SemEval_NLI4CT, TREC_CDS, TREC_CT, TREC_Prec-Med, Trial_Meta-Analysis_type
+
+#"MedNLI:CoT|MedNLI:0-shot"
+#"SemEval_NLI4CT:CoT|SemEval_NLI4CT:0-shot"
+
 PAIRS_OF_TASK_LIST=(
-    "MedNLI:CoT_SC|MedNLI:0-shot"
+    "MedNLI:CoT|MedNLI:0-shot"
+    "HINT:CoT|HINT:0-shot"
+    "MedMCQA:CoT|MedMCQA:0-shot"
+    "MedQA:CoT|MedQA:0-shot"
+    "PubMedQA:CoT|PubMedQA:0-shot"
+    "Evidence_Inference_v2:CoT|Evidence_Inference_v2:0-shot"
+    "NLI4PR_patient-lang_CoT|NLI4PR_patient-lang_0-shot"
+    "NLI4PR_medical-lang_CoT|NLI4PR_medical-lang_0-shot"
+    "SemEval_NLI4CT_2023_CoT|SemEval_NLI4CT_2023_0-shot"
+    "SemEval_NLI4CT_2024_CoT|SemEval_NLI4CT_2024_0-shot"
 )
 
-MODE=multi-turn_CoT-SC
-# multi-turn_SC
+MODE=multi-turn_CoT
+# multi-turn_CoT
 # multi-turn_CoT-SC
 # cross-consistency
 
-BASE_OUTPUT_DIR="/cfs/home/u021010/PhD/active_dev/outputs/Multi-Turn-Debug/"
+BASE_OUTPUT_DIR="/cfs/home/u021010/PhD/active_dev/outputs/TEST/$MODE"
 
 CUDA_DEVICES=0
 BATCH_SIZE=auto
 SEED=0
+
+echo "=================================================="
+echo "[INFO] Running These Models / Tasks:"
+echo "Full list of model pairs: ${PAIRS_OF_MODELS[@]}"
+echo "Full list of task pairs: ${PAIRS_OF_TASK_LIST[@]}"
+echo "=================================================="
 
 echo "[INFO] Starting runs..."
 for PAIR_MODELS in "${PAIRS_OF_MODELS[@]}"; do
@@ -48,9 +68,7 @@ for PAIR_MODELS in "${PAIRS_OF_MODELS[@]}"; do
     echo "Base Output Dir = $BASE_OUTPUT_DIR"
     echo "=================================================="
 
-    OUTPUT_PATH="${BASE_OUTPUT_DIR}/$(echo ${TASK_REASON} | tr ':' '_')/$(echo ${MODEL_REASON#pretrained=} | tr '/' '_')/"
-
-    mkdir -p "$OUTPUT_PATH"
+    OUTPUT_PATH="${BASE_OUTPUT_DIR}/$(echo ${TASK_REASON} | tr ':' '_')/$(echo ${MODEL_REASON} | sed -n 's/.*pretrained=\([^,)]*\).*/\1/p' | tr '/' '_')/"
 
     VLLM_WORKER_MULTIPROC_METHOD=spawn CUDA_VISIBLE_DEVICES=$CUDA_DEVICES python -m lm_eval.reasoning_modes \
         --provider $PROVIDER \
@@ -63,7 +81,7 @@ for PAIR_MODELS in "${PAIRS_OF_MODELS[@]}"; do
         --batch_size $BATCH_SIZE \
         --seed $SEED \
         --log_samples \
-        --limit 2
+        --limit 1
         #--limit 10
         #--limit 2
         #--limit 2 #DEBUG ONLY

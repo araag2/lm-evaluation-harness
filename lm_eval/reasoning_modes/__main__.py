@@ -63,7 +63,7 @@ def main():
         #with open(f"{args.output_path}Summary_{datetime.now().strftime('%Y-%m-%dT%H-%M')}.json", "w") as f:
             #no_samples_out = {**out}.pop("results")
             #json.dump(out, f, indent=4)
-        with safe_open_w(f"{args.output_path}{args.mode}/Samples_{datetime.now().strftime('%Y-%m-%dT%H-%M')}.json") as f:
+        with safe_open_w(f"{args.output_path}Samples_{datetime.now().strftime('%Y-%m-%dT%H-%M')}.json") as f:
             json.dump(out, f, indent=4)
         print(f"\n✅ Results written to {args.output_path}")
         
