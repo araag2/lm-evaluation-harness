@@ -73,14 +73,12 @@ def main():
     print(json.dumps({k: v for k, v in out.items() if k != "results"}, indent=2))
 
     if args.output_path:
-        #with open(f"{args.output_path}Summary_{datetime.now().strftime('%Y-%m-%dT%H-%M')}.json", "w") as f:
-            #no_samples_out = {**out}.pop("results")
-            #json.dump(out, f, indent=4)
-
-        #pprint.pprint(out)
-
-        with safe_open_w(f"{args.output_path}Samples_{datetime.now().strftime('%Y-%m-%dT%H-%M')}.json") as f:
+        with safe_open_w(f"{args.output_path}Summary_{datetime.now().strftime('%Y-%m-%dT%H-%M')}.json") as f:
             json.dump(out, f, indent=4, default=make_json_serializable)
+
+        #with safe_open_w(f"{args.output_path}Samples_{datetime.now().strftime('%Y-%m-%dT%H-%M')}.json") as f:
+            #json.dump(out, f, indent=4, default=make_json_serializable)
+
         print(f"\n✅ Results written to {args.output_path}")
         
 if __name__ == "__main__":

@@ -35,13 +35,10 @@ def parse_task_spec(task_spec: str) -> Tuple[str, str]:
     else:
         raise ValueError(f"Invalid task spec: {task_spec}")
 
-
 def load_base_dataset_from_task(task_name: str) -> DatasetDict:
     """Load the base dataset for a given task name."""
     task_def = tasks.get_task_dict([task_name])[task_name]
-    if "test" not in task_def.dataset and "labeled" in task_def.dataset:
-        return dataset_list_to_dataset_dict(list(task_def.dataset["labeled"]), split_name="labeled")
-    return dataset_list_to_dataset_dict(list(task_def.dataset["test"]), split_name="test")
+    return dataset_list_to_dataset_dict(list(task_def.dataset[task_def.config.test_split]), split_name="test")
 
 # -------------------------
 # Reasoning Chain Helpers
@@ -62,7 +59,9 @@ def extract_reasoning_text_from_dicts(sample: dict) -> List[str]:
     raise ValueError(f"Could not extract reasoning text from sample: {sample}")
 
 def inject_reasoning_into_dataset(base_dataset: List[dict], reasoning_samples: List, reasoning_field: str = "Reasoning_Chain") -> List[dict]:
-    res = copy.deepcopy(base_dataset["test"].select(range(len(reasoning_samples))))
+    test_set = dataset_list_to_dataset_dict(base_dataset, "test")["test"]
+
+    res = copy.deepcopy(test_set.select(range(len(reasoning_samples))))
 
     # If its a list, easy to inject directly
     reasoning_texts = reasoning_samples
@@ -83,6 +82,7 @@ def build_patched_task(answering_task_name:str, dataset_with_reasoning: List[dic
     patched = copy.deepcopy(original_task)
     patched.dataset = dataset_list_to_dataset_dict(dataset_with_reasoning)
     patched.doc_to_text = doc_to_text_func
+    patched.config.test_split = "test"
 
     return patched
 

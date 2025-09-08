@@ -27,8 +27,6 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
 
     base_dataset = load_base_dataset_from_task(answering_task.replace(":", "_"))
 
-    print(f'Reasoning chain lists: {reasoning_chains_per_document}')
-
     for reasoning_chain_list in reasoning_chains_per_document:
 
         dataset_with_reasoning = inject_reasoning_into_dataset(base_dataset, reasoning_chain_list)
@@ -52,7 +50,7 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
 
                 predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"] = []
 
-            predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(shorten_reasoning_chain(sample["doc"]["Reasoning_Chain"]), 100)
+            predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(shorten_reasoning_chain(sample["doc"]["Reasoning_Chain"], 100))
 
             pred_probs = [prob[0][0] for prob in sample["resps"]]
 

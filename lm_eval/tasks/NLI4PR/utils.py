@@ -45,8 +45,8 @@ relevant_keys = ["CTR_Context", "Description_Medical-Language", "Description_Pat
 def doc_to_text_process(doc, prompt):
     res = prompt
     for key in relevant_keys:
-      if key in doc:
-        res = res.replace(f"{{{{{key}}}}}", doc[key])
+        if key in doc:
+            res = res.replace(f"{{{{{key}}}}}", doc[key])
     return res
 
 def doc_to_text(doc):

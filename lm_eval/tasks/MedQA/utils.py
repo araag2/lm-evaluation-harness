@@ -18,8 +18,8 @@ relevant_keys = ["Question", "Option_A", "Option_B", "Option_C", "Option_D", "Re
 def doc_to_text(doc, prompt = baseline_prompt):
     res = prompt
     for key in relevant_keys:
-      if key in doc:
-        res = res.replace(f"{{{{{key}}}}}", doc[key])
+        if key in doc:
+            res = res.replace(f"{{{{{key}}}}}", doc[key])
     return res
 
 def doc_to_text_reasoning(doc):

@@ -6,8 +6,7 @@ dataset_name: processed
 dataset_kwargs:
   trust_remote_code: true
 training_split: train
-validation_split: dev
-test_split: test
+test_split: dev
 doc_to_text: !function utils.doc_to_text
 doc_to_target: "{{ Label }}"
 output_type: generate_until

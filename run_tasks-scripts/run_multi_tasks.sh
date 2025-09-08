@@ -6,11 +6,11 @@
 MODEL=vllm
 
 MODELS=(
-    #"pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000"
-    #"pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=20000"
+    "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000"
+    "pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=20000"
     "pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=20000"
-    #"pretrained=google/gemma-3n-E4B-it,max_length=20000"
-    #"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=20000"
+    "pretrained=google/gemma-3n-E4B-it,max_length=20000"
+    "pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=20000"
 )
 
 # meta-llama/Llama-3.1-8B-Instruct
@@ -21,27 +21,31 @@ MODELS=(
 #Qwen/Qwen3-0.6B -> Test Model
 #arnir0/Tiny-LLM -> Test Model
 
+#MedNLI
+#MedQA
+#MedMCQA
+#NLI4PR
+#PubMedQA
+#Trial_Meta-Analysis_type
+#Evidence_Inference_v2
+#HINT
+#SemEval_NLI4CT
+#TREC_CDS
+#TREC_CT
+#TREC_Prec-Med
 
 # Tasks List (space-separated)
 TASK_LIST=(
-    #MedNLI
-    #MedQA
-    #MedMCQA
-    #NLI4PR
-    #PubMedQA
-    #Trial_Meta-Analysis_type
-    #Evidence_Inference_v2
+    NLI4PR
     HINT
+    Evidence_Inference_v2
     SemEval_NLI4CT
-    TREC_CDS
-    TREC_CT
-    TREC_Prec-Med
 )
 
 INFERENCE_MODES=(
-    #0-shot
+    0-shot
     #SC
-    CoT
+    #CoT
 )
 
 # Generation Params
@@ -50,7 +54,7 @@ SEED=0
 
 # Output base path
 OUTPUT_BASE_PATH=/cfs/home/u021010/PhD/active_dev/outputs
-RUN_NAME=all_tests/
+RUN_NAME=0-shot_only/
 
 for MODEL_ARGS in "${MODELS[@]}"; do
 
@@ -75,7 +79,7 @@ for MODEL_ARGS in "${MODELS[@]}"; do
             echo -e "[INFO] Running Task: $TASK with Inference Mode: $INFERENCE_MODE"
             echo -e "--------------------------------------------------"
 
-            VLLM_WORKER_MULTIPROC_METHOD=spawn CUDA_VISIBLE_DEVICES=1 python -m lm_eval \
+            VLLM_WORKER_MULTIPROC_METHOD=spawn CUDA_VISIBLE_DEVICES=2 python -m lm_eval \
                 --model $MODEL \
                 --model_args $MODEL_ARGS \
                 --tasks "${TASK}_${INFERENCE_MODE}" \

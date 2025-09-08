@@ -16,25 +16,23 @@ def label_to_index(doc) -> int:
 def format_context(contexts):
     return "\n".join([f"- <{label}> : {context}" for label, context in contexts])
 
-relevant_keys = ["Context", "Question"]
+relevant_keys = ["Context", "Question", "Reasoning_Chain", "Verified_Reasoning_Chain"]
 
 def doc_to_text(doc, prompt = baseline_prompt):
     res = prompt
     for key in relevant_keys:
-      res = res.replace(f"{{{{{key}}}}}", doc[key] if key != "Context" else format_context(doc[key]))
+        if key in doc:
+            res = res.replace(f"{{{{{key}}}}}", doc[key] if key != "Context" else format_context(doc[key]))
     return res
 
 def doc_to_text_reasoning(doc):
     return doc_to_text(doc, reasoning_prompt)
 
 def doc_to_text_answer_selection(doc):
-    relevant_keys.append("Reasoning_Chain")
     return doc_to_text(doc, answer_selection_prompt)
 
 def doc_to_text_verify_reasoning(doc):
-    relevant_keys.append("Reasoning_Chain")
     return doc_to_text(doc, verify_reasoning_prompt)
 
 def doc_to_text_answer_selection_after_verify_reasoning(doc):
-    relevant_keys += ["Reasoning_Chain", "Verified_Reasoning_Chain"]
     return doc_to_text(doc, answer_selection_after_verification_prompt)

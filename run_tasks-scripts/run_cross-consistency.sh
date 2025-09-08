@@ -11,33 +11,45 @@ PROVIDER=vllm
 #"pretrained=google/gemma-3n-E4B-it,max_length=25000|pretrained=google/gemma-3n-E4B-it,max_length=25000"
 #"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=25000|pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=25000"
 REASONING_MODELS=(
-    "pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=25000"
-    "pretrained=google/gemma-3n-E4B-it,max_length=25000"
+    "pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=25000|pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=25000"
+    "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000|pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000"
+    "pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=25000|pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=25000"
+    "pretrained=google/gemma-3n-E4B-it,max_length=25000|pretrained=google/gemma-3n-E4B-it,max_length=25000"
+    "pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=25000|pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=25000"
 )
 
 
 ANSWERING_MODELS=("${REASONING_MODELS[@]}")
 
-#"MedNLI:CoT|MedNLI:0-shot" WORKS
-#"HINT:CoT|HINT:0-shot" WORKS 
-#"MedMCQA:CoT|MedMCQA:0-shot" X 
-#"MedQA:CoT|MedQA:0-shot"  X
-#"PubMedQA:CoT|PubMedQA:0-shot" WORKS
-#"Evidence_Inference_v2:CoT|Evidence_Inference_v2:0-shot" WORKS
-#"NLI4PR_patient-lang_CoT|NLI4PR_patient-lang_0-shot" X
-#"NLI4PR_medical-lang_CoT|NLI4PR_medical-lang_0-shot" X
-#"SemEval_NLI4CT_2023_CoT|SemEval_NLI4CT_2023_0-shot" X
-#"SemEval_NLI4CT_2024_CoT|SemEval_NLI4CT_2024_0-shot" X
+#"MedNLI:CoT|MedNLI:0-shot"
+#"HINT:CoT|HINT:0-shot"
+#"MedMCQA:CoT|MedMCQA:0-shot" 
+#"MedQA:CoT|MedQA:0-shot"
+#"PubMedQA:CoT|PubMedQA:0-shot"
+#"Evidence_Inference_v2:CoT|Evidence_Inference_v2:0-shot"
+#"NLI4PR:patient-lang_CoT|NLI4PR:patient-lang_0-shot"
+#"NLI4PR:medical-lang_CoT|NLI4PR:medical-lang_0-shot"
+#"SemEval_NLI4CT:2023_CoT|SemEval_NLI4CT:2023_0-shot"
+#"SemEval_NLI4CT:2024_CoT|SemEval_NLI4CT:2024_0-shot"
 
 PAIRS_OF_TASK_LIST=(
     "MedNLI:CoT|MedNLI:0-shot"
+    "HINT:CoT|HINT:0-shot"
+    "MedMCQA:CoT|MedMCQA:0-shot" 
+    "MedQA:CoT|MedQA:0-shot"
+    "PubMedQA:CoT|PubMedQA:0-shot"
+    "Evidence_Inference_v2:CoT|Evidence_Inference_v2:0-shot"
+    "NLI4PR:patient-lang_CoT|NLI4PR:patient-lang_0-shot"
+    "NLI4PR:medical-lang_CoT|NLI4PR:medical-lang_0-shot"
+    "SemEval_NLI4CT:2023_CoT|SemEval_NLI4CT:2023_0-shot"
+    "SemEval_NLI4CT:2024_CoT|SemEval_NLI4CT:2024_0-shot"
 )
 
 MODE=cross-consistency  # Updated mode to cross-consistency
 
 BASE_OUTPUT_DIR="/cfs/home/u021010/PhD/active_dev/outputs/TEST/$MODE"
 
-CUDA_DEVICES=2
+CUDA_DEVICES=0
 BATCH_SIZE=auto
 SEED=0
 

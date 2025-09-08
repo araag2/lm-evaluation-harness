@@ -12,40 +12,44 @@ PROVIDER=vllm
 
 PAIRS_OF_MODELS=(
     "pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=25000|pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=25000"
+    "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000|pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000"
+    "pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=25000|pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=25000"
+    "pretrained=google/gemma-3n-E4B-it,max_length=25000|pretrained=google/gemma-3n-E4B-it,max_length=25000"
+    "pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=25000|pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=25000"
 )
 
-#"MedNLI:CoT|MedNLI:0-shot" WORKS
-#"HINT:CoT|HINT:0-shot" WORKS 
-#"MedMCQA:CoT|MedMCQA:0-shot" WORKS 
-#"MedQA:CoT|MedQA:0-shot"  WORKS
-#"PubMedQA:CoT|PubMedQA:0-shot" WORKS
-#"Evidence_Inference_v2:CoT|Evidence_Inference_v2:0-shot" WORKS
-#"NLI4PR_patient-lang:CoT|NLI4PR_patient-lang:0-shot" WORKS
-#"NLI4PR_medical-lang:CoT|NLI4PR_medical-lang:0-shot" WORKS
-#"SemEval_NLI4CT:2023_CoT|SemEval_NLI4CT:2023_0-shot" WORKS
-#"SemEval_NLI4CT:2024_CoT|SemEval_NLI4CT:2024_0-shot" WORKS
+#"MedNLI:CoT|MedNLI:0-shot"
+#"HINT:CoT|HINT:0-shot"
+#"MedMCQA:CoT|MedMCQA:0-shot" 
+#"MedQA:CoT|MedQA:0-shot"
+#"PubMedQA:CoT|PubMedQA:0-shot"
+#"Evidence_Inference_v2:CoT|Evidence_Inference_v2:0-shot"
+#"NLI4PR:patient-lang_CoT|NLI4PR:patient-lang_0-shot"
+#"NLI4PR:medical-lang_CoT|NLI4PR:medical-lang_0-shot"
+#"SemEval_NLI4CT:2023_CoT|SemEval_NLI4CT:2023_0-shot"
+#"SemEval_NLI4CT:2024_CoT|SemEval_NLI4CT:2024_0-shot"
 
 PAIRS_OF_TASK_LIST=(
-    "MedNLI:CoT|MedNLI:0-shot" 
-    "HINT:CoT|HINT:0-shot" 
+    "MedNLI:CoT|MedNLI:0-shot"
+    "HINT:CoT|HINT:0-shot"
     "MedMCQA:CoT|MedMCQA:0-shot" 
-    "MedQA:CoT|MedQA:0-shot"  
-    "PubMedQA:CoT|PubMedQA:0-shot" 
-    "Evidence_Inference_v2:CoT|Evidence_Inference_v2:0-shot" 
-    "NLI4PR_patient-lang:CoT|NLI4PR_patient-lang:0-shot" 
-    "NLI4PR_medical-lang:CoT|NLI4PR_medical-lang:0-shot" 
-    "SemEval_NLI4CT:2023_CoT|SemEval_NLI4CT:2023_0-shot" 
-    "SemEval_NLI4CT:2024_CoT|SemEval_NLI4CT:2024_0-shot" 
+    "MedQA:CoT|MedQA:0-shot"
+    "PubMedQA:CoT|PubMedQA:0-shot"
+    "Evidence_Inference_v2:CoT|Evidence_Inference_v2:0-shot"
+    "NLI4PR:patient-lang_CoT|NLI4PR:patient-lang_0-shot"
+    "NLI4PR:medical-lang_CoT|NLI4PR:medical-lang_0-shot"
+    "SemEval_NLI4CT:2023_CoT|SemEval_NLI4CT:2023_0-shot"
+    "SemEval_NLI4CT:2024_CoT|SemEval_NLI4CT:2024_0-shot"
 )
 
-MODE=multi-turn_CoT-SC
+MODE=multi-turn_CoT
 # multi-turn_CoT
 # multi-turn_CoT-SC
 # cross-consistency
 
 BASE_OUTPUT_DIR="/cfs/home/u021010/PhD/active_dev/outputs/$MODE"
 
-CUDA_DEVICES=0
+CUDA_DEVICES=4
 BATCH_SIZE=auto
 SEED=0
 
@@ -87,7 +91,7 @@ for PAIR_MODELS in "${PAIRS_OF_MODELS[@]}"; do
         --batch_size $BATCH_SIZE \
         --seed $SEED \
         --log_samples \
-        --limit 1
+        #--limit 1
 
     STATUS=$?
     if [ $STATUS -eq 0 ]; then

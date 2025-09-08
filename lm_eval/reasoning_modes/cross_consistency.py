@@ -69,6 +69,10 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
                 doc_to_text_func_name= "doc_to_text_verify_reasoning"
             )
 
+            #TO:DO Need to wrap this dataset into a "test" split dataset dict so it work correctly with inject_reasoning_into_dataset. Also double check the reasoning outputs to see if they work correctly.
+
+            print(f'{reasoning_dataset}, {raw_output["samples"][reasoning_full_task_name]}')
+
             per_model_reasoning_verification_outputs[reasoning_model][answering_model] = inject_reasoning_into_dataset(reasoning_dataset, raw_output["samples"][reasoning_full_task_name], reasoning_field="Verified_Reasoning_Chain")
 
     print(f"[Step 3: Aggregation] Aggregating {len(args.reasoning_models)}x{len(args.answering_models)} verification outputs per document.")
@@ -97,51 +101,38 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
 
                     predictions_per_input_doc[doc_id] = {
                         "doc": copy.deepcopy(sample["doc"]),
-                        "preds": [],
-                        "pred_probs": [],
+                        "preds": {}
                     }
 
                     predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"] = []
                     predictions_per_input_doc[doc_id]["doc"]["Verified_Reasoning_Chains"] = []
 
-                predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(shorten_reasoning_chain(sample["doc"]["Reasoning_Chain"]), 100)
+                predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(shorten_reasoning_chain(sample["doc"]["Reasoning_Chain"], 100))
 
-                predictions_per_input_doc[doc_id]["doc"]["Verified_Reasoning_Chains"].append(shorten_reasoning_chain(sample["doc"]["Verified_Reasoning_Chain"]), 100)
+                predictions_per_input_doc[doc_id]["doc"]["Verified_Reasoning_Chains"].append(shorten_reasoning_chain(sample["doc"]["Verified_Reasoning_Chain"], 100))
 
                 pred_probs = [prob[0][0] for prob in sample["resps"]]
 
-                predictions_per_input_doc[doc_id]["pred_probs"].append(pred_probs)    
-                predictions_per_input_doc[doc_id]["preds"].append(pred_probs.index(max(pred_probs)))
+                if reasoning_model not in predictions_per_input_doc[doc_id]["preds"]:
+                    predictions_per_input_doc[doc_id]["preds"][reasoning_model] = []
+
+                predictions_per_input_doc[doc_id]["preds"][reasoning_model].append((pred_probs.index(max(pred_probs)), pred_probs))
 
 
     print(f"[Step 4: Metrics] Aggregating metrics for task {answering_task} using {args.reasoning_models} reasoning models as verifiers.")
 
     task_def = tasks.get_task_dict([answering_task_full_task_name])[answering_task_full_task_name]
-    doc_to_choice = task_def.config.doc_to_choice
-
-    # Step 4: Aggregate metrics across all docs using the task aggregation
-
-    results_per_doc = {}
-    for doc_id, info in predictions_per_input_doc.items():
-        pred = majority_vote(info["preds"])
-        predictions_per_input_doc[doc_id]["majority_pred"] = doc_to_choice[pred]
-        pred_probs = [0.0 for _ in doc_to_choice]
-
-        # Aggrate probabilities by averaging them but only from the majority voted class
-        for p, probs in zip(info["preds"], info["pred_probs"]):
-            if p == pred:
-                for i in range(len(doc_to_choice)):
-                    pred_probs[i] += probs[i]
-        pred_probs = [(p / info["preds"].count(pred), False) for p in pred_probs]
-
-        results_per_doc[doc_id] = task_def.process_results(info["doc"], pred_probs)
+    results_per_doc = aggregate_doc_predictions(predictions_per_input_doc, task_def)
 
     # Aggregate metrics across all docs using the task aggregation
     aggregated_metrics = {}
     for metric_name, agg_fn in task_def.aggregation().items():
-        all_values = [results_per_doc[doc_id][metric_name] for doc_id in results_per_doc if metric_name in results_per_doc[doc_id]]
-        if all_values:
-            aggregated_metrics[metric_name] = agg_fn(all_values)
+        if metric_name not in results_per_doc["flat_preds"][0]:
+            continue
+
+        for result_key in results_per_doc:
+            all_values = [results_per_doc[result_key][doc_id_][metric_name] for doc_id_ in results_per_doc[result_key]]
+            aggregated_metrics[f"{result_key}_{metric_name}"] = agg_fn(all_values)
 
     return {
         "mode": "cross_consistency",
@@ -153,3 +144,61 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
         "results": aggregated_metrics,
         "samples" : predictions_per_input_doc
     }
+
+# -------------------------
+# Process Votes
+# -------------------------
+
+def single_doc_aggregate_votes(preds: List[int], doc_to_choice : str) -> list:
+    win_pred = majority_vote([preds[0] for preds in preds])
+    vote_probs = [0.0 for _ in doc_to_choice]
+
+    for pred, pred_probs in preds:
+        if pred == win_pred:
+            for i in range(len(doc_to_choice)):
+                vote_probs[i] += pred_probs[i] if type(pred_probs[i]) == float else pred_probs[i][0]
+    vote_probs = [(p / len([pred for pred, _ in preds if pred == win_pred]), False) for p in vote_probs]
+
+    return (win_pred, vote_probs)
+
+def aggregate_votes(preds: List[int], doc_to_choice : str) -> list:
+    if type(preds[0]) == list:
+        preds = [aggregate_votes(pred, doc_to_choice) for pred in preds]
+
+    return single_doc_aggregate_votes(preds, doc_to_choice)
+
+def aggregate_doc_predictions(predictions_per_input_doc: Dict[str, Dict], task_def) -> None:
+    # predictions_per_input_doc[doc_id] = {
+    #     "preds": {model_name: [pred1, pred2, ...], ...},
+    #     "pred_probs": {model_name: [[prob1, prob2, ...
+
+    doc_to_choice = task_def.config.doc_to_choice
+
+    results_per_doc = { "flat_preds": {doc_id : None for doc_id in predictions_per_input_doc}, 
+                        "per_reasoning_model_preds": {doc_id : None for doc_id in predictions_per_input_doc},
+                        "per_answering_model_preds": {doc_id : None for doc_id in predictions_per_input_doc}
+                    }
+    
+    for doc_id, info in predictions_per_input_doc.items():
+        flat_res = []
+        per_reasoning_model_res = [[] for _ in info["preds"]]
+        per_answering_model_res = [[] for _ in info["preds"]]
+
+        reasoning_models = list(info["preds"].keys())
+
+        # Group results correctly
+        for i, reasoning_model in enumerate(reasoning_models):
+            for j in range(len(info["preds"][reasoning_model])):
+                flat_res.append(info["preds"][reasoning_model][j])
+                per_reasoning_model_res[i].append(info["preds"][reasoning_model][j])
+                per_answering_model_res[j].append(info["preds"][reasoning_model][j])
+
+        flat_res = task_def.process_results(info["doc"], aggregate_votes(flat_res, doc_to_choice)[1])
+        per_reasoning_model_res = task_def.process_results(info["doc"], aggregate_votes(per_reasoning_model_res, doc_to_choice)[1])
+        per_answering_model_res = task_def.process_results(info["doc"], aggregate_votes(per_answering_model_res, doc_to_choice)[1])
+
+        results_per_doc["flat_preds"][doc_id] = flat_res
+        results_per_doc["per_reasoning_model_preds"][doc_id] = per_reasoning_model_res
+        results_per_doc["per_answering_model_preds"][doc_id] = per_answering_model_res
+                                   
+    return results_per_doc

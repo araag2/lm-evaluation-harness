@@ -23,25 +23,23 @@ def fix_formatting(text):
     text = re.sub(r'\n {3,}', ' ', text)
     return re.sub(r'[\[\]\']', '', text).strip()
 
-relevant_keys = ["Diseases", "ICD_Codes", "Drugs", "SMILES", "CT_Criteria"]
+relevant_keys = ["Diseases", "ICD_Codes", "Drugs", "SMILES", "CT_Criteria", "Reasoning_Chain", "Verified_Reasoning_Chain"]
 
 def doc_to_text(doc, prompt = baseline_prompt):
     res = prompt
     for key in relevant_keys:
-      res = res.replace(f"{{{{{key}}}}}", fix_formatting(doc[key]))
+        if key in doc:
+            res = res.replace(f"{{{{{key}}}}}", fix_formatting(doc[key]))
     return res
 
 def doc_to_text_reasoning(doc):
     return doc_to_text(doc, reasoning_prompt)
 
 def doc_to_text_answer_selection(doc):
-    relevant_keys.append("Reasoning_Chain")
     return doc_to_text(doc, answer_selection_prompt)
 
 def doc_to_text_verify_reasoning(doc):
-    relevant_keys.append("Reasoning_Chain")
     return doc_to_text(doc, verify_reasoning_prompt)
 
 def doc_to_text_answer_selection_after_verify_reasoning(doc):
-    relevant_keys += ["Reasoning_Chain", "Verified_Reasoning_Chain"]
     return doc_to_text(doc, answer_selection_after_verification_prompt)
