@@ -3,7 +3,7 @@
 OUTPUT_PATH=/cfs/home/u021010/PhD/active_dev/outputs/template_outputs/
 OUTPUT_NAME=meeting_summary
 
-INPUT_FOLDERS_BASE=/cfs/home/u021010/PhD/active_dev/outputs/0-shot_only
+INPUT_FOLDERS_BASE=/cfs/home/u021010/PhD/active_dev/outputs/multi-turn_CoT
 
 INPUT_FOLDERS=(
   "."

@@ -7,10 +7,6 @@ MODEL=vllm
 
 MODELS=(
     "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000"
-    "pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=20000"
-    "pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=20000"
-    "pretrained=google/gemma-3n-E4B-it,max_length=20000"
-    "pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=20000"
 )
 
 # meta-llama/Llama-3.1-8B-Instruct
@@ -36,10 +32,8 @@ MODELS=(
 
 # Tasks List (space-separated)
 TASK_LIST=(
-    NLI4PR
     HINT
     Evidence_Inference_v2
-    SemEval_NLI4CT
 )
 
 INFERENCE_MODES=(
@@ -49,12 +43,13 @@ INFERENCE_MODES=(
 )
 
 # Generation Params
+CUDA_DEVICES=1
 BATCH_SIZE=auto
 SEED=0
 
 # Output base path
 OUTPUT_BASE_PATH=/cfs/home/u021010/PhD/active_dev/outputs
-RUN_NAME=0-shot_only/
+RUN_NAME=TEST/
 
 for MODEL_ARGS in "${MODELS[@]}"; do
 
@@ -79,7 +74,7 @@ for MODEL_ARGS in "${MODELS[@]}"; do
             echo -e "[INFO] Running Task: $TASK with Inference Mode: $INFERENCE_MODE"
             echo -e "--------------------------------------------------"
 
-            VLLM_WORKER_MULTIPROC_METHOD=spawn CUDA_VISIBLE_DEVICES=2 python -m lm_eval \
+            VLLM_WORKER_MULTIPROC_METHOD=spawn CUDA_VISIBLE_DEVICES=$CUDA_DEVICES python -m lm_eval \
                 --model $MODEL \
                 --model_args $MODEL_ARGS \
                 --tasks "${TASK}_${INFERENCE_MODE}" \

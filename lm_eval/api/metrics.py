@@ -397,13 +397,12 @@ def bits_per_byte(items):
 @register_aggregation("f1")
 def f1_score(items):
     from sklearn.metrics import f1_score
-
+    
     unzipped_list = list(zip(*items))
     golds = [1 if g > 0 else 0 for g in unzipped_list[0]]
     preds = [1 if p > 0 else 0 for p in unzipped_list[1]]
-    fscore = f1_score(golds, preds, zero_division=0)
 
-    return np.max(fscore)
+    return f1_score(golds, preds, zero_division=0)
 
 
 @register_aggregation("matthews_corrcoef")
@@ -658,7 +657,7 @@ def mcc_fn(items):  # This is a passthrough function
 @register_metric(
     metric="f1",
     higher_is_better=True,
-    output_type="multiple_choice",
+    output_type=["multiple_choice", "generate_until"],
     aggregation="f1",
 )
 def f1_fn(items):  # This is a passthrough function

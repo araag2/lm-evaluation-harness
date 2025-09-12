@@ -10,6 +10,7 @@ from pathlib import Path
 
 def extract_metrics(result_dict, prefix=""):
     metrics = {}
+
     for k, v in result_dict.items():
         if "," in k and "_stderr" not in k:
             metric_name = k.split(",")[0]
@@ -23,7 +24,7 @@ def collect_results(folders, file_filter=None):
         for root, _, files in os.walk(folder):
 
             for file in files:
-                if not file.endswith(".json") or not file.startswith("results_"):
+                if not file.endswith(".json") or (not file.startswith("results_") and not file.startswith("Summary_")):
                     continue
 
                 if file_filter and file_filter not in file:
@@ -37,7 +38,12 @@ def collect_results(folders, file_filter=None):
                         print(f"Failed to load {path}: {e}")
                         continue
 
-                for task_name, result_dict in data.get("results", {}).items():
+                results_field = list(data.get("results", {}).keys())
+                search_field = None
+                if len(results_field) == 1:
+                    search_field = data["results"][results_field[0]]
+
+                for task_name, result_dict in search_field.items():
                     config = data.get("configs", {}).get(task_name, {})
                     model_args = data.get("config", {}).get("model_args", "N/A")
                     pretrained = config.get("metadata", {}).get("pretrained", "N/A")
@@ -48,6 +54,7 @@ def collect_results(folders, file_filter=None):
                         "Model Args": model_args,
                         "Path": root
                     }
+
                     result_entry.update(extract_metrics(result_dict))
                     results.append(result_entry)
 
@@ -61,6 +68,11 @@ def save_csv(df, path):
 
 def save_markdown(df, path):
     df = df.drop(columns=["Model Args", "Path"], errors="ignore")
+
+    # Multiply all numeric (float/int) columns by 100
+    numeric_cols = df.select_dtypes(include=["float", "int"]).columns
+    df[numeric_cols] = round(df[numeric_cols] * 100, 2)
+
     df.to_markdown(path, index=False)
     print(f"    - Saved Markdown to:{path}")
 

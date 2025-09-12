@@ -107,7 +107,6 @@ def run_reasoning(args: argparse.Namespace) -> Dict[str, Dict[str, List[dict]]]:
         for task in args.reasoning_tasks:
             full_task_name = task.replace(":", "_")
 
-            print(f"\n[Step 1: Reasoning] Running model: {model_name} for task {task} with args: {args}")
             results = evaluator.simple_evaluate(
                 model=args.provider,
                 model_args=model_name,

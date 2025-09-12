@@ -69,8 +69,8 @@ def main():
         case _:
             raise ValueError(f"Unknown mode: {args.mode}")
         
-    print("\n==== RESULTS (summary keys only) ====")
-    print(json.dumps({k: v for k, v in out.items() if k != "results"}, indent=2))
+    #print("\n==== RESULTS (summary keys only) ====")
+    #print(json.dumps({k: v for k, v in out.items() if k != "results"}, indent=2))
 
     if args.output_path:
         with safe_open_w(f"{args.output_path}Summary_{datetime.now().strftime('%Y-%m-%dT%H-%M')}.json") as f:

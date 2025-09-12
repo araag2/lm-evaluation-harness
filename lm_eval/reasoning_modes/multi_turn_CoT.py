@@ -32,10 +32,13 @@ def mode_multi_turn_CoT(args: argparse.Namespace) -> Dict:
 
         results[full_task_name] = output
 
+    inner_results = next(iter(results.values()))
+    output_results = {"results": inner_results["results"], "samples": inner_results["samples"]}
+
     return {
         "mode": "multi-turn_CoT",
         "reasoning_model": reasoning_model,
         "answering_model": answering_model,
         "reasoning_task": reasoning_task,
-        "results": results,
+        **output_results
     }

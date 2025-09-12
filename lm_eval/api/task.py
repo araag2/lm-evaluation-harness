@@ -1639,6 +1639,7 @@ class ConfigurableTask(Task):
 
             # TODO use keyword arguments to the metric?
             # gold, pred, norm stuff, the original lls,
+
             result_dict = {
                 **({"acc": acc} if "acc" in use_metric else {}),
                 **({"f1": (gold, pred)} if "f1" in use_metric else {}),
@@ -1671,7 +1672,7 @@ class ConfigurableTask(Task):
         elif self.OUTPUT_TYPE == "generate_until":
             gold = self.doc_to_target(doc)
             result = results[0]
-            if self.config.doc_to_choice is not None:
+            if self.config.doc_to_choice is not None and isinstance(gold, int):
                 # If you set doc_to_choice,
                 # it assumes that doc_to_target returns a number.
                 choices = self.doc_to_choice(doc)
@@ -1755,6 +1756,14 @@ class ConfigurableTask(Task):
                     result_score = 1.0 if norm_target == norm_cand else 0.0
 
                 else:
+
+                    if metric == "f1":
+                        if isinstance(gold, str):
+                            gold =  self.doc_to_choice(doc).index(gold) if gold in self.doc_to_choice(doc) else -1
+                        if isinstance(result, str):
+                            result = self.doc_to_choice(doc).index(result) if result in self.doc_to_choice(doc) else -1
+
+
                     try:
                         result_score = self._metric_fn_list[metric](
                             references=[gold],

@@ -9,6 +9,7 @@ training_split: train
 test_split: dev
 doc_to_text: !function utils.doc_to_text_reasoning
 doc_to_target: "{{ Label }}"
+doc_to_choice: ["A", "B", "C", "D"]
 output_type: generate_until
 generation_kwargs:
   until:

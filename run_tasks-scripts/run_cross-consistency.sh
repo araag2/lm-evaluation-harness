@@ -34,23 +34,14 @@ ANSWERING_MODELS=("${REASONING_MODELS[@]}")
 
 PAIRS_OF_TASK_LIST=(
     "MedNLI:CoT|MedNLI:0-shot"
-    "HINT:CoT|HINT:0-shot"
-    "MedMCQA:CoT|MedMCQA:0-shot" 
-    "MedQA:CoT|MedQA:0-shot"
-    "PubMedQA:CoT|PubMedQA:0-shot"
-    "Evidence_Inference_v2:CoT|Evidence_Inference_v2:0-shot"
-    "NLI4PR:patient-lang_CoT|NLI4PR:patient-lang_0-shot"
-    "NLI4PR:medical-lang_CoT|NLI4PR:medical-lang_0-shot"
-    "SemEval_NLI4CT:2023_CoT|SemEval_NLI4CT:2023_0-shot"
-    "SemEval_NLI4CT:2024_CoT|SemEval_NLI4CT:2024_0-shot"
 )
 
 MODE=cross-consistency  # Updated mode to cross-consistency
 
-BASE_OUTPUT_DIR="/cfs/home/u021010/PhD/active_dev/outputs/TEST/$MODE"
+BASE_OUTPUT_DIR="/cfs/home/u021010/PhD/active_dev/outputs/$MODE"
 
-CUDA_DEVICES=0
-BATCH_SIZE=auto
+CUDA_DEVICES=1
+BATCH_SIZE=1
 SEED=0
 
 echo "=================================================="
@@ -87,8 +78,8 @@ for TASK_PAIR in "${PAIRS_OF_TASK_LIST[@]}"; do
         --output_path $OUTPUT_PATH \
         --batch_size $BATCH_SIZE \
         --seed $SEED \
-        --log_samples \
-        --limit 1
+        --log_samples
+        #--limit 1
 
     STATUS=$?
     if [ $STATUS -eq 0 ]; then
