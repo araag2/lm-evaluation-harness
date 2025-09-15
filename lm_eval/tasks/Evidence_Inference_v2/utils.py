@@ -19,7 +19,7 @@ def doc_to_text(doc, prompt = baseline_prompt):
     res = prompt
     for key in relevant_keys:
         if key in doc:
-            res = res.replace(f"{{{{{key}}}}}", doc[key])
+            res = res.replace(f"{{{{{key}}}}}", doc[key][:30000])  # Truncate to avoid exceeding token limits
     return res
 
 def doc_to_text_reasoning(doc):

@@ -21,22 +21,22 @@ generation_kwargs:
     - "<eos>"
     - "</s>"
   do_sample: true
-  temperature: 1.2
-  top_p: 0.9
-  top_k: 50
-repeats: 11
+  temperature: 1.3
+  top_p: 0.95
+  top_k: 30
+repeats: 21
 filter_list:
   - name: "score_first"
     filter:
     - function: "regex"
       regex_pattern: "(?s:.*)([Nn]o|[Mm]aybe|[Yy]es)"
     - function: "take_first"
-  - name: "maj@11"
+  - name: "maj@21"
     filter:
     - function: "regex"
       regex_pattern: "(?s:.*)([Nn]o|[Mm]aybe|[Yy]es)"
     - function: "take_first_k"
-      k: 11
+      k: 21
     - function: "majority_vote"
     - function: "take_first"
 metric_list:

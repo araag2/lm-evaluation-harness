@@ -4,14 +4,14 @@
 # ================================
 PROVIDER=vllm
 
-#"pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=25000|pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=25000"
-#"pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000|pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000"
-#"pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=25000|pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=25000"
-#"pretrained=google/gemma-3n-E4B-it,max_length=25000|pretrained=google/gemma-3n-E4B-it,max_length=25000"
-#"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=25000|pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=25000"
+#"pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8|pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8"
+#"pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8|pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8"
+#"pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8|pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8"
+#"pretrained=google/gemma-3n-E4B-it,max_length=22000,gpu_memory_utilization=0.8,swap_space=8|pretrained=google/gemma-3n-E4B-it,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
+#"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8|pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8"
 
 PAIRS_OF_MODELS=(
-    "pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=25000|pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=25000"
+    "pretrained=google/gemma-3n-E4B-it,max_length=22000,gpu_memory_utilization=0.8,swap_space=8|pretrained=google/gemma-3n-E4B-it,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
 )
 
 #"MedNLI:CoT|MedNLI:0-shot"
@@ -26,20 +26,17 @@ PAIRS_OF_MODELS=(
 #"SemEval_NLI4CT:2024_CoT|SemEval_NLI4CT:2024_0-shot"
 
 PAIRS_OF_TASK_LIST=(
-    "Evidence_Inference_v2:CoT|Evidence_Inference_v2:0-shot"
-    "HINT:CoT|HINT:0-shot"
-    "NLI4PR:patient-lang_CoT|NLI4PR:patient-lang_0-shot"
-    "NLI4PR:medical-lang_CoT|NLI4PR:medical-lang_0-shot"
+    "MedNLI:CoT|MedNLI:0-shot"
+    "MedMCQA:CoT|MedMCQA:0-shot" 
+    "MedQA:CoT|MedQA:0-shot"
+    "PubMedQA:CoT|PubMedQA:0-shot"
 )
 
 MODE=multi-turn_CoT
-# multi-turn_CoT
-# multi-turn_CoT-SC
-# cross-consistency
 
-BASE_OUTPUT_DIR="/cfs/home/u021010/PhD/active_dev/outputs/clean_res/$MODE"
+BASE_OUTPUT_DIR="/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/$MODE"
 
-CUDA_DEVICES=5
+CUDA_DEVICES=0
 BATCH_SIZE=auto
 SEED=0
 
@@ -80,8 +77,7 @@ for PAIR_MODELS in "${PAIRS_OF_MODELS[@]}"; do
         --output_path $OUTPUT_PATH \
         --batch_size $BATCH_SIZE \
         --seed $SEED \
-        --log_samples \
-        --limit 1
+        --log_samples
 
     STATUS=$?
     if [ $STATUS -eq 0 ]; then

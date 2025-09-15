@@ -20,7 +20,7 @@ relevant_keys = ["Title", "Summary", "Detailed_description", "Eligibility", "Pat
 def doc_to_text(doc, reasoning = False):
     res = reasoning_prompt if reasoning else baseline_prompt
     for key in relevant_keys:
-        res = res.replace(f"{{{{{key}}}}}", doc[key])
+        res = res.replace(f"{{{{{key}}}}}", doc[key][:40000])
     return res
 
 def doc_to_text_reasoning(doc):

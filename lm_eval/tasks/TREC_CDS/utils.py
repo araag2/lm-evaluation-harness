@@ -12,7 +12,7 @@ relevant_keys = ["Title", "Abstract", "Body", "Question", "Patient_Summary"]
 def doc_to_text(doc, reasoning = False):
     res = reasoning_prompt if reasoning else baseline_prompt
     for key in relevant_keys:
-      res = res.replace(f"{{{{{key}}}}}", doc[key])
+      res = res.replace(f"{{{{{key}}}}}", doc[key][:40000]) # Truncate to 40k characters to avoid exceeding context length
     return res
 
 def doc_to_text_reasoning(doc):

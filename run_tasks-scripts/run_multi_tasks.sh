@@ -5,23 +5,21 @@
 # ================================
 MODEL=vllm
 
-MODELS=(
-    "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000"
-)
-
-# meta-llama/Llama-3.1-8B-Instruct
-# deepseek-ai/DeepSeek-R1-Distill-Llama-8B
-# Qwen/Qwen3-4B-Instruct-2507
-# google/gemma-3n-E4B-it
-# mistralai/Ministral-8B-Instruct-2410
+#"pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=25000"
+#"pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000"
+#"pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=25000"
+#"pretrained=google/gemma-3n-E4B-it,max_length=25000"
+#"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=25000"
 #Qwen/Qwen3-0.6B -> Test Model
 #arnir0/Tiny-LLM -> Test Model
 
-#MedNLI
-#MedQA
-#MedMCQA
+MODELS=(
+    "pretrained=google/gemma-3n-E4B-it,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
+)
+
+
 #NLI4PR
-#PubMedQA
+
 #Trial_Meta-Analysis_type
 #Evidence_Inference_v2
 #HINT
@@ -30,10 +28,11 @@ MODELS=(
 #TREC_CT
 #TREC_Prec-Med
 
-# Tasks List (space-separated)
 TASK_LIST=(
-    HINT
-    Evidence_Inference_v2
+    MedNLI
+    MedQA
+    MedMCQA
+    PubMedQA
 )
 
 INFERENCE_MODES=(
@@ -43,13 +42,13 @@ INFERENCE_MODES=(
 )
 
 # Generation Params
-CUDA_DEVICES=1
+CUDA_DEVICES=0
 BATCH_SIZE=auto
 SEED=0
 
 # Output base path
-OUTPUT_BASE_PATH=/cfs/home/u021010/PhD/active_dev/outputs
-RUN_NAME=TEST/
+OUTPUT_BASE_PATH=/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/
+RUN_NAME=clean_res/
 
 for MODEL_ARGS in "${MODELS[@]}"; do
 
@@ -81,8 +80,8 @@ for MODEL_ARGS in "${MODELS[@]}"; do
                 --batch_size $BATCH_SIZE \
                 --seed $SEED \
                 --output_path $OUTPUT_PATH \
-                --write_out \
                 --log_samples 
+                #--write_out \
                 #--apply_chat_template \
                 #--limit 2 \
                 #--predict_only \

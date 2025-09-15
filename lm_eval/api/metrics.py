@@ -886,12 +886,12 @@ def stderr_for_metric(
     bootstrappable = [
         median,
         matthews_corrcoef,
-        f1_score,
         perplexity,
         bleu,
         chrf,
         ter,
         nanmean,
+        #f1_score,
         #P10_score, # TO:DO Custom Metrics Added
         #R_prec_score,
         #nDCG_score,
