@@ -57,27 +57,12 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
             predictions_per_input_doc[doc_id]["pred_probs"].append(pred_probs)    
             predictions_per_input_doc[doc_id]["preds"].append(pred_probs.index(max(pred_probs)))
 
-    results_per_doc = {}
-    for doc_id, info in predictions_per_input_doc.items():
-        pred = majority_vote(info["preds"])
-        predictions_per_input_doc[doc_id]["majority_pred"] = doc_to_choice[pred]
-        pred_probs = [0.0 for _ in doc_to_choice]
+        aggregated_metrics = {}
 
-        # Aggrate probabilities by averaging them but only from the majority voted class
-        for p, probs in zip(info["preds"], info["pred_probs"]):
-            if p == pred:
-                for i in range(len(doc_to_choice)):
-                    pred_probs[i] += probs[i]
-        pred_probs = [(p / info["preds"].count(pred), False) for p in pred_probs]
+        for strat in [("majority", None), ("majority", 3)]:
+            strategy, top_k = strat
+            aggregated_metrics[strategy + (f"_top{top_k}" if top_k is not None else "")] = aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def, strategy=strategy, top_k=top_k)
 
-        results_per_doc[doc_id] = task_def.process_results(info["doc"], pred_probs)
-
-    # Aggregate metrics across all docs using the task aggregation
-    aggregated_metrics = {}
-    for metric_name, agg_fn in task_def.aggregation().items():
-        all_values = [results_per_doc[doc_id][metric_name] for doc_id in results_per_doc if metric_name in results_per_doc[doc_id]]
-        if all_values:
-            aggregated_metrics[metric_name] = agg_fn(all_values)
 
     return {
         "mode": "multi-turn_CoT-SC",
@@ -88,3 +73,50 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
         "results": aggregated_metrics,
         "samples" : predictions_per_input_doc
     }
+
+def aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def, strategy="majority", top_k=None):
+    """
+    Aggregate predictions for a document using different strategies.
+
+    Args:
+        predictions_per_input_doc: dict mapping document IDs to their predicted class indices and probabilities
+        doc_to_choice: mapping of class indices -> class names
+        strategy: "majority" | "logits" | "topk_majority"
+        top_k: number of first predictions to use (for "topk_majority")
+    """
+
+    results_per_doc = {}
+
+    match strategy:
+        case "majority":
+            strategy_name = "majority" + (f"_top{top_k}" if top_k is not None else "")
+
+            results_per_doc = majority_aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def, k=top_k, strategy_name=strategy_name)
+
+        case "logits":
+            pass
+
+    # Aggregate metrics across all docs using the task aggregation
+    aggregated_metrics = {}
+    for metric_name, agg_fn in task_def.aggregation().items():
+        all_values = [results_per_doc[doc_id][metric_name] for doc_id in results_per_doc if metric_name in results_per_doc[doc_id]]
+        if all_values:
+            aggregated_metrics[metric_name] = agg_fn(all_values)
+    return aggregated_metrics
+
+def majority_aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def, k=None, strategy_name="majority"):
+    results_per_doc_id = {}
+    for doc_id, info in predictions_per_input_doc.items():
+        top_k_preds = [p for p in (info["preds"][:k] if k is not None else info["preds"])]
+        pred = majority_vote(top_k_preds)
+        predictions_per_input_doc[doc_id][strategy_name] = doc_to_choice[pred]
+        pred_probs = [0.0 for _ in doc_to_choice]
+
+        # Aggrate probabilities by averaging them but only from the majority voted class
+        for p, probs in zip(info["preds"][:k], info["pred_probs"][:k]):
+            if p == pred:
+                for i in range(len(doc_to_choice)):
+                    pred_probs[i] += probs[i]
+        pred_probs = [(p / top_k_preds.count(pred), False) for p in pred_probs]
+        results_per_doc_id[doc_id] = task_def.process_results(info["doc"], pred_probs)
+    return results_per_doc_id

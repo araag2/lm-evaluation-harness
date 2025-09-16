@@ -10,54 +10,93 @@ from pathlib import Path
 
 def extract_metrics(result_dict, prefix=""):
     metrics = {}
+    print(f"Result dict is {result_dict}")
 
     for k, v in result_dict.items():
         if "," in k and "_stderr" not in k:
             metric_name = k.split(",")[0]
             metrics[f"{prefix}{metric_name}"] = v
+        else:
+            metrics[f"{prefix}{k}"] = v
     return metrics
+
+def collect_results_from_default_file(path):
+    with open(path, "r") as f:
+        try:
+            data = json.load(f)
+        except Exception as e:
+            print(f"Failed to load {path}: {e}")
+        
+        results = []
+
+        for task_name, result_dict in data.get("results", {}).items():
+            config = data.get("configs", {}).get(task_name, {})
+            model_args = data.get("config", {}).get("model_args", "N/A")
+            pretrained = config.get("metadata", {}).get("pretrained", "N/A")
+
+            result_entry = {
+                "Dataset": task_name,
+                "Model": pretrained,
+                "Model Args": model_args,
+                "Path": path
+            }
+
+            result_entry.update(extract_metrics(result_dict))
+            results.append(result_entry)        
+
+    return results
+
+def collect_results_from_summary_file(path):
+    with open(path, "r") as f:
+        try:
+            data = json.load(f)
+        except Exception as e:
+            print(f"Failed to load {path}: {e}")
+        
+        results = []
+
+        if "acc" in data.get("results", {}).keys():
+            model_args = data.get("config", {}).get("model_args", "N/A")
+
+            result_entry = {
+                "Dataset": data.get("reasoning_task", {}),
+                "Model": data.get("reasoning_model", {}).split(",")[0][11:],
+                "Model Args": model_args,
+                "Path": path
+            }
+
+            result_entry.update(extract_metrics(data.get("results", {})))
+            results.append(result_entry)
+
+        else:
+            for task_name, result_dict in data.get("results", {}).items():
+                model_args = data.get("config", {}).get("model_args", "N/A")
+
+                result_entry = {
+                    "Dataset": task_name,
+                    "Model": data.get("reasoning_model", {}).split(",")[0][11:],
+                    "Model Args": model_args,
+                    "Path": path
+                }
+
+                result_entry.update(extract_metrics(result_dict))
+                results.append(result_entry)        
+
+    return results
+
 
 def collect_results(folders, file_filter=None):
     results = []
 
     for folder in folders:
         for root, _, files in os.walk(folder):
-
             for file in files:
-                if not file.endswith(".json") or (not file.startswith("results_") and not file.startswith("Summary_")):
-                    continue
-
-                if file_filter and file_filter not in file:
-                    continue   # Skip files that don’t match filter
-
-                path = os.path.join(root, file)
-                with open(path, "r") as f:
-                    try:
-                        data = json.load(f)
-                    except Exception as e:
-                        print(f"Failed to load {path}: {e}")
-                        continue
-
-                results_field = list(data.get("results", {}).keys())
-                search_field = None
-                if len(results_field) == 1:
-                    search_field = data["results"][results_field[0]]
-
-                for task_name, result_dict in search_field.items():
-                    config = data.get("configs", {}).get(task_name, {})
-                    model_args = data.get("config", {}).get("model_args", "N/A")
-                    pretrained = config.get("metadata", {}).get("pretrained", "N/A")
-
-                    result_entry = {
-                        "Dataset": task_name,
-                        "Model": pretrained,
-                        "Model Args": model_args,
-                        "Path": root
-                    }
-
-                    result_entry.update(extract_metrics(result_dict))
-                    results.append(result_entry)
-
+                if file.endswith(".json") and file.startswith("results_"):
+                    results += collect_results_from_default_file(os.path.join(root, file))
+                
+                elif file.endswith(".json") and file.startswith("Summary_"):
+                    results += collect_results_from_summary_file(os.path.join(root, file))
+                
     return results
 
 
@@ -69,11 +108,30 @@ def save_csv(df, path):
 def save_markdown(df, path):
     df = df.drop(columns=["Model Args", "Path"], errors="ignore")
 
-    # Multiply all numeric (float/int) columns by 100
-    numeric_cols = df.select_dtypes(include=["float", "int"]).columns
-    df[numeric_cols] = round(df[numeric_cols] * 100, 2)
+    # Sort by dataset then model in Qwen, Llama, DeepSeek, Mistral, Gemma order
+    model_order = ["Qwen", "meta-llama", "deepseek", "mistralai", "google"]
 
-    df.to_markdown(path, index=False)
+        # Function to extract model priority
+    def get_model_priority(model_name: str) -> int:
+        for i, key in enumerate(model_order):
+            if key.lower() in model_name.lower():
+                return i
+        return len(model_order)  # put unknown models at the end
+
+    # If columns exist, apply sorting
+    if "Dataset" in df.columns and "Model" in df.columns:
+        df = df.sort_values(
+            by=["Dataset", "Model"],
+            key=lambda col: col.map(
+                lambda x: get_model_priority(x) if col.name == "Model" else x),
+        )
+
+    numeric_cols = df.select_dtypes(include=["float", "int"]).columns
+    if len(numeric_cols) > 0:
+        df[numeric_cols] = (
+            df[numeric_cols].applymap(lambda x: f"{x * 100:.2f}")).astype(str)
+
+    df.to_markdown(path, index=False, disable_numparse=True)
     print(f"    - Saved Markdown to:{path}")
 
 

@@ -1,5 +1,6 @@
-task: MedQA_SC
+task: MedQA_CoT_SC
 tag:
+  - chain-of-thought
   - self-consistency
 dataset_path: araag2/MedQA
 dataset_name: processed

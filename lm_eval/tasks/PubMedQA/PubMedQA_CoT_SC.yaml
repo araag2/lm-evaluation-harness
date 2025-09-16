@@ -35,7 +35,7 @@ filter_list:
     - function: "take_first_k"
       k: 21
     - function: "majority_vote"
-    - function: "take_first"
+    - function: "take_last"
 metric_list:
   - metric: acc
     aggregation: mean
