@@ -1,5 +1,6 @@
 import copy
 import argparse
+from email.policy import default
 from typing import Dict, List, Any
 
 
@@ -149,23 +150,70 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
 # Process Votes
 # -------------------------
 
-def single_doc_aggregate_votes(preds: List[int], doc_to_choice : str) -> list:
-    win_pred = majority_vote([preds[0] for preds in preds])
-    vote_probs = [0.0 for _ in doc_to_choice]
+def single_doc_aggregate_votes(preds: List[int], doc_to_choice : str, strategy: str = "majority") -> list:
+    win_pred = None
 
+    match strategy:
+        case "majority":
+            win_pred = majority_vote([p for p, _ in preds])
+
+        case "logits":
+            # Sum logits across predictions
+            summed = [0.0 for _ in doc_to_choice]
+            for _, probs in preds:
+                for i, p in enumerate(probs):
+                    summed[i] += p if isinstance(p, float) else p[0]
+            win_pred = max(range(len(summed)), key=lambda i: summed[i])
+            vote_probs = [(s / len(preds), i == win_pred) for i, s in enumerate(summed)]
+            return (win_pred, vote_probs)
+
+        case "condorcet":
+            win_pred = condorcet_vote([probs for _, probs in preds], len(doc_to_choice))
+
+        case "borda":
+            win_pred = borda_vote([probs for _, probs in preds], len(doc_to_choice))
+
+        case _:
+            raise ValueError(f"Unknown strategy {strategy}")
+
+    # Default majority-style probs for majority/condorcet/borda
+    vote_probs = [0.0 for _ in doc_to_choice]
     for pred, pred_probs in preds:
         if pred == win_pred:
             for i in range(len(doc_to_choice)):
-                vote_probs[i] += pred_probs[i] if type(pred_probs[i]) == float else pred_probs[i][0]
-    vote_probs = [(p / len([pred for pred, _ in preds if pred == win_pred]), False) for p in vote_probs]
+                vote_probs[i] += pred_probs[i] if isinstance(pred_probs[i], float) else pred_probs[i][0]
 
+    vote_probs = [(p / len([pred for pred, _ in preds if pred == win_pred]), i == win_pred) 
+                  for i, p in enumerate(vote_probs)]
     return (win_pred, vote_probs)
 
-def aggregate_votes(preds: List[int], doc_to_choice : str) -> list:
-    if type(preds[0]) == list:
-        preds = [aggregate_votes(pred, doc_to_choice) for pred in preds]
+def condorcet_vote(pred_probs_list, num_classes):
+    # pairwise majority comparisons
+    pairwise_wins = [0] * num_classes
+    for i in range(num_classes):
+        for j in range(i + 1, num_classes):
+            wins_i = sum(1 for probs in pred_probs_list if probs[i] > probs[j])
+            wins_j = len(pred_probs_list) - wins_i
+            if wins_i > wins_j:
+                pairwise_wins[i] += 1
+            elif wins_j > wins_i:
+                pairwise_wins[j] += 1
+    return max(range(num_classes), key=lambda c: pairwise_wins[c])
 
-    return single_doc_aggregate_votes(preds, doc_to_choice)
+
+def borda_vote(pred_probs_list, num_classes):
+    scores = [0] * num_classes
+    for probs in pred_probs_list:
+        ranked = sorted(range(num_classes), key=lambda i: probs[i], reverse=True)
+        for rank, cls in enumerate(ranked):
+            scores[cls] += num_classes - rank - 1
+    return max(range(num_classes), key=lambda i: scores[i])
+
+def aggregate_votes(preds: List[int], doc_to_choice: str, strategy="majority") -> list:
+    if isinstance(preds[0], list):
+        preds = [aggregate_votes(pred, doc_to_choice, strategy) for pred in preds]
+
+    return single_doc_aggregate_votes(preds, doc_to_choice, strategy=strategy)
 
 def aggregate_doc_predictions(predictions_per_input_doc: Dict[str, Dict], task_def) -> None:
     # predictions_per_input_doc[doc_id] = {
@@ -174,7 +222,11 @@ def aggregate_doc_predictions(predictions_per_input_doc: Dict[str, Dict], task_d
 
     doc_to_choice = task_def.config.doc_to_choice
 
-    results_per_doc = { "flat_preds": {doc_id : None for doc_id in predictions_per_input_doc}, 
+    results_per_doc = { "flat_preds": {doc_id : None for doc_id in predictions_per_input_doc},
+                        "flat_preds_maj": {doc_id : None for doc_id in predictions_per_input_doc},
+                        "flat_preds_logits": {doc_id : None for doc_id in predictions_per_input_doc},
+                        "flat_preds_condorcet": {doc_id : None for doc_id in predictions_per_input_doc},
+                        "flat_preds_borda": {doc_id : None for doc_id in predictions_per_input_doc}, 
                         "per_reasoning_model_preds": {doc_id : None for doc_id in predictions_per_input_doc},
                         "per_answering_model_preds": {doc_id : None for doc_id in predictions_per_input_doc}
                     }
@@ -193,11 +245,11 @@ def aggregate_doc_predictions(predictions_per_input_doc: Dict[str, Dict], task_d
                 per_reasoning_model_res[i].append(info["preds"][reasoning_model][j])
                 per_answering_model_res[j].append(info["preds"][reasoning_model][j])
 
-        flat_res = task_def.process_results(info["doc"], aggregate_votes(flat_res, doc_to_choice)[1])
-        per_reasoning_model_res = task_def.process_results(info["doc"], aggregate_votes(per_reasoning_model_res, doc_to_choice)[1])
-        per_answering_model_res = task_def.process_results(info["doc"], aggregate_votes(per_answering_model_res, doc_to_choice)[1])
-
-        results_per_doc["flat_preds"][doc_id] = flat_res
+        results_per_doc["flat_preds_maj"][doc_id] = task_def.process_results(info["doc"], aggregate_votes(flat_res, doc_to_choice, strategy="majority")[1])
+        results_per_doc["flat_preds_logits"][doc_id] = task_def.process_results(info["doc"], aggregate_votes(flat_res, doc_to_choice, strategy="logits")[1])
+        results_per_doc["flat_preds_condorcet"][doc_id] = task_def.process_results(info["doc"], aggregate_votes(flat_res, doc_to_choice, strategy="condorcet")[1])
+        results_per_doc["flat_preds_borda"][doc_id] = task_def.process_results(info["doc"], aggregate_votes(flat_res, doc_to_choice, strategy="borda")[1])
+        
         results_per_doc["per_reasoning_model_preds"][doc_id] = per_reasoning_model_res
         results_per_doc["per_answering_model_preds"][doc_id] = per_answering_model_res
                                    

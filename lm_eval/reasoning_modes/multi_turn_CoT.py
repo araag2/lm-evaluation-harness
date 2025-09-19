@@ -32,13 +32,40 @@ def mode_multi_turn_CoT(args: argparse.Namespace) -> Dict:
 
         results[full_task_name] = output
 
-    inner_results = next(iter(results.values()))
-    output_results = {"results": inner_results["results"], "samples": inner_results["samples"]}
+    task_names = list(results.keys())
+    doc_to_choice = tasks.get_task_dict([full_task_name])[full_task_name].config.doc_to_choice
 
+    output_results = None
+
+    if len(task_names) == 1:
+        results = results[task_names[0]]
+
+        output_results = {"results" : format_results_dict(results["results"][task_names[0]]), "samples": {}}
+        predictions_per_input_doc = {}
+
+        for sample in results["samples"][task_names[0]]:
+            doc_id = sample["doc_id"]
+
+            predictions_per_input_doc[doc_id] = {
+                "doc" : sample["doc"],
+                "preds": [],
+                "pred_probs": [],
+            }
+
+            predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chain"] = shorten_reasoning_chain(sample["doc"]["Reasoning_Chain"], 100)
+            predictions_per_input_doc[doc_id]["pred_probs"] = [prob[0][0] for prob in sample["resps"]]
+            predictions_per_input_doc[doc_id]["preds"] = predictions_per_input_doc[doc_id]["pred_probs"].index(max(predictions_per_input_doc[doc_id]["pred_probs"]))
+
+            predictions_per_input_doc[doc_id]["pred_label"] = doc_to_choice[predictions_per_input_doc[doc_id]["preds"]]
+            
+        
+        output_results["samples"] = predictions_per_input_doc
+        
     return {
         "mode": "multi-turn_CoT",
         "reasoning_model": reasoning_model,
         "answering_model": answering_model,
         "reasoning_task": reasoning_task,
+        "answering_tasks": answering_task_spec,
         **output_results
     }

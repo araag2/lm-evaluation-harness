@@ -25,15 +25,15 @@ generation_kwargs:
   max_gen_toks: 1000
   temperature: 1.3
   top_p: 0.95
-  top_k: 30
-repeats: 21
+  top_k: 60
+repeats: 25
 filter_list:
-  - name: "maj@21"
+  - name: "maj@25"
     filter:
     - function: "regex"
       regex_pattern: "(?s:.*)([Nn]o|[Mm]aybe|[Yy]es)"
     - function: "take_first_k"
-      k: 21
+      k: 25
     - function: "majority_vote"
     - function: "take_last"
 metric_list:

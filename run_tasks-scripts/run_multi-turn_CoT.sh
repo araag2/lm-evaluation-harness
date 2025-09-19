@@ -11,7 +11,11 @@ PROVIDER=vllm
 #"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8|pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8"
 
 PAIRS_OF_MODELS=(
+    "pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=22000,gpu_memory_utilization=0.8,swap_space=8|pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
+    "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=22000,gpu_memory_utilization=0.8,swap_space=8|pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
+    "pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=22000,gpu_memory_utilization=0.8,swap_space=8|pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
     "pretrained=google/gemma-3n-E4B-it,max_length=22000,gpu_memory_utilization=0.8,swap_space=8|pretrained=google/gemma-3n-E4B-it,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
+    "pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.8,swap_space=8|pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
 )
 
 #"MedNLI:CoT|MedNLI:0-shot"
@@ -26,9 +30,6 @@ PAIRS_OF_MODELS=(
 #"SemEval_NLI4CT:2024_CoT|SemEval_NLI4CT:2024_0-shot"
 
 PAIRS_OF_TASK_LIST=(
-    "MedNLI:CoT|MedNLI:0-shot"
-    "MedMCQA:CoT|MedMCQA:0-shot" 
-    "MedQA:CoT|MedQA:0-shot"
     "PubMedQA:CoT|PubMedQA:0-shot"
 )
 

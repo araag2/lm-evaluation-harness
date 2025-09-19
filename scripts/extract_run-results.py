@@ -55,7 +55,7 @@ def collect_results_from_summary_file(path):
         
         results = []
 
-        if "acc" in data.get("results", {}).keys():
+        if "acc" in data.get("results", {}).keys() or "acc,none" in data.get("results", {}).keys():
             model_args = data.get("config", {}).get("model_args", "N/A")
 
             result_entry = {

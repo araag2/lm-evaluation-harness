@@ -16,6 +16,18 @@ def shorten_reasoning_chain(chain: str, edge_length: int = 100) -> str:
     """Shorten a reasoning chain for logging purposes."""
     return f'{chain[:edge_length]}  +  ..........  +  {chain[-edge_length:]}'
 
+def format_results_dict(results: Dict[str, Any]) -> Dict[str, Any]:
+    """Format results dictionary by rounding floats and converting lists to strings."""
+    formatted = {}
+    for key, value in results.items():
+        if key in ("alias", "acc_stderr,none", "acc_norm_stderr,none", "f1_stderr,none", "f1_norm_stderr,none"):
+            continue
+        elif key in ("acc,none", "acc_norm,none", "f1,none", "f1_norm,none"):
+            formatted[key.split(",")[0]] = round(value, 4) if isinstance(value, float) else 0.0
+        else:
+            formatted[key] = round(value, 4) if isinstance(value, float) else 0.0
+    return formatted
+
 # -------------------------
 # Dataset Helpers
 # -------------------------
