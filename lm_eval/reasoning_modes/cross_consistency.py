@@ -1,6 +1,7 @@
 import copy
 import argparse
 from email.policy import default
+import json
 from typing import Dict, List, Any
 
 
@@ -19,6 +20,21 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
     This function assumes the same task names as other modes and relies on helpers in
     reasoning_utils.py (run_reasoning, inject_reasoning_into_dataset, run_answering_for_dataset, etc.).
     """
+
+    if args.vote_file is not None:
+        print(f"[INFO] Using vote_file {args.vote_file} to load predictions and skip reasoning/answering steps.")
+        predictions_per_input_doc = json.load(open(args.vote_file, "r"))["samples"]
+
+        return {
+            "mode": "cross_consistency",
+            "reasoning_models": args.reasoning_models,
+            "verifier_models": args.answering_models,
+            "answering_models": args.answering_models,
+            "reasoning_task": args.reasoning_tasks[0],
+            "answering_task": args.answering_tasks[0],
+            "results": only_vote(args, predictions_per_input_doc),
+            "samples" : predictions_per_input_doc
+        }
 
 
     if len(args.reasoning_models) < 1 or len(args.answering_models) < 1:
@@ -59,11 +75,11 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
         reasoning_dataset = per_model_datasets_inject[reasoning_model]
 
         for answering_model in args.answering_models:
-            print(f"\n[Verification] Running reasoning model {reasoning_model} as verifier for chains from {answering_model}")
+            print(f"\n[Verification] Running answering model {answering_model} to verify reasoning chains from model {reasoning_model}.")
 
             raw_output = run_answering_for_dataset(
                 args=args,
-                answering_model= reasoning_model,
+                answering_model= answering_model,
                 answering_task_name= reasoning_full_task_name,
                 dataset_with_reasoning= reasoning_dataset,
                 doc_to_text_module=  f"lm_eval.tasks.{parse_task_spec(reasoning_task)[0]}.utils",
@@ -84,6 +100,8 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
 
     for reasoning_model in args.reasoning_models:
         for answering_model in args.answering_models:
+            print(f"\n[Aggregation] Using {reasoning_model} to verify reasoning chain with original reasoning from {reasoning_model} and verification from {answering_model}.")
+
             dataset_with_reasoning_verification = per_model_reasoning_verification_outputs[reasoning_model][answering_model]
 
             raw_output = run_answering_for_dataset(
@@ -122,19 +140,6 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
 
     print(f"[Step 4: Metrics] Aggregating metrics for task {answering_task} using {args.reasoning_models} reasoning models as verifiers.")
 
-    task_def = tasks.get_task_dict([answering_task_full_task_name])[answering_task_full_task_name]
-    results_per_doc = aggregate_doc_predictions(predictions_per_input_doc, task_def)
-
-    # Aggregate metrics across all docs using the task aggregation
-    aggregated_metrics = {}
-    for metric_name, agg_fn in task_def.aggregation().items():
-        if metric_name not in results_per_doc["flat_preds"][0]:
-            continue
-
-        for result_key in results_per_doc:
-            all_values = [results_per_doc[result_key][doc_id_][metric_name] for doc_id_ in results_per_doc[result_key]]
-            aggregated_metrics[f"{result_key}_{metric_name}"] = agg_fn(all_values)
-
     return {
         "mode": "cross_consistency",
         "reasoning_models": args.reasoning_models,
@@ -142,9 +147,37 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
         "answering_models": args.answering_models,
         "reasoning_task": reasoning_task,
         "answering_task": answering_task,
-        "results": aggregated_metrics,
+        "results": only_vote(args, predictions_per_input_doc),
         "samples" : predictions_per_input_doc
     }
+
+# -------------------------
+# Vote Wrappers
+# -------------------------
+
+def only_vote(args: argparse.Namespace, predictions_per_input_doc: Dict) -> Dict:
+    if args.vote_file is not None:
+        predictions_per_input_doc = json.load(open(args.vote_file, "r"))["samples"]
+
+    answering_task_full_task_name = args.answering_tasks[0].replace(":", "_")
+    task_def = tasks.get_task_dict([answering_task_full_task_name])[answering_task_full_task_name]
+    results_per_doc = aggregate_doc_predictions(predictions_per_input_doc, task_def)
+
+    # Aggregate metrics across all docs using the task aggregation
+    aggregated_metrics = {}
+    for metric_name, agg_fn in task_def.aggregation().items():
+
+        if metric_name not in results_per_doc["flat_preds_maj"]["0"]:
+            continue
+
+        for result_key in results_per_doc:
+            all_values = []
+            for doc_id in results_per_doc[result_key]:
+                all_values.append(results_per_doc[result_key][doc_id][metric_name])
+            aggregated_metrics[f"{result_key}_{metric_name}"] = agg_fn(all_values)
+
+    return aggregated_metrics
+
 
 # -------------------------
 # Process Votes
@@ -173,6 +206,9 @@ def single_doc_aggregate_votes(preds: List[int], doc_to_choice : str, strategy: 
         case "borda":
             win_pred = borda_vote([probs for _, probs in preds], len(doc_to_choice))
 
+        case "rrf":
+            win_pred = rrf_vote([probs for _, probs in preds], len(doc_to_choice))
+
         case _:
             raise ValueError(f"Unknown strategy {strategy}")
 
@@ -188,7 +224,6 @@ def single_doc_aggregate_votes(preds: List[int], doc_to_choice : str, strategy: 
     return (win_pred, vote_probs)
 
 def condorcet_vote(pred_probs_list, num_classes):
-    # pairwise majority comparisons
     pairwise_wins = [0] * num_classes
     for i in range(num_classes):
         for j in range(i + 1, num_classes):
@@ -209,10 +244,19 @@ def borda_vote(pred_probs_list, num_classes):
             scores[cls] += num_classes - rank - 1
     return max(range(num_classes), key=lambda i: scores[i])
 
-def aggregate_votes(preds: List[int], doc_to_choice: str, strategy="majority") -> list:
-    if isinstance(preds[0], list):
-        preds = [aggregate_votes(pred, doc_to_choice, strategy) for pred in preds]
+def rrf_vote(pred_probs_list, num_classes, rrf_k=60):
+    scores = [0.0] * num_classes
 
+    for probs in pred_probs_list:
+        # Rank classes descending by probability
+        ranked = sorted(range(num_classes), key=lambda i: probs[i], reverse=True)
+        for rank, cls in enumerate(ranked):
+            scores[cls] += 1.0 / (rrf_k + rank + 1)  # rank is 0-based
+
+    winner = max(range(num_classes), key=lambda i: scores[i])
+    return winner
+
+def aggregate_votes(preds: List[int], doc_to_choice: str, strategy="majority") -> list:
     return single_doc_aggregate_votes(preds, doc_to_choice, strategy=strategy)
 
 def aggregate_doc_predictions(predictions_per_input_doc: Dict[str, Dict], task_def) -> None:
@@ -222,19 +266,24 @@ def aggregate_doc_predictions(predictions_per_input_doc: Dict[str, Dict], task_d
 
     doc_to_choice = task_def.config.doc_to_choice
 
-    results_per_doc = { "flat_preds": {doc_id : None for doc_id in predictions_per_input_doc},
-                        "flat_preds_maj": {doc_id : None for doc_id in predictions_per_input_doc},
+    results_per_doc = { "flat_preds_maj": {doc_id : None for doc_id in predictions_per_input_doc},
                         "flat_preds_logits": {doc_id : None for doc_id in predictions_per_input_doc},
                         "flat_preds_condorcet": {doc_id : None for doc_id in predictions_per_input_doc},
                         "flat_preds_borda": {doc_id : None for doc_id in predictions_per_input_doc}, 
-                        "per_reasoning_model_preds": {doc_id : None for doc_id in predictions_per_input_doc},
-                        "per_answering_model_preds": {doc_id : None for doc_id in predictions_per_input_doc}
+                        "flat_preds_rrf": {doc_id : None for doc_id in predictions_per_input_doc}, 
+                        #"per_reasoning_model_preds": {doc_id : None for doc_id in predictions_per_input_doc},
+                        #"per_answering_model_preds": {doc_id : None for doc_id in predictions_per_input_doc}
                     }
     
+    print(f"{predictions_per_input_doc=}")
+
     for doc_id, info in predictions_per_input_doc.items():
         flat_res = []
-        per_reasoning_model_res = [[] for _ in info["preds"]]
-        per_answering_model_res = [[] for _ in info["preds"]]
+
+        # TODO: Why is this crashing
+
+        per_reasoning_model_res = [[] for _ in range(len(info["preds"]))]
+        per_answering_model_res = [[] for _ in range(len(next(iter(info["preds"].values()))))]
 
         reasoning_models = list(info["preds"].keys())
 
@@ -249,8 +298,9 @@ def aggregate_doc_predictions(predictions_per_input_doc: Dict[str, Dict], task_d
         results_per_doc["flat_preds_logits"][doc_id] = task_def.process_results(info["doc"], aggregate_votes(flat_res, doc_to_choice, strategy="logits")[1])
         results_per_doc["flat_preds_condorcet"][doc_id] = task_def.process_results(info["doc"], aggregate_votes(flat_res, doc_to_choice, strategy="condorcet")[1])
         results_per_doc["flat_preds_borda"][doc_id] = task_def.process_results(info["doc"], aggregate_votes(flat_res, doc_to_choice, strategy="borda")[1])
+        results_per_doc["flat_preds_rrf"][doc_id] = task_def.process_results(info["doc"], aggregate_votes(flat_res, doc_to_choice, strategy="rrf")[1])
         
-        results_per_doc["per_reasoning_model_preds"][doc_id] = per_reasoning_model_res
-        results_per_doc["per_answering_model_preds"][doc_id] = per_answering_model_res
+        #results_per_doc["per_reasoning_model_preds_maj"][doc_id] = aggregate_votes(per_reasoning_model_res, doc_to_choice, strategy="majority")
+        #results_per_doc["per_answering_model_preds_maj"][doc_id] = aggregate_votes(per_answering_model_res, doc_to_choice, strategy="majority")
                                    
     return results_per_doc

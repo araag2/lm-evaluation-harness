@@ -1,7 +1,10 @@
-
+import json
 from lm_eval.reasoning_modes.reasoning_utils import *
 
 def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
+    if args.vote_file is not None:
+        return only_vote(args)
+
     if len(args.reasoning_models) != 1 or len(args.answering_models) != 1:
         print(f"[WARNING] For multi-turn mode, please provide exactly one reasoning model and one answering model. {args.reasoning_models=} {args.answering_models=}")
 
@@ -57,12 +60,43 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
             predictions_per_input_doc[doc_id]["pred_probs"].append(pred_probs)    
             predictions_per_input_doc[doc_id]["preds"].append(pred_probs.index(max(pred_probs)))
 
-        aggregated_metrics = {}
 
-        for strat in [("majority", None), ("logits", None), ("condorcet", None), ("borda", None), ("rrf", None)]:
-            strategy, top_k = strat
-            aggregated_metrics[strategy + (f"_top{top_k}" if top_k is not None else "")] = aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def, strategy=strategy, top_k=top_k)
 
+    aggregated_metrics = {}
+
+    for strat in [("majority", None), ("logits", None), ("condorcet", None), ("borda", None), ("rrf", None)]:
+        strategy, top_k = strat
+        aggregated_metrics[strategy + (f"_top{top_k}" if top_k is not None else "")] = aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def, strategy=strategy, top_k=top_k)
+
+
+    return {
+        "mode": "multi-turn_CoT-SC",
+        "reasoning_model": reasoning_model,
+        "answering_model": answering_model,
+        "reasoning_task": reasoning_task,
+        "answering_task": answering_task,
+        "results": aggregated_metrics,
+        "samples" : predictions_per_input_doc
+    }
+
+def only_vote(args: argparse.Namespace) -> Dict:
+    reasoning_model = args.reasoning_models[0]
+    answering_model = args.answering_models[0]
+
+    reasoning_task = args.reasoning_tasks[0]
+    answering_task = args.answering_tasks[0]
+
+    full_task_name = answering_task.replace(":", "_")
+    task_def = tasks.get_task_dict([full_task_name])[full_task_name]
+
+    doc_to_choice = task_def.config.doc_to_choice
+
+    predictions_per_input_doc = json.load(open(args.vote_file, "r"))["samples"]
+    aggregated_metrics = {}
+
+    for strat in [("majority", None), ("logits", None), ("condorcet", None), ("borda", None), ("rrf", None)]:
+        strategy, top_k = strat
+        aggregated_metrics[strategy + (f"_top{top_k}" if top_k is not None else "")] = aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def, strategy=strategy, top_k=top_k)
 
     return {
         "mode": "multi-turn_CoT-SC",
@@ -202,7 +236,12 @@ def condorcet_aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def
                 break
 
         if condorcet_winner is None:
-            return majority_aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def, k=k, strategy_name="condorcet_fallback")
+            # Fallback *per-doc*, not return for all docs
+            majority_results = majority_aggregate_votes(
+                {doc_id: info}, doc_to_choice, task_def, k=k, strategy_name="condorcet_fallback"
+            )
+            results_per_doc_id.update(majority_results)
+            continue
 
         # Build probability distribution from pairwise win ratio
         scores = [

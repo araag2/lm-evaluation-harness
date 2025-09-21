@@ -39,22 +39,20 @@ ANSWERING_MODELS=(
 
 PAIRS_OF_TASK_LIST=(
     "MedNLI:CoT|MedNLI:0-shot"
-    "MedMCQA:CoT|MedMCQA:0-shot" 
-    "MedQA:CoT|MedQA:0-shot"
-    "PubMedQA:CoT|PubMedQA:0-shot"
 )
 
-MODE=cross-consistency 
+MODE=cross-consistency
 
-BASE_OUTPUT_DIR="/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/$MODE-single-reasoning"
+BASE_OUTPUT_DIR="/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/TEST/$MODE"
 
 CUDA_DEVICES=0
 BATCH_SIZE=auto
 SEED=0
 
 echo "=================================================="
-echo "[INFO] Running Cross-Consistency with Reasoning Models:"
+echo "[INFO] Running Cross-Consistency with Reasoning Models and Verifier Models:"
 printf '%s\n' "${REASONING_MODELS[@]}"
+printf '%s\n' "${ANSWERING_MODELS[@]}"
 echo "=================================================="
 
 for TASK_PAIR in "${PAIRS_OF_TASK_LIST[@]}"; do
@@ -86,7 +84,7 @@ for TASK_PAIR in "${PAIRS_OF_TASK_LIST[@]}"; do
         --output_path $OUTPUT_PATH \
         --batch_size $BATCH_SIZE \
         --seed $SEED \
-        --log_samples 
+        --log_samples
 
     STATUS=$?
     if [ $STATUS -eq 0 ]; then

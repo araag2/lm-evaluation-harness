@@ -10,9 +10,11 @@ from pathlib import Path
 
 def extract_metrics(result_dict, prefix=""):
     metrics = {}
-    print(f"Result dict is {result_dict}")
+    #print(f"Result dict is {result_dict}")
 
     for k, v in result_dict.items():
+        if 'norm' in k or "stderr" in k:
+            continue
         if "," in k and "_stderr" not in k:
             metric_name = k.split(",")[0]
             metrics[f"{prefix}{metric_name}"] = v
@@ -67,6 +69,22 @@ def collect_results_from_summary_file(path):
 
             result_entry.update(extract_metrics(data.get("results", {})))
             results.append(result_entry)
+
+        elif "majority" in data.get("results", {}).keys() or "rrf" in data.get("results", {}).keys() or "condorcet" in data.get("results", {}).keys() or "logits" in data.get("results", {}).keys() or "borda" in data.get("results", {}).keys():
+
+            for voting_method, result_dict in data.get("results", {}).items():
+                model_args = data.get("config", {}).get("model_args", "N/A")
+
+                result_entry = {
+                    "Dataset": data.get("reasoning_task", {}),
+                    "Voting_Method": voting_method,
+                    "Model": data.get("reasoning_model", {}).split(",")[0][11:],
+                    "Model Args": model_args,
+                    "Path": path
+                }
+
+                result_entry.update(extract_metrics(result_dict))
+                results.append(result_entry)     
 
         else:
             for task_name, result_dict in data.get("results", {}).items():
@@ -142,7 +160,19 @@ def save_latex(df, path):
     numeric_cols = df.select_dtypes(include=["float", "int"]).columns
     df[numeric_cols] = df[numeric_cols] * 100
 
+    # Create LaTeX table with Datasets in Columns, with metrics as sub-columns, and Models as rows, with Voting_Method as sub-rows if exists
+    if "Voting_Method" in df.columns:
+        df = df.pivot_table(index=["Model", "Voting_Method"], columns="Dataset", aggfunc='first')
+        df.columns = ['_'.join(col).strip() for col in df.columns.values]
+        df = df.reset_index()
+    else:
+        df = df.pivot_table(index="Model", columns="Dataset", aggfunc='first')
+        df.columns = ['_'.join(col).strip() for col in df.columns.values]
+        df = df.reset_index()
+
     latex_code = df.to_latex(index=False, float_format="%.2f", escape=False)
+
+
     with open(path, "w") as f:
         f.write(latex_code)
     print(f"    - Saved LaTeX to:   {path}")

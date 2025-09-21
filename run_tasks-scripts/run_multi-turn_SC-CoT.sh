@@ -26,8 +26,6 @@ PAIRS_OF_MODELS=(
 #"SemEval_NLI4CT:2024_CoT_SC|SemEval_NLI4CT:2024_0-shot"
 
 PAIRS_OF_TASK_LIST=(
-    "MedNLI:CoT_SC|MedNLI:0-shot"
-    "MedMCQA:CoT_SC|MedMCQA:0-shot" 
     "MedQA:CoT_SC|MedQA:0-shot"
     "PubMedQA:CoT_SC|PubMedQA:0-shot"
 )

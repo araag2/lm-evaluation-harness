@@ -96,18 +96,20 @@ def process_folder(input_folder, use="majority"):
 def main():
     parser = argparse.ArgumentParser(description="Extract evaluation results from lm-harness runs recursively.")
     parser.add_argument("--input_folder", required=True, help="Folder containing JSON result files")
-    parser.add_argument("--output_dir", required=True, help="Path to save aggregated output JSON")
+    parser.add_argument("--output_dir", required=True, help="Directory to save outputs")
+    parser.add_argument("--output_name", required=True, help="Base name for output files (no extension)")
     parser.add_argument("--use", default="majority", help="Prediction key to use (default=majority)")
 
     args = parser.parse_args()
 
-    print(f"Processing all JSON files in {args.input_folder} ...")
+    print(f"Collecting results from folders: {args.input_folder}\nSaving to {args.output_dir}/{args.output_name}")
+
     results_by_file = process_folder(args.input_folder, use=args.use)
 
-    with safe_open_w(os.path.join(args.output_dir, "aggregated_errors.json")) as f:
+    with safe_open_w(os.path.join(args.output_dir, f"{args.output_name}.json")) as f:
         json.dump(results_by_file, f, indent=4)
 
-    print(f"Results saved to {args.output_dir}/aggregated_errors.json")
+    print(f"Results saved to {args.output_dir}/{args.output_name}.json")
 
 
 if __name__ == "__main__":

@@ -53,6 +53,7 @@ def main():
     # Modes
     parser.add_argument("--mode", type=str, default="multi-turn",
                         choices=["multi-turn_CoT", "multi-turn_CoT-SC", "cross-consistency"])
+    parser.add_argument("--vote_file", type=str, default=None)
 
     # Output Args
     parser.add_argument('--output_path', type=str, default="/cfs/home/u021010/PhD/active_dev/outputs/CoT-Debug/")
