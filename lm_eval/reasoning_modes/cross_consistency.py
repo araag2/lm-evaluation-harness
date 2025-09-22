@@ -222,7 +222,8 @@ def single_doc_aggregate_votes(preds: List[int], doc_to_choice : str, strategy: 
             for i in range(len(doc_to_choice)):
                 vote_probs[i] += pred_probs[i] if isinstance(pred_probs[i], float) else pred_probs[i][0]
 
-    vote_probs = [(p / len([pred for pred, _ in preds if pred == win_pred]), i == win_pred) 
+    right_preds = [pred for pred, _ in preds if pred == win_pred]
+    vote_probs = [(p / len(right_preds) if right_preds != [] else 0, i == win_pred) 
                   for i, p in enumerate(vote_probs)]
     return (win_pred, vote_probs)
 
