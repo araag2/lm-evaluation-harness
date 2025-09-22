@@ -22,12 +22,10 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
 
     full_task_name = answering_task.replace(":", "_")
     task_def = tasks.get_task_dict([full_task_name])[full_task_name]
-
+    doc_to_choice = task_def.config.doc_to_choice
     doc_to_text_module = f"lm_eval.tasks.{parse_task_spec(answering_task)[0]}.utils"
 
     predictions_per_input_doc = {}
-    doc_to_choice = task_def.config.doc_to_choice
-
     base_dataset = load_base_dataset_from_task(answering_task.replace(":", "_"))
 
     for reasoning_chain_list in reasoning_chains_per_document:
@@ -53,7 +51,8 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
 
                 predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"] = []
 
-            predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(shorten_reasoning_chain(sample["doc"]["Reasoning_Chain"], 100))
+            predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(sample["doc"]["Reasoning_Chain"])
+            #predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(shorten_reasoning_chain(sample["doc"]["Reasoning_Chain"], 100))
 
             pred_probs = [prob[0][0] for prob in sample["resps"]]
 

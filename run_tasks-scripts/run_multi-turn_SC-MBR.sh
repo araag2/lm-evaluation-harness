@@ -10,31 +10,26 @@ PROVIDER=vllm
 #"pretrained=google/gemma-3n-E4B-it,max_length=22000,gpu_memory_utilization=0.8,swap_space=8|pretrained=google/gemma-3n-E4B-it,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
 #"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8|pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8"
 
-#"pretrained=UbiquantAI/Fleming-R1-7B,max_length=22000,gpu_memory_utilization=0.8,swap_space=8|pretrained=UbiquantAI/Fleming-R1-7B,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
-
 PAIRS_OF_MODELS=(
-    "pretrained=UbiquantAI/Fleming-R1-7B,max_length=22000,gpu_memory_utilization=0.8,swap_space=8|pretrained=UbiquantAI/Fleming-R1-7B,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
+    "pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=22000,gpu_memory_utilization=0.8,swap_space=8|pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
 )
 
-#"MedNLI:CoT|MedNLI:0-shot"
-#"HINT:CoT|HINT:0-shot"
-#"MedMCQA:CoT|MedMCQA:0-shot" 
-#"MedQA:CoT|MedQA:0-shot"
-#"PubMedQA:CoT|PubMedQA:0-shot"
-#"Evidence_Inference_v2:CoT|Evidence_Inference_v2:0-shot"
-#"NLI4PR:patient-lang_CoT|NLI4PR:patient-lang_0-shot"
-#"NLI4PR:medical-lang_CoT|NLI4PR:medical-lang_0-shot"
-#"SemEval_NLI4CT:2023_CoT|SemEval_NLI4CT:2023_0-shot"
-#"SemEval_NLI4CT:2024_CoT|SemEval_NLI4CT:2024_0-shot"
+#"MedNLI:CoT_SC|MedNLI:0-shot"
+#"HINT:CoT_SC|HINT:0-shot"
+#"MedMCQA:CoT_SC|MedMCQA:0-shot" 
+#"MedQA:CoT_SC|MedQA:0-shot"
+#"PubMedQA:CoT_SC|PubMedQA:0-shot"
+#"Evidence_Inference_v2:CoT_SC|Evidence_Inference_v2:0-shot"
+#"NLI4PR:patient-lang_CoT_SC|NLI4PR:patient-lang_0-shot"
+#"NLI4PR:medical-lang_CoT_SC|NLI4PR:medical-lang_0-shot"
+#"SemEval_NLI4CT:2023_CoT_SC|SemEval_NLI4CT:2023_0-shot"
+#"SemEval_NLI4CT:2024_CoT_SC|SemEval_NLI4CT:2024_0-shot"
 
 PAIRS_OF_TASK_LIST=(
-"MedNLI:CoT|MedNLI:0-shot"
-"MedMCQA:CoT|MedMCQA:0-shot" 
-"MedQA:CoT|MedQA:0-shot"
-"PubMedQA:CoT|PubMedQA:0-shot"
+    "MedNLI:CoT_SC|MedNLI:0-shot"
 )
 
-MODE=multi-turn_CoT
+MODE=multi-turn_CoT-MBR
 
 BASE_OUTPUT_DIR="/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/$MODE"
 
@@ -79,7 +74,8 @@ for PAIR_MODELS in "${PAIRS_OF_MODELS[@]}"; do
         --output_path $OUTPUT_PATH \
         --batch_size $BATCH_SIZE \
         --seed $SEED \
-        --log_samples
+        --log_samples \
+        --vote_file "/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/multi-turn_CoT-SC/MedNLI_CoT_SC/Qwen_Qwen3-4B-Instruct-2507/Summary_2025-09-14T18-50.json"
 
     STATUS=$?
     if [ $STATUS -eq 0 ]; then

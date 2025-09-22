@@ -78,8 +78,8 @@ def inject_reasoning_into_dataset(base_dataset: List[dict], reasoning_samples: L
     # If its a list, easy to inject directly
     reasoning_texts = reasoning_samples
 
-    if type(reasoning_samples[0]) == dict:
-        reasoning_texts = [extract_reasoning_text_from_dicts(sample)[0] for sample in reasoning_samples]
+    if type(reasoning_texts[0]) == dict:
+        reasoning_texts = [extract_reasoning_text_from_dicts(sample)[0] for sample in reasoning_texts]
 
     it = iter(reasoning_texts)
     return res.map(lambda x: {**x, reasoning_field: next(it)})

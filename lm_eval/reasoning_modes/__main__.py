@@ -4,17 +4,18 @@ import argparse
 import importlib
 import os
 import pprint
+import warnings
 import numpy as np
 
 from datetime import datetime
 from typing import Dict, List, Tuple, Any, Union
 from lm_eval import evaluator, tasks
 from datasets import Dataset, DatasetDict
+from tqdm import tqdm
 
 from lm_eval.reasoning_modes.multi_turn_CoT import mode_multi_turn_CoT
-
 from lm_eval.reasoning_modes.multi_turn_CoT_SC import mode_multi_turn_CoT_SC
-
+from lm_eval.reasoning_modes.multi_turn_CoT_MBR import mode_multi_turn_CoT_MBR
 from lm_eval.reasoning_modes.cross_consistency import mode_cross_consistency
 
 def safe_open_w(path: str) -> object:
@@ -52,7 +53,7 @@ def main():
 
     # Modes
     parser.add_argument("--mode", type=str, default="multi-turn",
-                        choices=["multi-turn_CoT", "multi-turn_CoT-SC", "cross-consistency"])
+                        choices=["multi-turn_CoT", "multi-turn_CoT-SC", "multi-turn_CoT-MBR", "cross-consistency"])
     parser.add_argument("--vote_file", type=str, default=None)
 
     # Output Args
@@ -65,21 +66,16 @@ def main():
             out = mode_multi_turn_CoT(args)
         case "multi-turn_CoT-SC":
             out = mode_multi_turn_CoT_SC(args)
+        case "multi-turn_CoT-MBR":
+            out = mode_multi_turn_CoT_MBR(args)
         case "cross-consistency":
             out = mode_cross_consistency(args)
         case _:
             raise ValueError(f"Unknown mode: {args.mode}")
         
-    #print("\n==== RESULTS (summary keys only) ====")
-    #print(json.dumps({k: v for k, v in out.items() if k != "results"}, indent=2))
-
     if args.output_path:
         with safe_open_w(f"{args.output_path}Summary_{datetime.now().strftime('%Y-%m-%dT%H-%M')}.json") as f:
             json.dump(out, f, indent=4, default=make_json_serializable)
-
-        #with safe_open_w(f"{args.output_path}Samples_{datetime.now().strftime('%Y-%m-%dT%H-%M')}.json") as f:
-            #json.dump(out, f, indent=4, default=make_json_serializable)
-
         print(f"\n✅ Results written to {args.output_path}")
         
 if __name__ == "__main__":

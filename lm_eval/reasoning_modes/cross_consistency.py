@@ -147,7 +147,7 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
         "answering_models": args.answering_models,
         "reasoning_task": reasoning_task,
         "answering_task": answering_task,
-        "results": only_vote(args, predictions_per_input_doc),
+        #"results": only_vote(args, predictions_per_input_doc),
         "samples" : predictions_per_input_doc
     }
 
@@ -174,7 +174,10 @@ def only_vote(args: argparse.Namespace, predictions_per_input_doc: Dict) -> Dict
             all_values = []
             for doc_id in results_per_doc[result_key]:
                 all_values.append(results_per_doc[result_key][doc_id][metric_name])
-            aggregated_metrics[f"{result_key}_{metric_name}"] = agg_fn(all_values)
+
+            if result_key not in aggregated_metrics:
+                aggregated_metrics[result_key] = {}
+            aggregated_metrics[result_key][metric_name] = agg_fn(all_values)
 
     return aggregated_metrics
 
@@ -274,8 +277,6 @@ def aggregate_doc_predictions(predictions_per_input_doc: Dict[str, Dict], task_d
                         #"per_reasoning_model_preds": {doc_id : None for doc_id in predictions_per_input_doc},
                         #"per_answering_model_preds": {doc_id : None for doc_id in predictions_per_input_doc}
                     }
-    
-    print(f"{predictions_per_input_doc=}")
 
     for doc_id, info in predictions_per_input_doc.items():
         flat_res = []

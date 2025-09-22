@@ -43,7 +43,7 @@ PAIRS_OF_TASK_LIST=(
 
 MODE=cross-consistency
 
-BASE_OUTPUT_DIR="/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/TEST/$MODE"
+BASE_OUTPUT_DIR="/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/single-reasoning-$MODE"
 
 CUDA_DEVICES=0
 BATCH_SIZE=auto
@@ -84,7 +84,8 @@ for TASK_PAIR in "${PAIRS_OF_TASK_LIST[@]}"; do
         --output_path $OUTPUT_PATH \
         --batch_size $BATCH_SIZE \
         --seed $SEED \
-        --log_samples
+        --log_samples \
+        --vote_file "/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/single-reasoning-cross-consistency/MedNLI_CoT/Qwen_Qwen3-4B-Instruct-2507/Summary_2025-09-21T21-50.json"
 
     STATUS=$?
     if [ $STATUS -eq 0 ]; then
