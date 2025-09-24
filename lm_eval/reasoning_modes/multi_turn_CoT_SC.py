@@ -1,6 +1,11 @@
 import json
 from lm_eval.reasoning_modes.reasoning_utils import *
 
+from joblib import Parallel, delayed
+from mbrs.metrics import MetricBLEU, MetricBLEURT
+from mbrs.decoders import DecoderMBR
+from tqdm import tqdm
+
 def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
     if args.vote_file is not None:
         return only_vote(args)
@@ -28,37 +33,37 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
     predictions_per_input_doc = {}
     base_dataset = load_base_dataset_from_task(answering_task.replace(":", "_"))
 
-    for reasoning_chain_list in reasoning_chains_per_document:
 
-        dataset_with_reasoning = inject_reasoning_into_dataset(base_dataset, reasoning_chain_list)
-
-        raw_output = run_answering_for_dataset(
-            args=args,
-            answering_model= answering_model,
-            answering_task_name= full_task_name,
-            dataset_with_reasoning= dataset_with_reasoning,
-            doc_to_text_module= doc_to_text_module
-        )
-
-        for sample in raw_output["samples"][full_task_name]:
-            doc_id = sample["doc_id"]
-            if doc_id not in predictions_per_input_doc:
-                predictions_per_input_doc[doc_id] = {
-                    "doc" : copy.deepcopy(sample["doc"]),
-                    "preds": [],
-                    "pred_probs": [],
-                }
-
-                predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"] = []
-
-            predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(sample["doc"]["Reasoning_Chain"])
-            #predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(shorten_reasoning_chain(sample["doc"]["Reasoning_Chain"], 100))
-
-            pred_probs = [prob[0][0] for prob in sample["resps"]]
-
-            predictions_per_input_doc[doc_id]["pred_probs"].append(pred_probs)    
-            predictions_per_input_doc[doc_id]["preds"].append(pred_probs.index(max(pred_probs)))
-
+    #for reasoning_chain_list in reasoning_chains_per_document:
+#
+    #    dataset_with_reasoning = inject_reasoning_into_dataset(base_dataset, reasoning_chain_list)
+#
+    #    raw_output = run_answering_for_dataset(
+    #        args=args,
+    #        answering_model= answering_model,
+    #        answering_task_name= full_task_name,
+    #        dataset_with_reasoning= dataset_with_reasoning,
+    #        doc_to_text_module= doc_to_text_module
+    #    )
+#
+    #    for sample in raw_output["samples"][full_task_name]:
+    #        doc_id = sample["doc_id"]
+    #        if doc_id not in predictions_per_input_doc:
+    #            predictions_per_input_doc[doc_id] = {
+    #                "doc" : copy.deepcopy(sample["doc"]),
+    #                "preds": [],
+    #                "pred_probs": [],
+    #            }
+#
+    #            predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"] = []
+#
+    #        predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(sample["doc"]["Reasoning_Chain"])
+    #        #predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(shorten_reasoning_chain(sample["doc"]["Reasoning_Chain"], 100))
+#
+    #        pred_probs = [prob[0][0] for prob in sample["resps"]]
+#
+    #        predictions_per_input_doc[doc_id]["pred_probs"].append(pred_probs)    
+    #        predictions_per_input_doc[doc_id]["preds"].append(pred_probs.index(max(pred_probs)))
 
 
     aggregated_metrics = {}
@@ -66,6 +71,11 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
     for strat in [("majority", None), ("logits", None), ("condorcet", None), ("borda", None), ("rrf", None)]:
         strategy, top_k = strat
         aggregated_metrics[strategy + (f"_top{top_k}" if top_k is not None else "")] = aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def, strategy=strategy, top_k=top_k)
+
+    reasoning_chains_per_document = {i : reasoning_chains_per_document[i] for i in range(len(reasoning_chains_per_document))}
+    mbr_metrics_results = MBR_process_reasoning(args, MBR_reasoning_chains(reasoning_chains_per_document), base_dataset, answering_model, full_task_name, doc_to_text_module)
+
+    aggregated_metrics.update(mbr_metrics_results["results"])
 
 
     return {
@@ -88,7 +98,11 @@ def only_vote(args: argparse.Namespace) -> Dict:
     full_task_name = answering_task.replace(":", "_")
     task_def = tasks.get_task_dict([full_task_name])[full_task_name]
 
+    full_task_name = answering_task.replace(":", "_")
+    task_def = tasks.get_task_dict([full_task_name])[full_task_name]
     doc_to_choice = task_def.config.doc_to_choice
+    doc_to_text_module = f"lm_eval.tasks.{parse_task_spec(answering_task)[0]}.utils"
+    base_dataset = load_base_dataset_from_task(answering_task.replace(":", "_"))
 
     predictions_per_input_doc = json.load(open(args.vote_file, "r"))["samples"]
     aggregated_metrics = {}
@@ -96,6 +110,9 @@ def only_vote(args: argparse.Namespace) -> Dict:
     for strat in [("majority", None), ("logits", None), ("condorcet", None), ("borda", None), ("rrf", None)]:
         strategy, top_k = strat
         aggregated_metrics[strategy + (f"_top{top_k}" if top_k is not None else "")] = aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def, strategy=strategy, top_k=top_k)
+
+    mbr_metrics_results = MBR_process_reasoning(args, MBR_reasoning_chains(predictions_per_input_doc), base_dataset, answering_model, full_task_name, doc_to_text_module)
+    aggregated_metrics.update(mbr_metrics_results["results"])
 
     return {
         "mode": "multi-turn_CoT-SC",
@@ -106,6 +123,7 @@ def only_vote(args: argparse.Namespace) -> Dict:
         "results": aggregated_metrics,
         "samples" : predictions_per_input_doc
     }
+
 
 def aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def, strategy="majority", top_k=None):
     """
@@ -338,3 +356,65 @@ def rrf_aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def, k=No
         results_per_doc_id[doc_id] = task_def.process_results(info["doc"], pred_probs)
 
     return results_per_doc_id
+
+def MBR_reasoning_chains(reasoning_chains_per_document: Dict[str, List[str]]) -> Dict[str, List[List[str]]]:
+    def process_doc(doc_id, decoder, reasoning_chains):
+        metric_output = decoder.decode(
+            reasoning_chains[doc_id], reasoning_chains[doc_id]
+        )
+        return reasoning_chains[doc_id][metric_output.idx[0]]
+
+    bleu = MetricBLEU(MetricBLEU.Config(num_workers=4))
+    bleurt = MetricBLEURT(MetricBLEURT.Config(batch_size=64, model="lucadiliello/bleurt-tiny-512"))
+
+    #mbr_metrics = [("bleu", bleu, bleu.Config), ("bleurt", bleurt, bleurt.Config)]
+    mbr_metrics = [("bleurt", bleurt, bleurt.Config)]
+
+    res = {"bleurt" : []}
+
+    for name, metric, config in mbr_metrics:
+        decoder = DecoderMBR(config, metric)
+
+        if name == "bleu":
+            # ⚡ Parallelize across documents
+            res[name] = Parallel(n_jobs=8)(
+                delayed(process_doc)(doc_id, decoder, reasoning_chains_per_document)
+                for doc_id in tqdm(reasoning_chains_per_document, desc="BLEU")
+            )
+
+        elif name == "bleurt":
+
+            for doc_id in tqdm(reasoning_chains_per_document, desc="BLEURT"):
+                # still per-doc, but BLEURT batches internally with batch_size=64
+                metric_output = decoder.decode(
+                    reasoning_chains_per_document[doc_id],
+                    reasoning_chains_per_document[doc_id],
+                )
+
+                res[name].append(
+                    reasoning_chains_per_document[doc_id][metric_output.idx[0]]
+                )
+
+    return res
+
+
+def MBR_process_reasoning(args: argparse.Namespace, mbr_reasoning_chains: Dict[str, List[str]], base_dataset, answering_model, full_task_name, doc_to_text_module) -> Dict:
+
+    metrics_results = {"results" : {mbr_metric: {} for mbr_metric in mbr_reasoning_chains}}
+
+    for mbr_metric in mbr_reasoning_chains:
+        reasoning_chain_list = mbr_reasoning_chains[mbr_metric]
+
+        dataset_with_reasoning = inject_reasoning_into_dataset(base_dataset, reasoning_chain_list)
+
+        raw_output = run_answering_for_dataset(
+            args=args,
+            answering_model= answering_model,
+            answering_task_name= full_task_name,
+            dataset_with_reasoning= dataset_with_reasoning,
+            doc_to_text_module= doc_to_text_module
+        )
+
+        metrics_results["results"][mbr_metric] = format_results_dict(raw_output["results"][full_task_name])
+
+    return metrics_results

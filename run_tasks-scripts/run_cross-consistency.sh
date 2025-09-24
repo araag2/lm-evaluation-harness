@@ -38,7 +38,7 @@ ANSWERING_MODELS=(
 #"SemEval_NLI4CT:2024_CoT|SemEval_NLI4CT:2024_0-shot"
 
 PAIRS_OF_TASK_LIST=(
-    "MedNLI:CoT|MedNLI:0-shot"
+    "MedMCQA:CoT|MedMCQA:0-shot" 
 )
 
 MODE=cross-consistency
@@ -85,7 +85,7 @@ for TASK_PAIR in "${PAIRS_OF_TASK_LIST[@]}"; do
         --batch_size $BATCH_SIZE \
         --seed $SEED \
         --log_samples \
-        --vote_file "/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/single-reasoning-cross-consistency/MedNLI_CoT/Qwen_Qwen3-4B-Instruct-2507/Summary_2025-09-21T21-50.json"
+        --vote_file /user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/single-reasoning-cross-consistency/MedMCQA_CoT/Qwen_Qwen3-4B-Instruct-2507/Summary_2025-09-21T23-46.json
 
     STATUS=$?
     if [ $STATUS -eq 0 ]; then

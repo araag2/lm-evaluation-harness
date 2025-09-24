@@ -15,12 +15,13 @@ def MBR_reasoning_chains(reasoning_chains_per_document):
         )
         return reasoning_chains[doc_id][metric_output.idx[0]]
 
-    bleu = MetricBLEU(MetricBLEU.Config(num_workers=128))
+    bleu = MetricBLEU(MetricBLEU.Config(num_workers=4))
     bleurt = MetricBLEURT(MetricBLEURT.Config(batch_size=64, model="lucadiliello/bleurt-tiny-512"))
 
-    mbr_metrics = [("bleu", bleu, bleu.Config)] # ("bluert", bleurt, bleurt.Config)
+    #mbr_metrics = [("bleu", bleu, bleu.Config), ("bleurt", bleurt, bleurt.Config)]
+    mbr_metrics = [("bleurt", bleurt, bleurt.Config)]
 
-    res = {"bleu" : []}
+    res = {"bleurt" : []}
 
     for name, metric, config in mbr_metrics:
         decoder = DecoderMBR(config, metric)
@@ -63,9 +64,9 @@ def mode_multi_turn_CoT_MBR(args: argparse.Namespace) -> Dict:
 
     predictions_per_input_doc = None
     if args.vote_file is None:
-        raise ValueError("For multi-turn CoT-MBR mode, please provide a vote_file to load reasoning samples from (Currently only stubbing functionality).")
         reasoning_outputs = run_reasoning(args)[reasoning_model][reasoning_task]
         reasoning_chains_per_document = extract_multiple_reasoning_chains_per_document(reasoning_outputs)
+
     else:    
         predictions_per_input_doc = json.load(open(args.vote_file, "r"))["samples"]
 
@@ -80,15 +81,14 @@ def mode_multi_turn_CoT_MBR(args: argparse.Namespace) -> Dict:
 
 
     ### TO:DO Remove stubs after testing
-    stub_mini_trial = {}
-    stub_mini_trial["0"] = reasoning_chains_per_document["0"]
-    stub_mini_trial["1"] = reasoning_chains_per_document["1"]
-    mbr_reasoning_chains = MBR_reasoning_chains(stub_mini_trial)
+    mbr_reasoning_chains = MBR_reasoning_chains(reasoning_chains_per_document)
 
     metrics_results = {"results" : {mbr_metric: {} for mbr_metric in mbr_reasoning_chains}}
 
     for mbr_metric in mbr_reasoning_chains:
         reasoning_chain_list = mbr_reasoning_chains[mbr_metric]
+
+        print()
 
         dataset_with_reasoning = inject_reasoning_into_dataset(base_dataset, reasoning_chain_list)
 
@@ -125,6 +125,6 @@ def mode_multi_turn_CoT_MBR(args: argparse.Namespace) -> Dict:
         "answering_model": answering_model,
         "reasoning_task": reasoning_task,
         "answering_task": answering_task,
-        **metrics_results,
-        "samples" : predictions_per_input_doc
+        **metrics_results
+        #"samples" : predictions_per_input_doc
     }
