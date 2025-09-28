@@ -34,8 +34,6 @@ def mode_only_vote(args: argparse.Namespace, simple_voting : bool = True, mbr_vo
             task_def=task_def,
         )
 
-        print(aggregated_metrics_simple)
-
     if mbr_voting:
         aggregated_metrics_mbr = mbr_voting_modes(
             args=args,
@@ -51,7 +49,7 @@ def mode_only_vote(args: argparse.Namespace, simple_voting : bool = True, mbr_vo
     aggregated_metrics.update(aggregated_metrics_simple)
     aggregated_metrics.update(aggregated_metrics_mbr["results"])
 
-    args.output_path = os.path.join(args.output_path, doc_info.get("reasoning_task", "unknown").replace(":", "_"), f"{answering_model.split(',')[0]}")
+    args.output_path = os.path.join(args.output_path, doc_info.get("reasoning_task", "unknown").replace(":", "_"), f"{answering_model.split('=')[1].split(',')[0].replace('/', '_')}/")
 
     return {
         "mode": doc_info.get("mode", "unknown"),

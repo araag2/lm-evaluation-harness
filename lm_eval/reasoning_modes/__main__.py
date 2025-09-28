@@ -15,7 +15,6 @@ from tqdm import tqdm
 
 from lm_eval.reasoning_modes.multi_turn_CoT import mode_multi_turn_CoT
 from lm_eval.reasoning_modes.multi_turn_CoT_SC import mode_multi_turn_CoT_SC
-from lm_eval.reasoning_modes.multi_turn_CoT_MBR import mode_multi_turn_CoT_MBR
 from lm_eval.reasoning_modes.cross_consistency import mode_cross_consistency
 from lm_eval.reasoning_modes.only_vote import mode_only_vote
 
@@ -53,9 +52,10 @@ def main():
     parser.add_argument('--answering_tasks', nargs='+', default=['MedNLI:0-shot'])
 
     # Modes
-    parser.add_argument("--mode", type=str, default="multi-turn",
-                        choices=["multi-turn_CoT", "multi-turn_CoT-SC", "multi-turn_CoT-MBR",
-                        "only-vote",        "cross-consistency"])
+    parser.add_argument("--mode", type=str, default="multi-turn",choices=["multi-turn_CoT", 
+                                                                          "multi-turn_CoT-SC",
+                                                                          "only-vote",
+                                                                          "cross-consistency"])
     parser.add_argument("--vote_file", type=str, default=None)
 
     # Output Args
@@ -68,8 +68,6 @@ def main():
             out = mode_multi_turn_CoT(args)
         case "multi-turn_CoT-SC":
             out = mode_multi_turn_CoT_SC(args)
-        case "multi-turn_CoT-MBR":
-            out = mode_multi_turn_CoT_MBR(args)
         case "cross-consistency":
             out = mode_cross_consistency(args)
         case "only-vote":

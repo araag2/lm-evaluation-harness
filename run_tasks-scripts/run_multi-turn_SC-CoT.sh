@@ -32,9 +32,7 @@ PAIRS_OF_MODELS=(
 #"SemEval_NLI4CT:2024_CoT_SC|SemEval_NLI4CT:2024_0-shot"
 
 PAIRS_OF_TASK_LIST=(
-    "MedMCQA:CoT_SC|MedMCQA:0-shot" 
-    "MedQA:CoT_SC|MedQA:0-shot"
-    "PubMedQA:CoT_SC|PubMedQA:0-shot"
+    "MedNLI:CoT_SC|MedNLI:0-shot"
 )
 
 MODE=multi-turn_CoT-SC
@@ -82,7 +80,8 @@ for PAIR_MODELS in "${PAIRS_OF_MODELS[@]}"; do
         --output_path $OUTPUT_PATH \
         --batch_size $BATCH_SIZE \
         --seed $SEED \
-        --log_samples
+        --log_samples \
+        --limit 1
 
     STATUS=$?
     if [ $STATUS -eq 0 ]; then

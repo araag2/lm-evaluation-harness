@@ -13,7 +13,14 @@ BATCH_SIZE=auto
 SEED=0
 
 LIST_OF_VOTE_FILES=(
+    "/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/SC-Same-Params-as-CoT/multi-turn_CoT-SC/MedNLI_CoT_SC/deepseek-ai_DeepSeek-R1-Distill-Llama-8B/Summary_2025-09-27T18-03.json"
+    "/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/SC-Same-Params-as-CoT/multi-turn_CoT-SC/MedNLI_CoT_SC/google_gemma-3n-E4B-it/Summary_2025-09-27T14-29.json"
+    "/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/SC-Same-Params-as-CoT/multi-turn_CoT-SC/MedNLI_CoT_SC/meta-llama_Llama-3.1-8B-Instruct/Summary_2025-09-27T18-22.json"
+    "/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/SC-Same-Params-as-CoT/multi-turn_CoT-SC/MedNLI_CoT_SC/mistralai_Ministral-8B-Instruct-2410/Summary_2025-09-27T13-24.json"
     "/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/SC-Same-Params-as-CoT/multi-turn_CoT-SC/MedNLI_CoT_SC/Qwen_Qwen3-4B-Instruct-2507/Summary_2025-09-27T18-43.json"
+    "/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/SC-Same-Params-as-CoT/multi-turn_CoT-SC/MedNLI_CoT_SC/UbiquantAI_Fleming-R1-7B/Summary_2025-09-27T20-48.json"
+    "/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/SC-Same-Params-as-CoT/multi-turn_CoT-SC/MedQA_CoT_SC/mistralai_Ministral-8B-Instruct-2410/Summary_2025-09-28T14-06.json"
+
 )
 
 echo "=================================================="
@@ -38,8 +45,7 @@ for VOTE_FILE in "${LIST_OF_VOTE_FILES[@]}"; do
         --batch_size $BATCH_SIZE \
         --seed $SEED \
         --log_samples \
-        --vote_file $VOTE_FILE \
-        --limit 2
+        --vote_file $VOTE_FILE
 
     STATUS=$?
     if [ $STATUS -eq 0 ]; then

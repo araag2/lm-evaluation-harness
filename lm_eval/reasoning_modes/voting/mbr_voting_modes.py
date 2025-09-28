@@ -32,12 +32,16 @@ def mbr_voting_modes(args: argparse.Namespace, predictions_per_input_doc : Dict,
         metrics_results["results"][mbr_metric] = format_results_dict(raw_output["results"][answering_task])
 
     mbr_weighted_chains_scores = vote_weighted_chains_by_metric(mbr_weighted_chains_by_metric, predictions_per_input_doc, doc_to_choice, task_def)
-    print(mbr_weighted_chains_scores)
     metrics_results["results"].update(mbr_weighted_chains_scores)
 
     return metrics_results
 
 def get_mbr_reasoning_chains(reasoning_chains_per_document):
+    def normalize_scores(scores : list) -> list:
+        min_scores = min(scores)
+        norm_factor = max(scores) - min_scores + 1e-8
+        return [(score - min_scores) / norm_factor for score in scores]
+
     bleu = MetricBLEU(MetricBLEU.Config(num_workers=32))
     bleurt = MetricBLEURT(MetricBLEURT.Config(batch_size=32, model="lucadiliello/bleurt-tiny-128"))
 
@@ -63,7 +67,7 @@ def get_mbr_reasoning_chains(reasoning_chains_per_document):
                     reasoning_chains_per_document[doc_id][metric_output.idx[0]]
                 )
 
-                mbr_aggregate_vote_scores[name].append(metric_output.score)
+                mbr_aggregate_vote_scores[name].append(normalize_scores(metric_output.score))
 
 
         elif name == "bleurt":
@@ -79,7 +83,9 @@ def get_mbr_reasoning_chains(reasoning_chains_per_document):
                     reasoning_chains_per_document[doc_id][metric_output.idx[0]]
                 )
 
-                mbr_aggregate_vote_scores[name].append(metric_output.score)
+                mbr_aggregate_vote_scores[name].append(normalize_scores(metric_output.score))
+
+    print("[HERE] VOTE SCORES", mbr_aggregate_vote_scores)
 
     return res, mbr_aggregate_vote_scores
 
@@ -103,18 +109,17 @@ def vote_weighted_chains_by_metric(mbr_weighted_chains_scores : Dict, prediction
         for ((doc_id, info), weight_scores) in zip(predictions_per_input_doc.items(), weight_scores_by_doc):
             top_k_preds = [p for p in info["preds"]]
             pred = weighted_majority_vote(top_k_preds, weight_scores)
-            print(f"pred: {pred}, doc_to_choice[pred]: {doc_to_choice[pred]}")
 
             predictions_per_input_doc[doc_id][f"{metric}_weight_logits"] = doc_to_choice[pred]
             pred_probs = [0.0 for _ in doc_to_choice]
 
             # Aggregate probabilities by averaging them but only from the majority voted class
-            for p, probs, score in zip(info["preds"], info["pred_probs"], mbr_weighted_chains_scores[metric]):
-                print(f"p: {p}, probs: {probs}, score: {score}")
+            for p, probs, score in zip(info["preds"], info["pred_probs"], weight_scores):
                 if p == pred:
                     for i in range(len(doc_to_choice)):
                         pred_probs[i] += probs[i] * score
-            pred_probs = [(p / sum(mbr_weighted_chains_scores[metric]), False) for p in pred_probs]
+            sum_weight_scores = sum(weight_scores)
+            pred_probs = [(p / sum_weight_scores if sum_weight_scores != 0 else p, False) for p in pred_probs]
             res[doc_id] = task_def.process_results(info["doc"], pred_probs)
 
         res_per_metric[f"{metric}_weight_logits"] = aggregate_metrics_per_strategy(res, task_def)
