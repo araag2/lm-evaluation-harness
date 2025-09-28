@@ -1,6 +1,8 @@
 import json
 from lm_eval.reasoning_modes.reasoning_utils import *
 
+from collections import Counter
+from nltk.util import ngrams
 from joblib import Parallel, delayed
 from mbrs.metrics import MetricBLEU, MetricBLEURT
 from mbrs.decoders import DecoderMBR
@@ -33,37 +35,36 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
     predictions_per_input_doc = {}
     base_dataset = load_base_dataset_from_task(answering_task.replace(":", "_"))
 
+    for reasoning_chain_list in reasoning_chains_per_document:
 
-    #for reasoning_chain_list in reasoning_chains_per_document:
-#
-    #    dataset_with_reasoning = inject_reasoning_into_dataset(base_dataset, reasoning_chain_list)
-#
-    #    raw_output = run_answering_for_dataset(
-    #        args=args,
-    #        answering_model= answering_model,
-    #        answering_task_name= full_task_name,
-    #        dataset_with_reasoning= dataset_with_reasoning,
-    #        doc_to_text_module= doc_to_text_module
-    #    )
-#
-    #    for sample in raw_output["samples"][full_task_name]:
-    #        doc_id = sample["doc_id"]
-    #        if doc_id not in predictions_per_input_doc:
-    #            predictions_per_input_doc[doc_id] = {
-    #                "doc" : copy.deepcopy(sample["doc"]),
-    #                "preds": [],
-    #                "pred_probs": [],
-    #            }
-#
-    #            predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"] = []
-#
-    #        predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(sample["doc"]["Reasoning_Chain"])
-    #        #predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(shorten_reasoning_chain(sample["doc"]["Reasoning_Chain"], 100))
-#
-    #        pred_probs = [prob[0][0] for prob in sample["resps"]]
-#
-    #        predictions_per_input_doc[doc_id]["pred_probs"].append(pred_probs)    
-    #        predictions_per_input_doc[doc_id]["preds"].append(pred_probs.index(max(pred_probs)))
+        dataset_with_reasoning = inject_reasoning_into_dataset(base_dataset, reasoning_chain_list)
+
+        raw_output = run_answering_for_dataset(
+            args=args,
+            answering_model= answering_model,
+            answering_task_name= full_task_name,
+            dataset_with_reasoning= dataset_with_reasoning,
+            doc_to_text_module= doc_to_text_module
+        )
+
+        for sample in raw_output["samples"][full_task_name]:
+            doc_id = sample["doc_id"]
+            if doc_id not in predictions_per_input_doc:
+                predictions_per_input_doc[doc_id] = {
+                    "doc" : copy.deepcopy(sample["doc"]),
+                    "preds": [],
+                    "pred_probs": [],
+                }
+
+                predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"] = []
+
+            predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(sample["doc"]["Reasoning_Chain"])
+            #predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(shorten_reasoning_chain(sample["doc"]["Reasoning_Chain"], 100))
+
+            pred_probs = [prob[0][0] for prob in sample["resps"]]
+
+            predictions_per_input_doc[doc_id]["pred_probs"].append(pred_probs)    
+            predictions_per_input_doc[doc_id]["preds"].append(pred_probs.index(max(pred_probs)))
 
 
     aggregated_metrics = {}
@@ -72,10 +73,10 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
         strategy, top_k = strat
         aggregated_metrics[strategy + (f"_top{top_k}" if top_k is not None else "")] = aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def, strategy=strategy, top_k=top_k)
 
-    reasoning_chains_per_document = {i : reasoning_chains_per_document[i] for i in range(len(reasoning_chains_per_document))}
-    mbr_metrics_results = MBR_process_reasoning(args, MBR_reasoning_chains(reasoning_chains_per_document), base_dataset, answering_model, full_task_name, doc_to_text_module)
+    #reasoning_chains_per_document = {i : reasoning_chains_per_document[i] for i in range(len(reasoning_chains_per_document))}
+    #mbr_metrics_results = MBR_process_reasoning(args, MBR_reasoning_chains(reasoning_chains_per_document), base_dataset, answering_model, full_task_name, doc_to_text_module)
 
-    aggregated_metrics.update(mbr_metrics_results["results"])
+    #aggregated_metrics.update(mbr_metrics_results["results"])
 
 
     return {
@@ -89,40 +90,41 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
     }
 
 def only_vote(args: argparse.Namespace) -> Dict:
-    reasoning_model = args.reasoning_models[0]
-    answering_model = args.answering_models[0]
-
-    reasoning_task = args.reasoning_tasks[0]
-    answering_task = args.answering_tasks[0]
-
-    full_task_name = answering_task.replace(":", "_")
-    task_def = tasks.get_task_dict([full_task_name])[full_task_name]
-
-    full_task_name = answering_task.replace(":", "_")
-    task_def = tasks.get_task_dict([full_task_name])[full_task_name]
-    doc_to_choice = task_def.config.doc_to_choice
-    doc_to_text_module = f"lm_eval.tasks.{parse_task_spec(answering_task)[0]}.utils"
-    base_dataset = load_base_dataset_from_task(answering_task.replace(":", "_"))
-
-    predictions_per_input_doc = json.load(open(args.vote_file, "r"))["samples"]
-    aggregated_metrics = {}
-
-    for strat in [("majority", None), ("logits", None), ("condorcet", None), ("borda", None), ("rrf", None)]:
-        strategy, top_k = strat
-        aggregated_metrics[strategy + (f"_top{top_k}" if top_k is not None else "")] = aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def, strategy=strategy, top_k=top_k)
-
-    mbr_metrics_results = MBR_process_reasoning(args, MBR_reasoning_chains(predictions_per_input_doc), base_dataset, answering_model, full_task_name, doc_to_text_module)
-    aggregated_metrics.update(mbr_metrics_results["results"])
-
-    return {
-        "mode": "multi-turn_CoT-SC",
-        "reasoning_model": reasoning_model,
-        "answering_model": answering_model,
-        "reasoning_task": reasoning_task,
-        "answering_task": answering_task,
-        "results": aggregated_metrics,
-        "samples" : predictions_per_input_doc
-    }
+    pass
+#    reasoning_model = args.reasoning_models[0]
+#    answering_model = args.answering_models[0]
+#
+#    reasoning_task = args.reasoning_tasks[0]
+#    answering_task = args.answering_tasks[0]
+#
+#    full_task_name = answering_task.replace(":", "_")
+#    task_def = tasks.get_task_dict([full_task_name])[full_task_name]
+#
+#    full_task_name = answering_task.replace(":", "_")
+#    task_def = tasks.get_task_dict([full_task_name])[full_task_name]
+#    doc_to_choice = task_def.config.doc_to_choice
+#    doc_to_text_module = f"lm_eval.tasks.{parse_task_spec(answering_task)[0]}.utils"
+#    base_dataset = load_base_dataset_from_task(answering_task.replace(":", "_"))
+#
+#    predictions_per_input_doc = json.load(open(args.vote_file, "r"))["samples"]
+#    aggregated_metrics = {}
+#
+#    for strat in [("majority", None), ("logits", None), ("condorcet", None), ("borda", None), ("rrf", None)]:
+#        strategy, top_k = strat
+#        aggregated_metrics[strategy + (f"_top{top_k}" if top_k is not None else "")] = aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def, strategy=strategy, top_k=top_k)
+#
+#    mbr_metrics_results = MBR_process_reasoning(args, MBR_reasoning_chains(predictions_per_input_doc), base_dataset, answering_model, full_task_name, doc_to_text_module)
+#    aggregated_metrics.update(mbr_metrics_results["results"])
+#
+#    return {
+#        "mode": "multi-turn_CoT-SC",
+#        "reasoning_model": reasoning_model,
+#        "answering_model": answering_model,
+#        "reasoning_task": reasoning_task,
+#        "answering_task": answering_task,
+#        "results": aggregated_metrics,
+#        "samples" : predictions_per_input_doc
+#    }
 
 
 def aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def, strategy="majority", top_k=None):
@@ -358,29 +360,43 @@ def rrf_aggregate_votes(predictions_per_input_doc, doc_to_choice, task_def, k=No
     return results_per_doc_id
 
 def MBR_reasoning_chains(reasoning_chains_per_document: Dict[str, List[str]]) -> Dict[str, List[List[str]]]:
-    def process_doc(doc_id, decoder, reasoning_chains):
+    def precalc_bleu_stats(sentence, max_order=4):
+        tokens = sentence.split()
+        ngram_counts = {}
+        for n in range(1, max_order + 1):
+            ngram_counts[n] = Counter(ngrams(tokens, n))
+        return ngram_counts, len(tokens)
+
+    def process_doc(doc_id, decoder, candidates):
+        precomputed = {i: precalc_bleu_stats(c) for i, c in enumerate(candidates[doc_id])}
+
         metric_output = decoder.decode(
-            reasoning_chains[doc_id], reasoning_chains[doc_id]
+            candidates[doc_id],
+            candidates[doc_id],
+            precomputed_stats=precomputed
         )
-        return reasoning_chains[doc_id][metric_output.idx[0]]
+
+        return candidates[doc_id][metric_output.idx[0]]
 
     bleu = MetricBLEU(MetricBLEU.Config(num_workers=4))
-    bleurt = MetricBLEURT(MetricBLEURT.Config(batch_size=64, model="lucadiliello/bleurt-tiny-512"))
+    bleurt = MetricBLEURT(MetricBLEURT.Config(batch_size=64, model="lucadiliello/bleurt-tiny-128"))
 
-    #mbr_metrics = [("bleu", bleu, bleu.Config), ("bleurt", bleurt, bleurt.Config)]
-    mbr_metrics = [("bleurt", bleurt, bleurt.Config)]
+    mbr_metrics = [("bleu", bleu, bleu.Config), ("bleurt", bleurt, bleurt.Config)]
 
-    res = {"bleurt" : []}
+    res = {"bleu" : [], "bleurt" : []}
 
     for name, metric, config in mbr_metrics:
         decoder = DecoderMBR(config, metric)
 
         if name == "bleu":
-            # ⚡ Parallelize across documents
-            res[name] = Parallel(n_jobs=8)(
-                delayed(process_doc)(doc_id, decoder, reasoning_chains_per_document)
-                for doc_id in tqdm(reasoning_chains_per_document, desc="BLEU")
-            )
+            for doc_id in tqdm(reasoning_chains_per_document, desc="BLEU"):
+                metric_output = decoder.decode(
+                    reasoning_chains_per_document[doc_id],
+                    reasoning_chains_per_document[doc_id],
+                )
+                res[name].append(
+                    reasoning_chains_per_document[doc_id][metric_output.idx[0]]
+                )
 
         elif name == "bleurt":
 

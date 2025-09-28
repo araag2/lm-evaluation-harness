@@ -15,7 +15,7 @@ PROVIDER=vllm
 #"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8|pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8"
 
 PAIRS_OF_MODELS=(
-    "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8|pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8"
+    "pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8|pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8"
 )
 
 #"MedNLI:CoT_SC|MedNLI:0-shot"
@@ -24,7 +24,7 @@ PAIRS_OF_MODELS=(
 #"PubMedQA:CoT_SC|PubMedQA:0-shot"
 
 PAIRS_OF_TASK_LIST=(
-    "PubMedQA:CoT_SC|PubMedQA:0-shot" 
+    "MedNLI:CoT_SC|MedNLI:0-shot"
 )
 
 MODE=multi-turn_CoT-MBR
@@ -73,7 +73,7 @@ for PAIR_MODELS in "${PAIRS_OF_MODELS[@]}"; do
         --batch_size $BATCH_SIZE \
         --seed $SEED \
         --log_samples \
-        --vote_file "/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/NEW_OUTPUTS/multi-turn_CoT-SC/PubMedQA_CoT_SC/meta-llama_Llama-3.1-8B-Instruct/Summary_2025-09-24T01-58.json"
+        --vote_file "/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/SC-Same-Params-as-CoT/multi-turn_CoT-SC/MedNLI_CoT_SC/Qwen_Qwen3-4B-Instruct-2507/Summary_2025-09-27T18-43.json"
 
     STATUS=$?
     if [ $STATUS -eq 0 ]; then

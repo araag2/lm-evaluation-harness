@@ -16,7 +16,7 @@ def MBR_reasoning_chains(reasoning_chains_per_document):
         return reasoning_chains[doc_id][metric_output.idx[0]]
 
     bleu = MetricBLEU(MetricBLEU.Config(num_workers=4))
-    bleurt = MetricBLEURT(MetricBLEURT.Config(batch_size=64, model="lucadiliello/bleurt-tiny-512"))
+    bleurt = MetricBLEURT(MetricBLEURT.Config(batch_size=32, model="lucadiliello/bleurt-base-512"))
 
     #mbr_metrics = [("bleu", bleu, bleu.Config), ("bleurt", bleurt, bleurt.Config)]
     mbr_metrics = [("bleurt", bleurt, bleurt.Config)]
