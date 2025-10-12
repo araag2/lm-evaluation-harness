@@ -63,18 +63,18 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
         task_def=task_def,
     )
 
-    mbr_metrics = mbr_voting_modes(
-        args=args,
-        predictions_per_input_doc=predictions_per_input_doc,
-        base_dataset=base_dataset,
-        answering_model=answering_model,
-        answering_task=full_task_name,
-        doc_to_text_module=doc_to_text_module,
-        doc_to_choice=doc_to_choice,
-        task_def=task_def
-    )
-
-    aggregated_metrics.update(mbr_metrics["results"])
+    #mbr_metrics = mbr_voting_modes(
+    #    args=args,
+    #    predictions_per_input_doc=predictions_per_input_doc,
+    #    base_dataset=base_dataset,
+    #    answering_model=answering_model,
+    #    answering_task=full_task_name,
+    #    doc_to_text_module=doc_to_text_module,
+    #    doc_to_choice=doc_to_choice,
+    #    task_def=task_def
+    #)
+    #
+    #aggregated_metrics.update(mbr_metrics["results"])
 
 
     return {

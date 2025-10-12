@@ -5,34 +5,41 @@
 # ================================
 MODEL=vllm
 
+#"pretrained=unsloth/Qwen3-8B,max_length=25000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
+#"pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
+#"pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=25000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
+#"pretrained=UbiquantAI/Fleming-R1-7B,max_length=25000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
+
+
 #"pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=25000"
-#"pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000"
-#"pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=25000"
 #"pretrained=google/gemma-3n-E4B-it,max_length=25000"
 #"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=25000"
-#Qwen/Qwen3-0.6B -> Test Model
-#arnir0/Tiny-LLM -> Test Model
 
 MODELS=(
-    "pretrained=google/gemma-3n-E4B-it,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
+    "pretrained=unsloth/Qwen3-8B,max_length=25000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
+    "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
+    "pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=25000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
+    "pretrained=UbiquantAI/Fleming-R1-7B,max_length=25000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
 )
 
-
-#NLI4PR
-
-#Trial_Meta-Analysis_type
+#MedNLI
+#MedQA
+#MedMCQA
+#PubMedQA
+#RCT_Summary
 #Evidence_Inference_v2
+#NLI4PR
 #HINT
-#SemEval_NLI4CT
+#Trial_Meta-Analysis_type
 #TREC_CDS
-#TREC_CT
 #TREC_Prec-Med
+#TREC_CT
+#SemEval_NLI4CT
+#Trial_Meta-Analysis_binary
+#Trial_Meta-Analysis_continuous
 
 TASK_LIST=(
-    MedNLI
-    MedQA
-    MedMCQA
-    PubMedQA
+    TREC_CT
 )
 
 INFERENCE_MODES=(
@@ -48,7 +55,7 @@ SEED=0
 
 # Output base path
 OUTPUT_BASE_PATH=/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/
-RUN_NAME=clean_res/
+RUN_NAME=resource_paper/
 
 for MODEL_ARGS in "${MODELS[@]}"; do
 

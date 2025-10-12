@@ -127,7 +127,7 @@ def save_markdown(df, path):
     df = df.drop(columns=["Model Args", "Path"], errors="ignore")
 
     # Sort by dataset then model in Qwen, Llama, DeepSeek, Mistral, Gemma order
-    model_order = ["Qwen", "meta-llama", "deepseek", "mistralai", "google"]
+    model_order = ["Fleming", "deepseek", "Llama", "unsloth"]
 
         # Function to extract model priority
     def get_model_priority(model_name: str) -> int:

@@ -24,12 +24,6 @@ generation_kwargs:
   temperature: 0.7
   top_p: 0.9
   top_k: 50
-filter_list:
-  - name: "score_first"
-    filter:
-    - function: "regex"
-      regex_pattern: "(?s:.*)([cC]ontradiction|[nN]eutral|[eE]ntailment)"
-    - function: "take_first"
 metric_list:
   - metric: rouge_l
     aggregation: rouge_l

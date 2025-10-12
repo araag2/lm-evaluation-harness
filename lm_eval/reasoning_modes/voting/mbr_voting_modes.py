@@ -45,12 +45,12 @@ def get_mbr_reasoning_chains(reasoning_chains_per_document):
     bleu = MetricBLEU(MetricBLEU.Config(num_workers=32))
     bleurt = MetricBLEURT(MetricBLEURT.Config(batch_size=32, model="lucadiliello/bleurt-tiny-128"))
 
-    mbr_metrics = [("bleu", bleu, bleu.Config), ("bleurt", bleurt, bleurt.Config)]
-
-    res = {"bleu" : [], "bleurt" : []}
-
-    # These scores are based on weighted voting based on the MBR scores of each reasoning chain, where the weights are the MBR scores.
-    mbr_aggregate_vote_scores = {"bleu" : [], "bleurt" : []}
+    #mbr_metrics = [("bleu", bleu, bleu.Config), ("bleurt", bleurt, bleurt.Config)]
+    #res = {"bleu" : [], "bleurt" : []}
+    #mbr_aggregate_vote_scores = {"bleu" : [], "bleurt" : []}
+    mbr_metrics = [("bleurt", bleurt, bleurt.Config)]
+    res = {"bleurt" : []}
+    mbr_aggregate_vote_scores = {"bleurt" : []}
 
     for name, metric, config in mbr_metrics:
         decoder = DecoderMBR(config, metric)
@@ -84,8 +84,6 @@ def get_mbr_reasoning_chains(reasoning_chains_per_document):
                 )
 
                 mbr_aggregate_vote_scores[name].append(normalize_scores(metric_output.score))
-
-    print("[HERE] VOTE SCORES", mbr_aggregate_vote_scores)
 
     return res, mbr_aggregate_vote_scores
 

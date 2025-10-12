@@ -1,19 +1,45 @@
-baseline_type_prompt = "You are an expert medical assistant specialized in judging the type of outcome from a randomized controlled trial. Your task is to determine whether the outcome of a given trial is binary or continuous based on the provided article context.\n\nArticle:\n\n{{Context}}\n\nQuestion: Based on the article, is the outcome of {{outcome}} from a randomized controlled trial a binary or continuous type?\n\nPlease output 'binary' or 'continuous' corresponding to the correct option.\nAnswer: "
+baseline_prompt = "You are an expert medical assistant specialized in judging the type of outcome from a randomized controlled trial. Your task is to determine whether the outcome of a given trial is binary or continuous based on the provided article context.\n\nArticle:\n\n{{Context}}\n\nQuestion: Based on the article, is the outcome of {{outcome}} from a randomized controlled trial a binary or continuous type?\n\nPlease output 'binary' or 'continuous' corresponding to the correct option.\nAnswer: "
 
-reasoning_prompt = baseline_type_prompt[:-10] + "\nLet's think step by step:"
+reasoning_prompt = "You are an expert medical assistant specialized in judging the type of outcome from a randomized controlled trial. Your task is to determine whether the outcome of a given trial is binary or continuous based on the provided article context. The possible outcome types are:\n- Binary: The outcome has two distinct categories or states (e.g., success/failure, yes/no).\n- Continuous: The outcome can take any value within a range and is not limited to specific categories (e.g., weight, blood pressure).\n\nArticle:\n\n{{Context}}\n\nQuestion: Based on the article, is the outcome of {{outcome}} from a randomized controlled trial a binary or continuous type?\n\nLet's think step by step, and at the very end write your answer in the form: \nAnswer: [binary / continuous] <END>"
+
+reasoning_binary_prompt = "You are an expert medical assistant specialized in extracting data from randomized controlled trials. Your task is to produce a 2x2 contingency table in YAML format based on the provided article context.\n\nYou will be given an article context preceded by **Article:**, which contains the Abstract and Results sections of a randomized controlled trial. Pay close attention to the details in the article to accurately classify the outcome type.\n\nYou will also be provided with an ICO (Intervention, Comparator, and Outcome) triplet, which includes the intervention, comparator, and outcome of interest. Your task is to extract the number of events and group sizes for both the intervention and comparator groups.\n\n**Article:** \n\n{{Context}}\n\nBased on the given trial article, produce a 2x2 contingency table in YAML format for the following ICO (Intervention, Comparator, and Outcome) triplet: \n\n**Intervention:** {{intervention}}\n**Comparator:** {{comparator}}\n**Outcome:** {{outcome}}\n\nThe YAML format should include the fields \"events\" and \"group_size\" for \"intervention\" and \"comparator\", but not for \"outcome\". \n  \n**Example:**\nintervention:\n    events: NUMBER or x\n    group_size: NUMBER or x\ncomparator:\n    events: NUMBER or x\n    group_size: NUMBER or x\n\nOnly produce the YAML response. Do not provide any additional explanation. If any of the numerical information is unavailable, not extractable or not possible to calculate, replace it with \"x\".\n\nIf there is numerical data for pre and post-intervention, choose the post-intervention data. If there are multiple timeframes for the outcome, choose the one closest to the outcome timepoint of interest, or alternatively the last one. Be as accurate as possible, and only ouptut the YAML.\n\nYAML:" 
+
+reasoning_continuous_prompt = "You are an expert medical assistant specialized in extracting data from randomized controlled trials. Your task is to produce a 2x2 contingency table in YAML format based on the provided article context.\n\nYou will be given an article context preceded by **Article:**, which contains the Abstract and Results sections of a randomized controlled trial. Pay close attention to the details in the article to accurately classify the outcome type.\n\nYou will also be provided with an ICO (Intervention, Comparator, and Outcome) triplet, which includes the intervention, comparator, and outcome of interest. Your task is to extract the mean, standard deviation, and group sizes for both the intervention and comparator groups.\n\n**Article:** \n\n{{Context}}\n\nBased on the given trial article, produce a 2x2 contingency table in YAML format for the following ICO (Intervention, Comparator, and Outcome) triplet: \n\n**Intervention:** {{intervention}}\n**Comparator:** {{comparator}}\n**Outcome:** {{outcome}}\n\nThe YAML format should include the fields \"mean\", \"standard_deviation\", and \"group_size\" for \"intervention\" and \"comparator\", but not for \"outcome\".\n  \n**Example:**\nintervention:\n    mean: NUMBER or x\n    standard_deviation: NUMBER or x\n    group_size: NUMBER or x\ncomparator:\n    mean: NUMBER or x\n    standard_deviation: NUMBER or x\n    group_size: NUMBER or x\n\nOnly produce the YAML response. Do not provide any additional explanation. If any of the numerical information is unavailable, not extractable or not possible to calculate, replace it with \"x\".\n\nIf there is numerical data for pre and post-intervention, choose the post-intervention data. If there are multiple timeframes for the outcome, choose the one closest to the outcome timepoint of interest, or alternatively the last one. Be as accurate as possible, and only ouptut the YAML.\n\nYAML:"
+
+answer_selection_prompt = "You are an expert medical assistant specialized in judging the type of outcome from a randomized controlled trial. Your task is to determine whether the outcome of a given trial is binary or continuous based on the provided article context. The possible outcome types are:\n- Binary: The outcome has two distinct categories or states (e.g., success/failure, yes/no).\n- Continuous: The outcome can take any value within a range and is not limited to specific categories (e.g., weight, blood pressure).\n\nArticle:\n\n{{Context}}\n\nQuestion: Based on the article, is the outcome of {{outcome}} from a randomized controlled trial a binary or continuous type?\n\nReasoning Chain: {{Reasoning_Chain}}\n\nGiven the Article, the Outcome and with special attention to the presented Reasoning Chain, provide your judgement (binary or continuous), corresponding to the correct option. Be as accurate as possible.\nFinal Answer: "
+
+verify_reasoning_prompt = "You are an expert medical assistant specialized in judging the type of outcome from a randomized controlled trial. Your task is to verify a reasoning chain that determines whether the outcome of a given trial is binary or continuous based on the provided article context. The possible outcome types are:\n- Binary: The outcome has two distinct categories or states (e.g., success/failure, yes/no).\n- Continuous: The outcome can take any value within a range and is not limited to specific categories (e.g., weight, blood pressure).\n\nArticle:\n\n{{Context}}\n\nQuestion: Based on the article, is the outcome of {{outcome}} from a randomized controlled trial a binary or continuous type?\n\nReasoning Chain: {{Reasoning_Chain}}\n\nPlease find mistakes and critique the logical sense and the conclusion of the Reasoning Chain. Let's think step by step, and after explaining the mistakes you find, provide your final answer in the form: \nVerified Answer: [binary / continuous] <END>"
+
+answer_selection_after_verification_prompt = "You are an expert medical assistant specialized in judging the type of outcome from a randomized controlled trial. Your task is to determine whether the outcome of a given trial is binary or continuous based on the provided article context. The possible outcome types are:\n- Binary: The outcome has two distinct categories or states (e.g., success/failure, yes/no).\n- Continuous: The outcome can take any value within a range and is not limited to specific categories (e.g., weight, blood pressure).\n\nArticle:\n\n{{Context}}\n\nQuestion: Based on the article, is the outcome of {{outcome}} from a randomized controlled trial a binary or continuous type?\n\nReasoning Chain: {{Reasoning_Chain}}\n\nFlaws in the Reasoning Chain: {{Verified_Reasoning_Chain}}\n\nGiven the Article, the Outcome, the initial Reasoning Chain and the possible flaws of the reasoning chain, provide your judgement (binary or continuous), corresponding to the correct option. Be as accurate as possible.\nFinal Answer: "
 
 pos_answers = ["binary", "continuous"]
 
 def label_to_index(doc) -> int:
-    return pos_answers.index(doc["Label"])
+    return pos_answers.index(doc["outcome_type"])
 
-relevant_keys = ["Context", "outcome"]
+relevant_keys = ["Context", "outcome", "intervention", "comparator", "outcome", "Reasoning_Chain", "Verified_Reasoning_Chain"]
 
-def doc_to_text(doc, reasoning = False):
-    res = reasoning_prompt if reasoning else baseline_type_prompt
+def doc_to_text(doc, prompt = baseline_prompt):
+    res = prompt
     for key in relevant_keys:
-      res = res.replace(f"{{{{{key}}}}}", doc[key])
+        if key in doc:
+            res = res.replace(f"{{{{{key}}}}}", doc[key])
     return res
 
 def doc_to_text_reasoning(doc):
-    return doc_to_text(doc, reasoning=True)
+    return doc_to_text(doc, reasoning_prompt)
+
+def doc_to_text_reasoning_binary(doc):
+    return doc_to_text(doc, reasoning_binary_prompt)
+
+def doc_to_text_reasoning_continuous(doc):
+    return doc_to_text(doc, reasoning_continuous_prompt)
+
+def doc_to_text_answer_selection(doc):
+    return doc_to_text(doc, answer_selection_prompt)
+
+def doc_to_text_verify_reasoning(doc):
+    return doc_to_text(doc, verify_reasoning_prompt)
+
+def doc_to_text_answer_selection_after_verify_reasoning(doc):
+    return doc_to_text(doc, answer_selection_after_verification_prompt)
