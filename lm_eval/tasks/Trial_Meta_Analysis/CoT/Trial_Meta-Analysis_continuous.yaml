@@ -5,7 +5,6 @@ dataset_path: araag2/Trial_Meta-Analysis
 dataset_name: processed_continuous
 dataset_kwargs:
   trust_remote_code: true
-training_split: train
 validation_split: dev
 test_split: test
 doc_to_text: !function utils.doc_to_text_reasoning_continuous
@@ -26,12 +25,6 @@ generation_kwargs:
   top_k: 50
 filter_list:
 metric_list:
-  - metric: partial_match
-    aggregation: mean
-    higher_is_better: true
-    ignore_case: true
-    ignore_punctuation: true
-    ignore_numbers: false
   - metric: exact_match
     aggregation: mean
     higher_is_better: true
