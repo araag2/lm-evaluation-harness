@@ -1,4 +1,5 @@
 from sklearn.metrics import precision_score, recall_score
+import datasets
 
 def precision_fn(refs, preds, kwargs):
     return {"precision": precision_score(refs, preds, average="weighted", zero_division=0)}
@@ -42,3 +43,11 @@ def doc_to_text_verify_reasoning(doc):
 
 def doc_to_text_answer_selection_after_verify_reasoning(doc):
     return doc_to_text(doc, answer_selection_after_verification_prompt)
+
+def process_docs(dataset):
+    dataset_relevant = dataset.filter(lambda doc: doc["Label"] in ("definitely relevant", "possibly relevant"))
+    dataset_irrelevant = dataset.filter(lambda doc: doc["Label"] == "not relevant")
+    
+    dataset_irrelevant = dataset_irrelevant.shuffle(seed=42).select(range(len(dataset_relevant) if len(dataset_relevant) < len(dataset_irrelevant) else len(dataset_irrelevant)))
+
+    return datasets.concatenate_datasets([dataset_relevant, dataset_irrelevant]).shuffle(seed=42)

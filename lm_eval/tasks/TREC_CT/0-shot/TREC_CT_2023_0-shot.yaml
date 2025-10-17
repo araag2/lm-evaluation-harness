@@ -3,6 +3,11 @@ dataset_path: araag2/TREC_Clinical-Trials
 dataset_name: 2023_processed
 include: _default_TREC_CT_0-shot.yaml
 metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true 
   - metric: nDCG@5
     aggregation: nDCG@5
     higher_is_better: true

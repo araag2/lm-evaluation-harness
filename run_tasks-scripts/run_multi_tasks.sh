@@ -16,10 +16,10 @@ MODEL=vllm
 #"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=25000"
 
 MODELS=(
-    "pretrained=unsloth/Qwen3-8B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
-    "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
-    "pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
-    "pretrained=UbiquantAI/Fleming-R1-7B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
+    "pretrained=unsloth/Qwen3-8B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8,enable_prefix_caching=True"
+    "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8,enable_prefix_caching=True"
+    "pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8,enable_prefix_caching=True"
+    "pretrained=UbiquantAI/Fleming-R1-7B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8,enable_prefix_caching=True"
 )
 
 #MedNLI
@@ -39,22 +39,24 @@ MODELS=(
 #Trial_Meta_Analysis_continuous
 
 TASK_LIST=(
+    TREC_Prec-Med
+    TREC_CDS
     TREC_CT
 )
 
 INFERENCE_MODES=(
-    0-shot
+    #0-shot
     #SC
-    #CoT
+    CoT
 )
 
 # Generation Params
-CUDA_DEVICES=0
+CUDA_DEVICES=3  
 BATCH_SIZE=auto
 SEED=0
 
 # Output base path
-OUTPUT_BASE_PATH=/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/
+OUTPUT_BASE_PATH=../outputs/
 RUN_NAME=resource_paper/
 
 for MODEL_ARGS in "${MODELS[@]}"; do
@@ -87,7 +89,7 @@ for MODEL_ARGS in "${MODELS[@]}"; do
                 --batch_size $BATCH_SIZE \
                 --seed $SEED \
                 --output_path $OUTPUT_PATH \
-                --log_samples 
+                --log_samples
                 #--write_out \
                 #--apply_chat_template \
                 #--limit 2 \

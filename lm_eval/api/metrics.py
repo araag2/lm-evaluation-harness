@@ -227,31 +227,25 @@ def calculate_nDCG(items, k=None):
     from sklearn.metrics import ndcg_score
     scores_by_query_id = defaultdict(list)
     pos_label_index = len(items[0][3]) - 1
-    for doc, gold, _, prob_norm in items:    
-        scores_by_query_id[doc["query_id"]].append((doc, gold, prob_norm[pos_label_index]))
+    for doc, gold, _, prob_norm in items:
+        scores_by_query_id[doc["query_id"]].append((gold, prob_norm[pos_label_index]))    
 
     ndcg_scores = []
-
     for _, docs in scores_by_query_id.items():
-        # Sort items by predicted score in descending order
-        sorted_items = sorted(docs, key=lambda x: x[2], reverse=True)
-
-        # Prepare y_true and y_score for nDCG calculation
-        y_true = [[gold] for _, gold, _ in sorted_items]
-        y_score = [[prob_norm] for _, _, prob_norm in sorted_items]
-
-        # Failsafe: if only one doc or all gold labels are identical, skip sklearn and set nDCG = 1.0
-        if len(y_true) < 2 or sum([g[0] for g in y_true]) < 2:
+        if len(docs) < 2:
             ndcg_scores.append(0.0)
             continue
+        
+        golds, scores = zip(*docs)
+        y_true = [list(golds)]
+        y_score = [list(scores)]
+        
 
-        ndcg_scores.append(ndcg_score(y_true, y_score, k=k))
+        if sum(y_true[0]) < 1:
+            ndcg_scores.append(0.0)
 
-        # Optional: Debugging output
-        #print(f"[DEBUG] Query {qid} – nDCG: {ndcg_scores[-1]}")
-        #for doc, gold, pred, prob in sorted_items:
-        #    print(f"[DEBUG] doc_id: {doc['doc_id']}, Gold: {gold}, Pred: {pred}, Prob: {prob}")
-
+        else:
+            ndcg_scores.append(ndcg_score(y_true, y_score, k=k))
     return mean(ndcg_scores) if ndcg_scores else 0.0
 
 @register_aggregation("nDCG")

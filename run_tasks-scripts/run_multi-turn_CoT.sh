@@ -38,7 +38,7 @@ PAIRS_OF_TASK_LIST=(
 
 MODE=multi-turn_CoT
 
-BASE_OUTPUT_DIR="/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/resource_paper/$MODE"
+BASE_OUTPUT_DIR="../outputs/resource_paper/$MODE"
 
 CUDA_DEVICES=0
 BATCH_SIZE=auto

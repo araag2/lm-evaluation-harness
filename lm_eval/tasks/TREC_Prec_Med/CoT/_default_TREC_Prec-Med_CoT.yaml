@@ -1,6 +1,7 @@
 dataset_kwargs:
   trust_remote_code: true
 test_split: test
+process_docs: !function utils.process_docs
 doc_to_text: !function utils.doc_to_text_reasoning
 doc_to_target: "{{ Label }}"
 doc_to_choice: ["not relevant", "possibly relevant", "definitely relevant"]
@@ -24,12 +25,5 @@ filter_list:
     - function: "regex"
       regex_pattern: "(?s:.*)([Nn]ot relevant|[Pp]ossibly relevant|[Dd]efinitely relevant)"
     - function: "take_first"
-metric_list:
-  - metric: exact_match
-    aggregation: mean
-    higher_is_better: true
-    ignore_case: true
-    ignore_punctuation: true
-    ignore_numbers: false
 metadata:
   version: 1.0
