@@ -19,7 +19,7 @@ def doc_to_text(doc, prompt = baseline_prompt):
     res = prompt
     for key in relevant_keys:
         if key in doc:
-            res = res.replace(f"{{{{{key}}}}}", doc[key][:8000])
+            res = res.replace(f"{{{{{key}}}}}", doc[key][:1000] + doc[key][-1000:]if len(doc[key]) > 2000 else doc[key])
         else:
             res = res.replace(f"{{{{{key}}}}}", "")
     return res
@@ -35,3 +35,10 @@ def doc_to_text_verify_reasoning(doc):
 
 def doc_to_text_answer_selection_after_verify_reasoning(doc):
     return doc_to_text(doc, answer_selection_after_verification_prompt)
+
+def process_docs(dataset):
+    dataset_relevant = dataset.filter(lambda doc: doc["Label"] == "definitely relevant" or doc["Label"] == "possibly relevant")
+    relevant_size = len(dataset_relevant)
+    dataset_irrelevant = dataset.filter(lambda doc: doc["Label"] == "not relevant").shuffle(seed=42).select(range(relevant_size))
+    dataset_balanced = dataset_relevant.concatenate(dataset_irrelevant).shuffle(seed=42)
+    return dataset_balanced

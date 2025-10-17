@@ -397,83 +397,84 @@ def parse_outcome_text(text: str) -> dict:
                 pass
 
     return outcome
-#
-#def partial_numeric_match_from_texts(
-#    pred_texts: list[str],
-#    ref_texts: list[str],
-#    float_tolerance: float = 1,
-#    threshold_counts: list[int] = None
-#) -> dict:
-#    """
-#    pred_texts: list of free-text outcomes from model
-#    ref_texts: list of free-text outcomes from ground truth
-#
-#    Returns metrics:
-#      - partial_match_frac: average fraction of numeric fields matched
-#      - and optionally partial_match_atleast_K for thresholds
-#    """
-#    n = len(pred_texts)
-#    if threshold_counts is None:
-#        threshold_counts = []
-#
-#    # helper flatten as before
-#    def flatten(outcome: dict) -> dict:
-#        flat = {}
-#        for section, sub in outcome.items():
-#            for field, val in sub.items():
-#                flat[f"{section}.{field}"] = val
-#        return flat
-#
-#    # accumulate scores
-#    frac_scores = []
-#    threshold_correct = {k: 0 for k in threshold_counts}
-#
-#    for ptxt, rtxt in zip(pred_texts, ref_texts):
-#        p = parse_outcome_text(ptxt)
-#        r = parse_outcome_text(rtxt)
-#        pflat = flatten(p)
-#        rflat = flatten(r)
-#
-#        keys = set(pflat.keys()) & set(rflat.keys())
-#        if not keys:
-#            frac_scores.append(0.0)
-#            continue
-#
-#        matched = 0
-#        total = 0
-#        for k in keys:
-#            pv = pflat[k]
-#            rv = rflat[k]
-#            # float tolerance
-#            if isinstance(pv, float) or isinstance(rv, float):
-#                if abs(pv - rv) <= float_tolerance:
-#                    matched += 1
-#            else:
-#                if pv == rv:
-#                    matched += 1
-#            total += 1
-#
-#        frac = matched / total if total > 0 else 0.0
-#        frac_scores.append(frac)
-#
-#        for th in threshold_counts:
-#            if matched >= th:
-#                threshold_correct[th] += 1
-#
-#    out = {"partial_match_frac": sum(frac_scores) / n}
-#    for th, cnt in threshold_correct.items():
-#        out[f"partial_match_atleast_{th}"] = cnt / n
-#    return out
-#
-#@register_metric(
-#    metric="partial_match",
-#    higher_is_better=True,
-#    output_type="generate_until",
-#    aggregation="mean",
-#)
-#def partial_match_fn(**kwargs):
-#    return partial_numeric_match_from_texts(**kwargs)
-#
+
+'''
+def partial_numeric_match_from_texts(
+    pred_texts: list[str],
+    ref_texts: list[str],
+    float_tolerance: float = 1,
+    threshold_counts: list[int] = None
+) -> dict:
+    """
+    pred_texts: list of free-text outcomes from model
+    ref_texts: list of free-text outcomes from ground truth
+
+    Returns metrics:
+      - partial_match_frac: average fraction of numeric fields matched
+      - and optionally partial_match_atleast_K for thresholds
+    """
+    n = len(pred_texts)
+    if threshold_counts is None:
+        threshold_counts = []
+
+    # helper flatten as before
+    def flatten(outcome: dict) -> dict:
+        flat = {}
+        for section, sub in outcome.items():
+            for field, val in sub.items():
+                flat[f"{section}.{field}"] = val
+        return flat
+
+    # accumulate scores
+    frac_scores = []
+    threshold_correct = {k: 0 for k in threshold_counts}
+
+    for ptxt, rtxt in zip(pred_texts, ref_texts):
+        p = parse_outcome_text(ptxt)
+        r = parse_outcome_text(rtxt)
+        pflat = flatten(p)
+        rflat = flatten(r)
+
+        keys = set(pflat.keys()) & set(rflat.keys())
+        if not keys:
+            frac_scores.append(0.0)
+            continue
+
+        matched = 0
+        total = 0
+        for k in keys:
+            pv = pflat[k]
+            rv = rflat[k]
+            # float tolerance
+            if isinstance(pv, float) or isinstance(rv, float):
+                if abs(pv - rv) <= float_tolerance:
+                    matched += 1
+            else:
+                if pv == rv:
+                    matched += 1
+            total += 1
+
+        frac = matched / total if total > 0 else 0.0
+        frac_scores.append(frac)
+
+        for th in threshold_counts:
+            if matched >= th:
+                threshold_correct[th] += 1
+
+    out = {"partial_match_frac": sum(frac_scores) / n}
+    for th, cnt in threshold_correct.items():
+        out[f"partial_match_atleast_{th}"] = cnt / n
+    return out
+
+@register_metric(
+    metric="partial_match",
+    higher_is_better=True,
+    output_type="generate_until",
+    aggregation="mean",
+)
+def partial_match_fn(**kwargs):
+    return partial_numeric_match_from_texts(**kwargs)
+'''
 #-------------------------------------------------------#
 
 # Register Aggregations First

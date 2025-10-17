@@ -15,10 +15,10 @@ PROVIDER=vllm
 #"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8|pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
 
 PAIRS_OF_MODELS=(
-    "pretrained=unsloth/Qwen3-8B,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8|pretrained=unsloth/Qwen3-8B,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
-    "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8|pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
-    "pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8|pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
-    "pretrained=UbiquantAI/Fleming-R1-7B,max_length=22000,gpu_memory_utilization=0.75,swap_space=8|pretrained=UbiquantAI/Fleming-R1-7B,max_length=22000,gpu_memory_utilization=0.75,swap_space=8"
+    "pretrained=unsloth/Qwen3-8B,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8|pretrained=unsloth/Qwen3-8B,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
+    "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8|pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
+    "pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8|pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
+    "pretrained=UbiquantAI/Fleming-R1-7B,max_length=20000,gpu_memory_utilization=0.9,swap_space=8|pretrained=UbiquantAI/Fleming-R1-7B,max_length=20000,gpu_memory_utilization=0.9,swap_space=8"
 )
 
 #"MedNLI:CoT|MedNLI:0-shot"
@@ -33,8 +33,7 @@ PAIRS_OF_MODELS=(
 #"SemEval_NLI4CT:2024_CoT|SemEval_NLI4CT:2024_0-shot"
 
 PAIRS_OF_TASK_LIST=(
-    "Trial_Meta-Analysis_type:CoT|Trial_Meta-Analysis_type:0-shot"
-    "Evidence_Inference_v2:CoT|Evidence_Inference_v2:0-shot"
+    "Trial_Meta_Analysis:type_CoT|Trial_Meta_Analysis:type_0-shot"
 )
 
 MODE=multi-turn_CoT
@@ -83,7 +82,7 @@ for PAIR_MODELS in "${PAIRS_OF_MODELS[@]}"; do
         --batch_size $BATCH_SIZE \
         --seed $SEED \
         --log_samples
-
+        
     STATUS=$?
     if [ $STATUS -eq 0 ]; then
         echo "[SUCCESS] Completed: $TASK_REASON to $TASK_ANSWER"

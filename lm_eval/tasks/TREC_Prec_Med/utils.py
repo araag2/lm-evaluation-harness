@@ -27,8 +27,8 @@ def doc_to_text(doc, prompt = baseline_prompt):
     res = prompt
     for key in relevant_keys:
         if key in doc:
-            res = res.replace(f"{{{{{key}}}}}", doc[key][:8000])
-    res = res.replace("{{Other}}", doc["Other"][:8000])  if "Other" in doc else res.replace("\n- Other: {{Other}}", "")
+            res = res.replace(f"{{{{{key}}}}}", doc[key][:1000] + doc[key][-1000:]if len(doc[key]) > 2000 else doc[key])
+    res = res.replace("{{Other}}", doc["Other"][:1000])  if "Other" in doc else res.replace("\n- Other: {{Other}}", "")
     return res
 
 def doc_to_text_reasoning(doc):

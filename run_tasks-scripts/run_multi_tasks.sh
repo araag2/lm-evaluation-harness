@@ -16,7 +16,10 @@ MODEL=vllm
 #"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=25000"
 
 MODELS=(
-    "pretrained=UbiquantAI/Fleming-R1-7B,max_length=25000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
+    "pretrained=unsloth/Qwen3-8B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
+    "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
+    "pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
+    "pretrained=UbiquantAI/Fleming-R1-7B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
 )
 
 #MedNLI
@@ -31,12 +34,12 @@ MODELS=(
 #TREC_Prec-Med
 #TREC_CT
 #SemEval_NLI4CT
-#Trial_Meta-Analysis_type
-#Trial_Meta-Analysis_binary
-#Trial_Meta-Analysis_continuous
+#Trial_Meta_Analysis_type
+#Trial_Meta_Analysis_binary
+#Trial_Meta_Analysis_continuous
 
 TASK_LIST=(
-    HINT
+    TREC_CT
 )
 
 INFERENCE_MODES=(

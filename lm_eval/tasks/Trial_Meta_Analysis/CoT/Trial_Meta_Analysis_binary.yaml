@@ -1,13 +1,13 @@
-task: Trial_Meta-Analysis_continuous_CoT
+task: Trial_Meta_Analysis_binary_CoT
 tag:
   - chain-of-thought
 dataset_path: araag2/Trial_Meta-Analysis
-dataset_name: processed_continuous
+dataset_name: processed_binary
 dataset_kwargs:
   trust_remote_code: true
 validation_split: dev
 test_split: test
-doc_to_text: !function utils.doc_to_text_reasoning_continuous
+doc_to_text: !function utils.doc_to_text_reasoning_binary
 doc_to_target: "{{ Completion Extraction }}"
 output_type: generate_until
 generation_kwargs:

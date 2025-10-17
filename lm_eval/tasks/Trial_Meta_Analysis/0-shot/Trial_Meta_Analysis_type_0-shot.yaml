@@ -1,4 +1,4 @@
-task: Trial_Meta-Analysis_type_0-shot
+task: Trial_Meta_Analysis_type_0-shot
 tag:
   - 0-shot
 dataset_path: araag2/Trial_Meta-Analysis

@@ -1,4 +1,4 @@
-task: Trial_Meta-Analysis_type_CoT
+task: Trial_Meta_Analysis_type_CoT
 tag:
   - chain-of-thought
 dataset_path: araag2/Trial_Meta-Analysis
@@ -31,12 +31,6 @@ filter_list:
       regex_pattern: "(?s:.*)([Bb]inary|[Cc]ontinuous)"
     - function: "take_first"
 metric_list:
-  - metric: partial_match
-    aggregation: mean
-    higher_is_better: true
-    ignore_case: true
-    ignore_punctuation: true
-    ignore_numbers: false
   - metric: exact_match
     aggregation: mean
     higher_is_better: true
