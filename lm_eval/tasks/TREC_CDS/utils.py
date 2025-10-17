@@ -1,3 +1,6 @@
+import datasets
+
+
 baseline_prompt = "You are a medical expert tasked with performing clinical decision support to a doctor, by reading a Patient Description and a article of biomedical literature, determining wether that article is relevant to the Patient Description and the Question.\n\nArticle Title:\n\n{{Title}}\n\nArticle Abstract:\n\n{{Abstract}}\n\nArticle Body:\n\n{{Body}}\n\nClinical Question:\n\n{{Question}}\n\nPatient Description:\n\n{{Patient_Summary}}\n\nBased on the above information, provide your judgement whether the Article is relevant to answer the Clinical Question, within the context of the Patient Description. Provide your judgement in short form, using 'not relevant', 'possibly relevant' or 'definitely relevant'.\nAnswer: "
 
 reasoning_prompt = "You are a medical expert tasked with performing clinical decision support to a doctor, by reading a Patient Description and a article of biomedical literature, determining wether that article is relevant to the Patient Description and the Question. The possible relevance judgements are:\n- Not Relevant: The article does not provide information that helps answer the clinical question in the context of the patient description.\n- Possibly Relevant: The article provides some information that might help answer the clinical question, but it is not definitive or directly applicable.\n- Definitely Relevant: The article provides clear and direct information that helps answer the clinical question in the context of the patient description.\n\nArticle Title:\n\n{{Title}}\n\nArticle Abstract:\n\n{{Abstract}}\n\nArticle Body:\n\n{{Body}}\n\nClinical Question:\n\n{{Question}}\n\nPatient Description:\n\n{{Patient_Summary}}\n\nLet's think step by step, and at the very end write your answer in the form: \nAnswer: [not relevant / possibly relevant / definitely relevant] <END>"
@@ -37,8 +40,16 @@ def doc_to_text_answer_selection_after_verify_reasoning(doc):
     return doc_to_text(doc, answer_selection_after_verification_prompt)
 
 def process_docs(dataset):
-    dataset_relevant = dataset.filter(lambda doc: doc["Label"] == "definitely relevant" or doc["Label"] == "possibly relevant")
+    dataset_relevant = dataset.filter(lambda doc: doc["Label"] in ("definitely relevant", "possibly relevant"))
     relevant_size = len(dataset_relevant)
-    dataset_irrelevant = dataset.filter(lambda doc: doc["Label"] == "not relevant").shuffle(seed=42).select(range(relevant_size))
-    dataset_balanced = dataset_relevant.concatenate(dataset_irrelevant).shuffle(seed=42)
+
+    dataset_irrelevant = dataset.filter(lambda doc: doc["Label"] == "not relevant")
+    # Shuffle & downsample to match relevance count
+    dataset_irrelevant = dataset_irrelevant.shuffle(seed=42).select(range(relevant_size if relevant_size < len(dataset_irrelevant) else len(dataset_irrelevant)))
+
+    # Now concatenate using the correct function
+    dataset_balanced = datasets.concatenate_datasets([dataset_relevant, dataset_irrelevant])
+    # Shuffle the combined dataset
+    dataset_balanced = dataset_balanced.shuffle(seed=42)
+
     return dataset_balanced

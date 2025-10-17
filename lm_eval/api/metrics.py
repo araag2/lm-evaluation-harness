@@ -227,31 +227,25 @@ def calculate_nDCG(items, k=None):
     from sklearn.metrics import ndcg_score
     scores_by_query_id = defaultdict(list)
     pos_label_index = len(items[0][3]) - 1
-    for doc, gold, _, prob_norm in items:    
-        scores_by_query_id[doc["query_id"]].append((doc, gold, prob_norm[pos_label_index]))
+    for doc, gold, _, prob_norm in items:
+        scores_by_query_id[doc["query_id"]].append((gold, prob_norm[pos_label_index]))    
 
     ndcg_scores = []
-
     for _, docs in scores_by_query_id.items():
-        # Sort items by predicted score in descending order
-        sorted_items = sorted(docs, key=lambda x: x[2], reverse=True)
-
-        # Prepare y_true and y_score for nDCG calculation
-        y_true = [[gold] for _, gold, _ in sorted_items]
-        y_score = [[prob_norm] for _, _, prob_norm in sorted_items]
-
-        # Failsafe: if only one doc or all gold labels are identical, skip sklearn and set nDCG = 1.0
-        if len(y_true) < 2 or sum([g[0] for g in y_true]) < 2:
+        if len(docs) < 2:
             ndcg_scores.append(0.0)
             continue
+        
+        golds, scores = zip(*docs)
+        y_true = [list(golds)]
+        y_score = [list(scores)]
+        
 
-        ndcg_scores.append(ndcg_score(y_true, y_score, k=k))
+        if sum(y_true[0]) < 1:
+            ndcg_scores.append(0.0)
 
-        # Optional: Debugging output
-        #print(f"[DEBUG] Query {qid} – nDCG: {ndcg_scores[-1]}")
-        #for doc, gold, pred, prob in sorted_items:
-        #    print(f"[DEBUG] doc_id: {doc['doc_id']}, Gold: {gold}, Pred: {pred}, Prob: {prob}")
-
+        else:
+            ndcg_scores.append(ndcg_score(y_true, y_score, k=k))
     return mean(ndcg_scores) if ndcg_scores else 0.0
 
 @register_aggregation("nDCG")
@@ -350,132 +344,6 @@ def rouge_l(items):
 )
 def rouge_l_fn(items):  # This is a passthrough function
     return items
-
-
-#-----------------------------------------------------------------------#
-
-def parse_outcome_text(text: str) -> dict:
-    lines = text.splitlines()
-    outcome = {}
-    current_section = None
-    # pattern to capture “key: value” with optional whitespace
-    kv_pattern = re.compile(r"^\s*([a-zA-Z_]+)\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*$")
-    # pattern to detect a top section
-    section_pattern = re.compile(r"^\s*([a-zA-Z_]+)\s*:\s*$")
-
-    for line in lines:
-        if not line.strip():
-            continue  # skip empty lines
-        sec_m = section_pattern.match(line)
-        if sec_m:
-            # a new section like “intervention:” or “comparator:”
-            sec = sec_m.group(1)
-            current_section = sec
-            if sec in outcome:
-                # duplicate section – override or skip
-                pass
-            else:
-                outcome[sec] = {}
-        else:
-            # must be a subfield line under current_section
-            if current_section is None:
-                # could not parse this line
-                continue
-            m = kv_pattern.match(line)
-            if m:
-                key = m.group(1)
-                val_str = m.group(2)
-                # convert to float or int
-                if "." in val_str:
-                    val = float(val_str)
-                else:
-                    val = int(val_str)
-                outcome[current_section][key] = val
-            else:
-                # line didn’t match numeric field; skip or warn
-                # you could add fallback logic here
-                pass
-
-    return outcome
-
-'''
-def partial_numeric_match_from_texts(
-    pred_texts: list[str],
-    ref_texts: list[str],
-    float_tolerance: float = 1,
-    threshold_counts: list[int] = None
-) -> dict:
-    """
-    pred_texts: list of free-text outcomes from model
-    ref_texts: list of free-text outcomes from ground truth
-
-    Returns metrics:
-      - partial_match_frac: average fraction of numeric fields matched
-      - and optionally partial_match_atleast_K for thresholds
-    """
-    n = len(pred_texts)
-    if threshold_counts is None:
-        threshold_counts = []
-
-    # helper flatten as before
-    def flatten(outcome: dict) -> dict:
-        flat = {}
-        for section, sub in outcome.items():
-            for field, val in sub.items():
-                flat[f"{section}.{field}"] = val
-        return flat
-
-    # accumulate scores
-    frac_scores = []
-    threshold_correct = {k: 0 for k in threshold_counts}
-
-    for ptxt, rtxt in zip(pred_texts, ref_texts):
-        p = parse_outcome_text(ptxt)
-        r = parse_outcome_text(rtxt)
-        pflat = flatten(p)
-        rflat = flatten(r)
-
-        keys = set(pflat.keys()) & set(rflat.keys())
-        if not keys:
-            frac_scores.append(0.0)
-            continue
-
-        matched = 0
-        total = 0
-        for k in keys:
-            pv = pflat[k]
-            rv = rflat[k]
-            # float tolerance
-            if isinstance(pv, float) or isinstance(rv, float):
-                if abs(pv - rv) <= float_tolerance:
-                    matched += 1
-            else:
-                if pv == rv:
-                    matched += 1
-            total += 1
-
-        frac = matched / total if total > 0 else 0.0
-        frac_scores.append(frac)
-
-        for th in threshold_counts:
-            if matched >= th:
-                threshold_correct[th] += 1
-
-    out = {"partial_match_frac": sum(frac_scores) / n}
-    for th, cnt in threshold_correct.items():
-        out[f"partial_match_atleast_{th}"] = cnt / n
-    return out
-
-@register_metric(
-    metric="partial_match",
-    higher_is_better=True,
-    output_type="generate_until",
-    aggregation="mean",
-)
-def partial_match_fn(**kwargs):
-    return partial_numeric_match_from_texts(**kwargs)
-'''
-#-------------------------------------------------------#
 
 # Register Aggregations First
 @register_aggregation("bypass")
@@ -635,6 +503,132 @@ def acc_norm_fn(items):  # This is a passthrough function
 )
 def acc_mutual_info_fn(items):  # This is a passthrough function
     return items
+
+#-----------------------------------------------------------------------#
+
+def parse_outcome_text(text: str) -> dict:
+    lines = text.splitlines()
+    outcome = {}
+    current_section = None
+    # pattern to capture “key: value” with optional whitespace
+    kv_pattern = re.compile(r"^\s*([a-zA-Z_]+)\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*$")
+    # pattern to detect a top section
+    section_pattern = re.compile(r"^\s*([a-zA-Z_]+)\s*:\s*$")
+
+    for line in lines:
+        if not line.strip():
+            continue  # skip empty lines
+        sec_m = section_pattern.match(line)
+        if sec_m:
+            # a new section like “intervention:” or “comparator:”
+            sec = sec_m.group(1)
+            current_section = sec
+            if sec in outcome:
+                # duplicate section – override or skip
+                pass
+            else:
+                outcome[sec] = {}
+        else:
+            # must be a subfield line under current_section
+            if current_section is None:
+                # could not parse this line
+                continue
+            m = kv_pattern.match(line)
+            if m:
+                key = m.group(1)
+                val_str = m.group(2)
+                # convert to float or int
+                if "." in val_str:
+                    val = float(val_str)
+                else:
+                    val = int(val_str)
+                outcome[current_section][key] = val
+            else:
+                # line didn’t match numeric field; skip or warn
+                # you could add fallback logic here
+                pass
+
+    return outcome
+
+
+
+def partial_numeric_match_from_texts(
+    ref_texts: list[str],
+    pred_texts: list[str],
+    float_tolerance: float = 1,
+    threshold_counts: list[int] = None
+) -> dict:
+    """
+    pred_texts: list of free-text outcomes from model
+    ref_texts: list of free-text outcomes from ground truth
+
+    Returns metrics:
+      - partial_match_frac: average fraction of numeric fields matched
+      - and optionally partial_match_atleast_K for thresholds
+    """
+    n = len(pred_texts)
+    if threshold_counts is None:
+        threshold_counts = []
+
+    # helper flatten as before
+    def flatten(outcome: dict) -> dict:
+        flat = {}
+        for section, sub in outcome.items():
+            for field, val in sub.items():
+                flat[f"{section}.{field}"] = val
+        return flat
+
+    # accumulate scores
+    frac_scores = []
+    threshold_correct = {k: 0 for k in threshold_counts}
+
+    for ptxt, rtxt in zip(pred_texts, ref_texts):
+        p = parse_outcome_text(ptxt)
+        r = parse_outcome_text(rtxt)
+        pflat = flatten(p)
+        rflat = flatten(r)
+
+        keys = set(pflat.keys()) & set(rflat.keys())
+        if not keys:
+            frac_scores.append(0.0)
+            continue
+
+        matched = 0
+        total = 0
+        for k in keys:
+            pv = pflat[k]
+            rv = rflat[k]
+            # float tolerance
+            if isinstance(pv, float) or isinstance(rv, float):
+                if abs(pv - rv) <= float_tolerance:
+                    matched += 1
+            else:
+                if pv == rv:
+                    matched += 1
+            total += 1
+
+        frac = matched / total if total > 0 else 0.0
+        frac_scores.append(frac)
+
+        for th in threshold_counts:
+            if matched >= th:
+                threshold_correct[th] += 1
+
+    out = {"partial_match_frac": sum(frac_scores) / n}
+    for th, cnt in threshold_correct.items():
+        out[f"partial_match_atleast_{th}"] = cnt / n
+    return out
+
+@register_metric(
+    metric="partial_match",
+    higher_is_better=True,
+    output_type="generate_until",
+    aggregation="mean"
+)
+def partial_match_fn(references, predictions, **kwargs):
+    return partial_numeric_match_from_texts(references, predictions)
+
+#-------------------------------------------------------#
 
 
 ### the code used in the `exact_match_hf_evaluate` function is ported from

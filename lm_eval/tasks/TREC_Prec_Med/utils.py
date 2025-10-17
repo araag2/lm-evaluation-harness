@@ -1,3 +1,4 @@
+import datasets
 from sklearn.metrics import precision_score, recall_score
 
 def precision_fn(refs, preds, kwargs):
@@ -42,3 +43,18 @@ def doc_to_text_verify_reasoning(doc):
 
 def doc_to_text_answer_selection_after_verify_reasoning(doc):
     return doc_to_text(doc, answer_selection_after_verification_prompt)
+
+def process_docs(dataset):
+    dataset_relevant = dataset.filter(lambda doc: doc["Label"] in ("definitely relevant", "possibly relevant"))
+    relevant_size = len(dataset_relevant)
+
+    dataset_irrelevant = dataset.filter(lambda doc: doc["Label"] == "not relevant")
+    # Shuffle & downsample to match relevance count
+    dataset_irrelevant = dataset_irrelevant.shuffle(seed=42).select(range(relevant_size if relevant_size < len(dataset_irrelevant) else len(dataset_irrelevant)))
+
+    # Now concatenate using the correct function
+    dataset_balanced = datasets.concatenate_datasets([dataset_relevant, dataset_irrelevant])
+    # Shuffle the combined dataset
+    dataset_balanced = dataset_balanced.shuffle(seed=42)
+
+    return dataset_balanced

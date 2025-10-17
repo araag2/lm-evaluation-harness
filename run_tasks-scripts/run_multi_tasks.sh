@@ -39,13 +39,14 @@ MODELS=(
 #Trial_Meta_Analysis_continuous
 
 TASK_LIST=(
-    TREC_CT
+    Trial_Meta_Analysis_binary
+    Trial_Meta_Analysis_continuous
 )
 
 INFERENCE_MODES=(
-    0-shot
+    #-shot
     #SC
-    #CoT
+    CoT
 )
 
 # Generation Params
