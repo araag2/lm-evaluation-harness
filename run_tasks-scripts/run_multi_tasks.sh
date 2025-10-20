@@ -31,7 +31,7 @@ MODELS=(
 #NLI4PR
 #HINT
 #TREC_CDS
-#TREC_Prec-Med
+#TREC_Prec_Med
 #TREC_CT
 #SemEval_NLI4CT
 #Trial_Meta_Analysis_type
@@ -39,7 +39,7 @@ MODELS=(
 #Trial_Meta_Analysis_continuous
 
 TASK_LIST=(
-    TREC_Prec-Med
+    TREC_Prec_Med
     TREC_CDS
     TREC_CT
 )

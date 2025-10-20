@@ -31,16 +31,27 @@ PAIRS_OF_MODELS=(
 #"NLI4PR:medical-lang_CoT|NLI4PR:medical-lang_0-shot"
 #"SemEval_NLI4CT:2023_CoT|SemEval_NLI4CT:2023_0-shot"
 #"SemEval_NLI4CT:2024_CoT|SemEval_NLI4CT:2024_0-shot"
+#"TREC_CDS:2014_CoT|TREC_CDS:2014_0-shot"
+#"TREC_CDS:2015_CoT|TREC_CDS:2015_0-shot"
+#"TREC_CDS:2016_CoT|TREC_CDS:2016_0-shot"
+#"TREC_Prec_Med:2017_CoT|TREC_Prec_Med:2017_0-shot"
+#"TREC_Prec_Med:2018_CoT|TREC_Prec_Med:2018_0-shot"
+#"TREC_Prec_Med:2019_CoT|TREC_Prec_Med:2019_0-shot"
+#"TREC_CT_2021:CoT|TREC_CT_2021:0-shot"
+#"TREC_CT_2022:CoT|TREC_CT_2022:0-shot"
+#"TREC_CT_2023:CoT|TREC_CT_2023:0-shot"
 
 PAIRS_OF_TASK_LIST=(
-    "Trial_Meta_Analysis:type_CoT|Trial_Meta_Analysis:type_0-shot"
+    "TREC_Prec_Med:2017_CoT|TREC_Prec_Med:2017_0-shot"
+    "TREC_Prec_Med:2018_CoT|TREC_Prec_Med:2018_0-shot"
+    "TREC_Prec_Med:2019_CoT|TREC_Prec_Med:2019_0-shot"
 )
 
 MODE=multi-turn_CoT
 
 BASE_OUTPUT_DIR="../outputs/resource_paper/$MODE"
 
-CUDA_DEVICES=0
+CUDA_DEVICES=3
 BATCH_SIZE=auto
 SEED=0
 
