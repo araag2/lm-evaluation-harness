@@ -1,0 +1,365 @@
+{
+  "results": {
+    "TREC_CT_0-shot": {
+      " ": " ",
+      "alias": "TREC_CT_0-shot"
+    },
+    "TREC_CT_2021_0-shot": {
+      "alias": " - TREC_CT_2021_0-shot",
+      "acc,none": 0.5891362498921391,
+      "acc_stderr,none": 0.0032316786975731962,
+      "P@10,none": 0.9110952380952378,
+      "P@10_stderr,none": "N/A",
+      "nDCG@10,none": 0.8399221823492763,
+      "nDCG@10_stderr,none": "N/A",
+      "RecRank,none": 0.96,
+      "RecRank_stderr,none": "N/A"
+    },
+    "TREC_CT_2022_0-shot": {
+      "alias": " - TREC_CT_2022_0-shot",
+      "acc,none": 0.6146236559139785,
+      "acc_stderr,none": 0.004120743904333861,
+      "P@10,none": 0.929,
+      "P@10_stderr,none": "N/A",
+      "R-Prec,none": 0.9014269037111576,
+      "R-Prec_stderr,none": "N/A",
+      "nDCG@10,none": 0.8371527660683717,
+      "nDCG@10_stderr,none": "N/A",
+      "RecRank,none": 0.965,
+      "RecRank_stderr,none": "N/A"
+    },
+    "TREC_CT_2023_0-shot": {
+      "alias": " - TREC_CT_2023_0-shot",
+      "acc,none": 0.4056467586531037,
+      "acc_stderr,none": 0.0028450521418123967,
+      "P@10,none": 0.7024024024024023,
+      "P@10_stderr,none": "N/A",
+      "nDCG@5,none": 0.7174814423156772,
+      "nDCG@5_stderr,none": "N/A",
+      "nDCG@10,none": 0.6961570435136493,
+      "nDCG@10_stderr,none": "N/A",
+      "RecRank,none": 0.8128378378378377,
+      "RecRank_stderr,none": "N/A"
+    }
+  },
+  "group_subtasks": {
+    "TREC_CT_0-shot": [
+      "TREC_CT_2021_0-shot",
+      "TREC_CT_2022_0-shot",
+      "TREC_CT_2023_0-shot"
+    ]
+  },
+  "configs": {
+    "TREC_CT_2021_0-shot": {
+      "task": "TREC_CT_2021_0-shot",
+      "dataset_path": "araag2/TREC_Clinical-Trials",
+      "dataset_name": "2021_processed",
+      "dataset_kwargs": {
+        "trust_remote_code": true
+      },
+      "test_split": "test",
+      "process_docs": "def process_docs(dataset):\n    dataset_relevant = dataset.filter(lambda doc: doc[\"Label\"] in (\"definitely relevant\", \"possibly relevant\"))\n    dataset_irrelevant = dataset.filter(lambda doc: doc[\"Label\"] == \"not relevant\")\n    \n    dataset_irrelevant = dataset_irrelevant.shuffle(seed=42).select(range(len(dataset_relevant) if len(dataset_relevant) < len(dataset_irrelevant) else len(dataset_irrelevant)))\n\n    return datasets.concatenate_datasets([dataset_relevant, dataset_irrelevant]).shuffle(seed=42)\n",
+      "doc_to_text": "def doc_to_text(doc, prompt = baseline_prompt):\n    res = prompt\n    for key in relevant_keys:\n        if key in doc:\n            res = res.replace(f\"{{{{{key}}}}}\", doc[key][:1000] + doc[key][-1000:]if len(doc[key]) > 2000 else doc[key])\n        else:\n            res = res.replace(f\"{{{{{key}}}}}\", \"\")\n    return res\n",
+      "doc_to_target": "{{ Label }}",
+      "unsafe_code": false,
+      "doc_to_choice": [
+        "not relevant",
+        "possibly relevant",
+        "definitely relevant"
+      ],
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "acc",
+          "aggregation": "mean",
+          "higher_is_better": true,
+          "ignore_case": true,
+          "ignore_punctuation": true
+        },
+        {
+          "metric": "nDCG@10",
+          "aggregation": "nDCG@10",
+          "higher_is_better": true,
+          "ignore_case": true,
+          "ignore_punctuation": true
+        },
+        {
+          "metric": "P@10",
+          "aggregation": "P@10",
+          "higher_is_better": true,
+          "ignore_case": true,
+          "ignore_punctuation": true
+        },
+        {
+          "metric": "RecRank",
+          "aggregation": "RecRank",
+          "higher_is_better": true,
+          "ignore_case": true,
+          "ignore_punctuation": true
+        }
+      ],
+      "output_type": "multiple_choice",
+      "repeats": 1,
+      "should_decontaminate": false,
+      "metadata": {
+        "version": 1.0,
+        "pretrained": "UbiquantAI/Fleming-R1-7B",
+        "max_length": 25000,
+        "gpu_memory_utilization": 0.9,
+        "dtype": "float16",
+        "swap_space": 8,
+        "enable_prefix_caching": true
+      }
+    },
+    "TREC_CT_2022_0-shot": {
+      "task": "TREC_CT_2022_0-shot",
+      "dataset_path": "araag2/TREC_Clinical-Trials",
+      "dataset_name": "2022_processed",
+      "dataset_kwargs": {
+        "trust_remote_code": true
+      },
+      "test_split": "test",
+      "process_docs": "def process_docs(dataset):\n    dataset_relevant = dataset.filter(lambda doc: doc[\"Label\"] in (\"definitely relevant\", \"possibly relevant\"))\n    dataset_irrelevant = dataset.filter(lambda doc: doc[\"Label\"] == \"not relevant\")\n    \n    dataset_irrelevant = dataset_irrelevant.shuffle(seed=42).select(range(len(dataset_relevant) if len(dataset_relevant) < len(dataset_irrelevant) else len(dataset_irrelevant)))\n\n    return datasets.concatenate_datasets([dataset_relevant, dataset_irrelevant]).shuffle(seed=42)\n",
+      "doc_to_text": "def doc_to_text(doc, prompt = baseline_prompt):\n    res = prompt\n    for key in relevant_keys:\n        if key in doc:\n            res = res.replace(f\"{{{{{key}}}}}\", doc[key][:1000] + doc[key][-1000:]if len(doc[key]) > 2000 else doc[key])\n        else:\n            res = res.replace(f\"{{{{{key}}}}}\", \"\")\n    return res\n",
+      "doc_to_target": "{{ Label }}",
+      "unsafe_code": false,
+      "doc_to_choice": [
+        "not relevant",
+        "possibly relevant",
+        "definitely relevant"
+      ],
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "acc",
+          "aggregation": "mean",
+          "higher_is_better": true,
+          "ignore_case": true,
+          "ignore_punctuation": true
+        },
+        {
+          "metric": "nDCG@10",
+          "aggregation": "nDCG@10",
+          "higher_is_better": true,
+          "ignore_case": true,
+          "ignore_punctuation": true
+        },
+        {
+          "metric": "P@10",
+          "aggregation": "P@10",
+          "higher_is_better": true,
+          "ignore_case": true,
+          "ignore_punctuation": true
+        },
+        {
+          "metric": "R-Prec",
+          "aggregation": "R-Prec",
+          "higher_is_better": true,
+          "ignore_case": true,
+          "ignore_punctuation": true
+        },
+        {
+          "metric": "RecRank",
+          "aggregation": "RecRank",
+          "higher_is_better": true,
+          "ignore_case": true,
+          "ignore_punctuation": true
+        }
+      ],
+      "output_type": "multiple_choice",
+      "repeats": 1,
+      "should_decontaminate": false,
+      "metadata": {
+        "version": 1.0,
+        "pretrained": "UbiquantAI/Fleming-R1-7B",
+        "max_length": 25000,
+        "gpu_memory_utilization": 0.9,
+        "dtype": "float16",
+        "swap_space": 8,
+        "enable_prefix_caching": true
+      }
+    },
+    "TREC_CT_2023_0-shot": {
+      "task": "TREC_CT_2023_0-shot",
+      "dataset_path": "araag2/TREC_Clinical-Trials",
+      "dataset_name": "2023_processed",
+      "dataset_kwargs": {
+        "trust_remote_code": true
+      },
+      "test_split": "test",
+      "process_docs": "def process_docs(dataset):\n    dataset_relevant = dataset.filter(lambda doc: doc[\"Label\"] in (\"definitely relevant\", \"possibly relevant\"))\n    dataset_irrelevant = dataset.filter(lambda doc: doc[\"Label\"] == \"not relevant\")\n    \n    dataset_irrelevant = dataset_irrelevant.shuffle(seed=42).select(range(len(dataset_relevant) if len(dataset_relevant) < len(dataset_irrelevant) else len(dataset_irrelevant)))\n\n    return datasets.concatenate_datasets([dataset_relevant, dataset_irrelevant]).shuffle(seed=42)\n",
+      "doc_to_text": "def doc_to_text(doc, prompt = baseline_prompt):\n    res = prompt\n    for key in relevant_keys:\n        if key in doc:\n            res = res.replace(f\"{{{{{key}}}}}\", doc[key][:1000] + doc[key][-1000:]if len(doc[key]) > 2000 else doc[key])\n        else:\n            res = res.replace(f\"{{{{{key}}}}}\", \"\")\n    return res\n",
+      "doc_to_target": "{{ Label }}",
+      "unsafe_code": false,
+      "doc_to_choice": [
+        "not relevant",
+        "possibly relevant",
+        "definitely relevant"
+      ],
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "num_fewshot": 0,
+      "metric_list": [
+        {
+          "metric": "acc",
+          "aggregation": "mean",
+          "higher_is_better": true,
+          "ignore_case": true,
+          "ignore_punctuation": true
+        },
+        {
+          "metric": "nDCG@5",
+          "aggregation": "nDCG@5",
+          "higher_is_better": true,
+          "ignore_case": true,
+          "ignore_punctuation": true
+        },
+        {
+          "metric": "nDCG@10",
+          "aggregation": "nDCG@10",
+          "higher_is_better": true,
+          "ignore_case": true,
+          "ignore_punctuation": true
+        },
+        {
+          "metric": "P@10",
+          "aggregation": "P@10",
+          "higher_is_better": true,
+          "ignore_case": true,
+          "ignore_punctuation": true
+        },
+        {
+          "metric": "RecRank",
+          "aggregation": "RecRank",
+          "higher_is_better": true,
+          "ignore_case": true,
+          "ignore_punctuation": true
+        }
+      ],
+      "output_type": "multiple_choice",
+      "repeats": 1,
+      "should_decontaminate": false,
+      "metadata": {
+        "version": 1.0,
+        "pretrained": "UbiquantAI/Fleming-R1-7B",
+        "max_length": 25000,
+        "gpu_memory_utilization": 0.9,
+        "dtype": "float16",
+        "swap_space": 8,
+        "enable_prefix_caching": true
+      }
+    }
+  },
+  "versions": {
+    "TREC_CT_2021_0-shot": 1.0,
+    "TREC_CT_2022_0-shot": 1.0,
+    "TREC_CT_2023_0-shot": 1.0
+  },
+  "n-shot": {
+    "TREC_CT_2021_0-shot": 0,
+    "TREC_CT_2022_0-shot": 0,
+    "TREC_CT_2023_0-shot": 0
+  },
+  "higher_is_better": {
+    "TREC_CT_0-shot": {
+      "acc": true,
+      "nDCG@10": true,
+      "P@10": true,
+      "RecRank": true,
+      "R-Prec": true,
+      "nDCG@5": true
+    },
+    "TREC_CT_2021_0-shot": {
+      "acc": true,
+      "nDCG@10": true,
+      "P@10": true,
+      "RecRank": true
+    },
+    "TREC_CT_2022_0-shot": {
+      "acc": true,
+      "nDCG@10": true,
+      "P@10": true,
+      "R-Prec": true,
+      "RecRank": true
+    },
+    "TREC_CT_2023_0-shot": {
+      "acc": true,
+      "nDCG@5": true,
+      "nDCG@10": true,
+      "P@10": true,
+      "RecRank": true
+    }
+  },
+  "n-samples": {
+    "TREC_CT_2021_0-shot": {
+      "original": 23178,
+      "effective": 23178
+    },
+    "TREC_CT_2022_0-shot": {
+      "original": 13950,
+      "effective": 13950
+    },
+    "TREC_CT_2023_0-shot": {
+      "original": 29787,
+      "effective": 29787
+    }
+  },
+  "config": {
+    "model": "vllm",
+    "model_args": "pretrained=UbiquantAI/Fleming-R1-7B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8,enable_prefix_caching=True",
+    "batch_size": "auto",
+    "batch_sizes": [],
+    "device": null,
+    "use_cache": null,
+    "limit": null,
+    "bootstrap_iters": 100000,
+    "gen_kwargs": null,
+    "random_seed": 0,
+    "numpy_seed": 0,
+    "torch_seed": 0,
+    "fewshot_seed": 0
+  },
+  "git_hash": "7974cf552",
+  "date": 1760819372.2987623,
+  "pretty_env_info": "PyTorch version: 2.7.1+cu126\nIs debug build: False\nCUDA used to build PyTorch: 12.6\nROCM used to build PyTorch: N/A\n\nOS: openSUSE Leap 15.5 (x86_64)\nGCC version: (Anaconda gcc) 11.2.0\nClang version: Could not collect\nCMake version: Could not collect\nLibc version: glibc-2.31\n\nPython version: 3.10.16 (main, Dec 11 2024, 16:24:50) [GCC 11.2.0] (64-bit runtime)\nPython platform: Linux-5.14.21-150500.55.52-default-x86_64-with-glibc2.31\nIs CUDA available: True\nCUDA runtime version: Could not collect\nCUDA_MODULE_LOADING set to: LAZY\nGPU models and configuration: \nGPU 0: NVIDIA A100 80GB PCIe\nGPU 1: NVIDIA A100 80GB PCIe\nGPU 2: NVIDIA A100 80GB PCIe\nGPU 3: NVIDIA A100 80GB PCIe\n\nNvidia driver version: 550.54.14\ncuDNN version: Could not collect\nHIP runtime version: N/A\nMIOpen runtime version: N/A\nIs XNNPACK available: True\n\nCPU:\nArchitecture:                         x86_64\nCPU op-mode(s):                       32-bit, 64-bit\nAddress sizes:                        52 bits physical, 57 bits virtual\nByte Order:                           Little Endian\nCPU(s):                               112\nOn-line CPU(s) list:                  0-111\nVendor ID:                            GenuineIntel\nModel name:                           Intel(R) Xeon(R) Gold 6348 CPU @ 2.60GHz\nCPU family:                           6\nModel:                                106\nThread(s) per core:                   2\nCore(s) per socket:                   28\nSocket(s):                            2\nStepping:                             6\nCPU max MHz:                          3500.0000\nCPU min MHz:                          800.0000\nBogoMIPS:                             5200.00\nFlags:                                fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb cat_l3 invpcid_single intel_ppin ssbd mba ibrs ibpb stibp ibrs_enhanced tpr_shadow vnmi flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 hle avx2 smep bmi2 erms invpcid rtm cqm rdt_a avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb intel_pt avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local split_lock_detect wbnoinvd dtherm ida arat pln pts avx512vbmi umip pku ospke avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg tme avx512_vpopcntdq la57 rdpid fsrm md_clear pconfig flush_l1d arch_capabilities\nVirtualization:                       VT-x\nL1d cache:                            2.6 MiB (56 instances)\nL1i cache:                            1.8 MiB (56 instances)\nL2 cache:                             70 MiB (56 instances)\nL3 cache:                             84 MiB (2 instances)\nNUMA node(s):                         2\nNUMA node0 CPU(s):                    0-27,56-83\nNUMA node1 CPU(s):                    28-55,84-111\nVulnerability Gather data sampling:   Mitigation; Microcode\nVulnerability Itlb multihit:          Not affected\nVulnerability L1tf:                   Not affected\nVulnerability Mds:                    Not affected\nVulnerability Meltdown:               Not affected\nVulnerability Mmio stale data:        Mitigation; Clear CPU buffers; SMT vulnerable\nVulnerability Reg file data sampling: Not affected\nVulnerability Retbleed:               Not affected\nVulnerability Spec rstack overflow:   Not affected\nVulnerability Spec store bypass:      Mitigation; Speculative Store Bypass disabled via prctl and seccomp\nVulnerability Spectre v1:             Mitigation; usercopy/swapgs barriers and __user pointer sanitization\nVulnerability Spectre v2:             Mitigation; Enhanced / Automatic IBRS, IBPB conditional, RSB filling, PBRSB-eIBRS SW sequence\nVulnerability Srbds:                  Not affected\nVulnerability Tsx async abort:        Not affected\n\nVersions of relevant libraries:\n[pip3] bleurt-pytorch==0.0.1\n[pip3] numpy==1.26.4\n[pip3] nvidia-cublas-cu12==12.6.4.1\n[pip3] nvidia-cuda-cupti-cu12==12.6.80\n[pip3] nvidia-cuda-nvrtc-cu12==12.6.77\n[pip3] nvidia-cuda-runtime-cu12==12.6.77\n[pip3] nvidia-cudnn-cu12==9.5.1.17\n[pip3] nvidia-cudnn-frontend==1.14.0\n[pip3] nvidia-cufft-cu12==11.3.0.4\n[pip3] nvidia-curand-cu12==10.3.7.77\n[pip3] nvidia-cusolver-cu12==11.7.1.2\n[pip3] nvidia-cusparse-cu12==12.5.4.2\n[pip3] nvidia-cusparselt-cu12==0.6.3\n[pip3] nvidia-nccl-cu12==2.26.2\n[pip3] nvidia-nvjitlink-cu12==12.6.85\n[pip3] nvidia-nvtx-cu12==12.6.77\n[pip3] pytorch-lightning==2.5.5\n[pip3] torch==2.7.1\n[pip3] torchaudio==2.7.1\n[pip3] torchmetrics==1.8.2\n[pip3] torchvision==0.22.1\n[pip3] triton==3.3.1\n[conda] bleurt-pytorch            0.0.1                    pypi_0    pypi\n[conda] numpy                     1.26.4                   pypi_0    pypi\n[conda] nvidia-cublas-cu12        12.6.4.1                 pypi_0    pypi\n[conda] nvidia-cuda-cupti-cu12    12.6.80                  pypi_0    pypi\n[conda] nvidia-cuda-nvrtc-cu12    12.6.77                  pypi_0    pypi\n[conda] nvidia-cuda-runtime-cu12  12.6.77                  pypi_0    pypi\n[conda] nvidia-cudnn-cu12         9.5.1.17                 pypi_0    pypi\n[conda] nvidia-cudnn-frontend     1.14.0                   pypi_0    pypi\n[conda] nvidia-cufft-cu12         11.3.0.4                 pypi_0    pypi\n[conda] nvidia-curand-cu12        10.3.7.77                pypi_0    pypi\n[conda] nvidia-cusolver-cu12      11.7.1.2                 pypi_0    pypi\n[conda] nvidia-cusparse-cu12      12.5.4.2                 pypi_0    pypi\n[conda] nvidia-cusparselt-cu12    0.6.3                    pypi_0    pypi\n[conda] nvidia-nccl-cu12          2.26.2                   pypi_0    pypi\n[conda] nvidia-nvjitlink-cu12     12.6.85                  pypi_0    pypi\n[conda] nvidia-nvtx-cu12          12.6.77                  pypi_0    pypi\n[conda] pytorch-lightning         2.5.5                    pypi_0    pypi\n[conda] torch                     2.7.1                    pypi_0    pypi\n[conda] torchaudio                2.7.1                    pypi_0    pypi\n[conda] torchmetrics              1.8.2                    pypi_0    pypi\n[conda] torchvision               0.22.1                   pypi_0    pypi\n[conda] triton                    3.3.1                    pypi_0    pypi",
+  "transformers_version": "4.55.4",
+  "lm_eval_version": "0.4.9",
+  "upper_git_hash": null,
+  "tokenizer_pad_token": [
+    "<|endoftext|>",
+    "151643"
+  ],
+  "tokenizer_eos_token": [
+    "<|im_end|>",
+    "151645"
+  ],
+  "tokenizer_bos_token": [
+    null,
+    "None"
+  ],
+  "eot_token_id": 151645,
+  "max_length": 25000,
+  "task_hashes": {
+    "TREC_CT_2021_0-shot": "82736c0e4052214bdb060317cd4e30e725427dd23606de986ab336a14a87bf45",
+    "TREC_CT_2022_0-shot": "e29bc781918e45aa2729b2670a45024fed1a2be4dee289913a69b8837915323d",
+    "TREC_CT_2023_0-shot": "79a3fafc5658bc8538a660745ffa896db5f8c365e09b9f333e3a7add67383b08"
+  },
+  "model_source": "vllm",
+  "model_name": "UbiquantAI/Fleming-R1-7B",
+  "model_name_sanitized": "UbiquantAI__Fleming-R1-7B",
+  "system_instruction": null,
+  "system_instruction_sha": null,
+  "fewshot_as_multiturn": false,
+  "chat_template": null,
+  "chat_template_sha": null,
+  "start_time": 9521534.365247432,
+  "end_time": 9536893.092864215,
+  "total_evaluation_time_seconds": "15358.727616783231"
+}
