@@ -42,16 +42,17 @@ PAIRS_OF_MODELS=(
 #"TREC_CT_2023:CoT|TREC_CT_2023:0-shot"
 
 PAIRS_OF_TASK_LIST=(
-    "TREC_Prec_Med:2017_CoT|TREC_Prec_Med:2017_0-shot"
-    "TREC_Prec_Med:2018_CoT|TREC_Prec_Med:2018_0-shot"
-    "TREC_Prec_Med:2019_CoT|TREC_Prec_Med:2019_0-shot"
+    "MedNLI:CoT|MedNLI:0-shot"
+    "HINT:CoT|HINT:0-shot"
+    "MedMCQA:CoT|MedMCQA:0-shot" 
+    "MedQA:CoT|MedQA:0-shot"
 )
 
 MODE=multi-turn_CoT
 
-BASE_OUTPUT_DIR="../outputs/resource_paper/$MODE"
+BASE_OUTPUT_DIR="./outputs/default_outputs/$MODE"
 
-CUDA_DEVICES=3
+CUDA_DEVICES=0
 BATCH_SIZE=auto
 SEED=0
 

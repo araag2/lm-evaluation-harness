@@ -1,9 +1,9 @@
 #!/bin/bash
 
-OUTPUT_PATH=/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/curated_outputs/
-OUTPUT_NAME=meeting_summary
+OUTPUT_PATH=./outputs/collected_results/
+OUTPUT_NAME=result_summary
 
-INPUT_FOLDERS_BASE=/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/resource_paper
+INPUT_FOLDERS_BASE=./outputs/
 
 INPUT_FOLDERS=(
   "."

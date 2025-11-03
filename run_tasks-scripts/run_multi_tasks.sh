@@ -17,9 +17,9 @@ MODEL=vllm
 
 MODELS=(
     "pretrained=unsloth/Qwen3-8B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8,enable_prefix_caching=True"
-    "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8,enable_prefix_caching=True"
-    "pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8,enable_prefix_caching=True"
-    "pretrained=UbiquantAI/Fleming-R1-7B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8,enable_prefix_caching=True"
+    #"pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8,enable_prefix_caching=True"
+    #"pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8,enable_prefix_caching=True"
+    #"pretrained=UbiquantAI/Fleming-R1-7B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8,enable_prefix_caching=True"
 )
 
 #MedNLI
@@ -45,19 +45,18 @@ TASK_LIST=(
 )
 
 INFERENCE_MODES=(
-    #0-shot
-    #SC
+    0-shot
     CoT
 )
 
 # Generation Params
-CUDA_DEVICES=3  
+CUDA_DEVICES=0 
 BATCH_SIZE=auto
 SEED=0
 
 # Output base path
-OUTPUT_BASE_PATH=../outputs/
-RUN_NAME=resource_paper/
+OUTPUT_BASE_PATH=./outputs/
+RUN_NAME=default_outputs/
 
 for MODEL_ARGS in "${MODELS[@]}"; do
 
@@ -90,10 +89,6 @@ for MODEL_ARGS in "${MODELS[@]}"; do
                 --seed $SEED \
                 --output_path $OUTPUT_PATH \
                 --log_samples
-                #--write_out \
-                #--apply_chat_template \
-                #--limit 2 \
-                #--predict_only \
 
             STATUS=$?
             if [ $STATUS -eq 0 ]; then

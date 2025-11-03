@@ -4,42 +4,53 @@
 # ================================
 PROVIDER=vllm
 
-#"pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8|pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=22000,gpu_memory_utilization=0.8,dtype=float16,swap_space=8"
+#"pretrained=unsloth/Qwen3-8B,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8|pretrained=unsloth/Qwen3-8B,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
+#"pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8|pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
+#"pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8|pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
+#"pretrained=UbiquantAI/Fleming-R1-7B,max_length=22000,gpu_memory_utilization=0.75,swap_space=8|pretrained=UbiquantAI/Fleming-R1-7B,max_length=22000,gpu_memory_utilization=0.75,swap_space=8"
 
-#"pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=22000,gpu_memory_utilization=0.8,swap_space=8|pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
-
-#"pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=22000,gpu_memory_utilization=0.8,swap_space=8|pretrained=deepseek-ai/DeepSeek-R1-Distill-Llama-8B,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
-
-#"pretrained=google/gemma-3n-E4B-it,max_length=22000,gpu_memory_utilization=0.8,swap_space=8|pretrained=google/gemma-3n-E4B-it,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
-
-#"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.8,swap_space=8|pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
-
-#"pretrained=UbiquantAI/Fleming-R1-7B,max_length=22000,gpu_memory_utilization=0.8,swap_space=8|pretrained=UbiquantAI/Fleming-R1-7B,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
+#"pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8|pretrained=Qwen/Qwen3-4B-Instruct-2507,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
+#"pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8|pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
+#"pretrained=google/gemma-3n-E4B-it,max_length=22000,gpu_memory_utilization=0.75,swap_space=8|pretrained=google/gemma-3n-E4B-it,max_length=22000,gpu_memory_utilization=0.75,swap_space=8"
+#"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8|pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
 
 PAIRS_OF_MODELS=(
-    "pretrained=UbiquantAI/Fleming-R1-7B,max_length=22000,gpu_memory_utilization=0.8,swap_space=8|pretrained=UbiquantAI/Fleming-R1-7B,max_length=22000,gpu_memory_utilization=0.8,swap_space=8"
+    "pretrained=unsloth/Qwen3-8B,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8|pretrained=unsloth/Qwen3-8B,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
+    "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8|pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
+    "pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8|pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
+    "pretrained=UbiquantAI/Fleming-R1-7B,max_length=20000,gpu_memory_utilization=0.9,swap_space=8|pretrained=UbiquantAI/Fleming-R1-7B,max_length=20000,gpu_memory_utilization=0.9,swap_space=8"
 )
 
-#"MedNLI:CoT_SC|MedNLI:0-shot"
-#"HINT:CoT_SC|HINT:0-shot"
-#"MedMCQA:CoT_SC|MedMCQA:0-shot" 
-#"MedQA:CoT_SC|MedQA:0-shot"
-#"PubMedQA:CoT_SC|PubMedQA:0-shot"
-#"Evidence_Inference_v2:CoT_SC|Evidence_Inference_v2:0-shot"
-#"NLI4PR:patient-lang_CoT_SC|NLI4PR:patient-lang_0-shot"
-#"NLI4PR:medical-lang_CoT_SC|NLI4PR:medical-lang_0-shot"
-#"SemEval_NLI4CT:2023_CoT_SC|SemEval_NLI4CT:2023_0-shot"
-#"SemEval_NLI4CT:2024_CoT_SC|SemEval_NLI4CT:2024_0-shot"
+#"MedNLI:CoT|MedNLI:0-shot"
+#"HINT:CoT|HINT:0-shot"
+#"MedMCQA:CoT|MedMCQA:0-shot" 
+#"MedQA:CoT|MedQA:0-shot"
+#"PubMedQA:CoT|PubMedQA:0-shot"
+#"Evidence_Inference_v2:CoT|Evidence_Inference_v2:0-shot"
+#"NLI4PR:patient-lang_CoT|NLI4PR:patient-lang_0-shot"
+#"NLI4PR:medical-lang_CoT|NLI4PR:medical-lang_0-shot"
+#"SemEval_NLI4CT:2023_CoT|SemEval_NLI4CT:2023_0-shot"
+#"SemEval_NLI4CT:2024_CoT|SemEval_NLI4CT:2024_0-shot"
+#"TREC_CDS:2014_CoT|TREC_CDS:2014_0-shot"
+#"TREC_CDS:2015_CoT|TREC_CDS:2015_0-shot"
+#"TREC_CDS:2016_CoT|TREC_CDS:2016_0-shot"
+#"TREC_Prec_Med:2017_CoT|TREC_Prec_Med:2017_0-shot"
+#"TREC_Prec_Med:2018_CoT|TREC_Prec_Med:2018_0-shot"
+#"TREC_Prec_Med:2019_CoT|TREC_Prec_Med:2019_0-shot"
+#"TREC_CT_2021:CoT|TREC_CT_2021:0-shot"
+#"TREC_CT_2022:CoT|TREC_CT_2022:0-shot"
+#"TREC_CT_2023:CoT|TREC_CT_2023:0-shot"
 
 PAIRS_OF_TASK_LIST=(
-    "MedQA:CoT_SC|MedQA:0-shot"
-    "MedMCQA:CoT_SC|MedMCQA:0-shot" 
-    "PubMedQA:CoT_SC|PubMedQA:0-shot"
+    "MedNLI:CoT|MedNLI:0-shot"
+    "HINT:CoT|HINT:0-shot"
+    "MedMCQA:CoT|MedMCQA:0-shot" 
+    "MedQA:CoT|MedQA:0-shot"
 )
 
 MODE=multi-turn_CoT-SC
 
-BASE_OUTPUT_DIR="/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/SC-Same-Params-as-CoT/$MODE"
+BASE_OUTPUT_DIR="./outputs/$MODE"
 
 CUDA_DEVICES=0
 BATCH_SIZE=auto

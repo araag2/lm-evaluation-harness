@@ -1,9 +1,9 @@
 #!/bin/bash
 
-OUTPUT_PATH=/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/error_breakdown
+OUTPUT_PATH=./outputs/error_breakdown
 OUTPUT_NAME=error_breakdown
 
-INPUT_FOLDER=/user/home/aguimas/data/PhD/Active_Dev/lm_harness_run-outputs/multi-turn_CoT/
+INPUT_FOLDER=./outputs/
 
 echo -e "-------------------------------\n"
 echo -e "Running Error Extraction Script with:\n"

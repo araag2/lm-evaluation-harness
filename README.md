@@ -6,66 +6,69 @@
 
 ## Overview
 
-This project provides a unified framework to test generative language models on a large number of different evaluation tasks.
+This project implements `OpenCTEval`, a comprehensive benchmark for evaluating generative language models on clinical trial data understanding and reasoning tasks. It is a forked project from the [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) repository, which provides a simple unified framework to evaluate on a wide range of tasks.
 
 ## Install
 
 To install the `lm-eval` package from the github repository, run:
 
 ```bash
-git clone --depth 1 https://github.com/EleutherAI/lm-evaluation-harness
+git clone --depth 1 https://github.com/araag2/lm-evaluation-harness/tree/OpenCTEval
 cd lm-evaluation-harness
 pip install -e .
 ```
 
-We also provide a number of optional dependencies for extended functionality. A detailed table is available at the end of this document.
+## Repo Structure
 
 ## Basic Usage
 
+TO:DO - Update this section
+
 ### User Guide
 
-A user guide detailing the full list of supported arguments is provided [here](./docs/interface.md), and on the terminal by calling `lm_eval -h`. Alternatively, you can use `lm-eval` instead of `lm_eval`.
+A user guide detailing the full list of supported arguments is provided [here](./docs/original_tutorials/interface.md), and on the terminal by calling `lm_eval -h`. Alternatively, you can use `lm-eval` instead of `lm_eval`.
 
 A list of supported tasks (or groupings of tasks) can be viewed with `lm-eval --tasks list`. Task descriptions and links to corresponding subfolders are provided [here](./lm_eval/tasks/README.md).
 
-### Hugging Face `transformers`
+### Run Task Scripts
 
-To evaluate a model hosted on the [HuggingFace Hub](https://huggingface.co/models) (e.g. GPT-J-6B) on `hellaswag` you can use the following command (this assumes you are using a CUDA-compatible GPU):
+You can run evaluation scripts for all benchmark tasks using the bash scripts located in the [run scripts folder](./run_task-scripts/). These scripts have interchangeable model arguments, so you can easily evaluate different models by changing the model-related flags, and different tasks by changing the task-related flags. 
+
+If you want to run a quick example, you can run the [example script](./run_task-scripts/run_example.sh) which evaluates Qwen-8B on 10 samples of the `MedNLI` task in `0-shot` setting:
+
+```bash ./run_task-scripts/example.sh```
+
+Other available files in the `run_task-scripts` folder include:
+
+## Repository Structure
+
+    .
+    ├── run_task_scripts/       # Base folder for all bash scripts to run experiments
+        ├── example.sh          # Example script to run a quick evaluation
+        
+        ├── run_multi_tasks.sh  # Script to run multiple tasks sequentially, in 0-shot and single-turn CoT settings
+        ├── 
+    └── README.md
+
+
+
+
+### Manually Run Hugging Face `transformers`
+
+To evaluate a model hosted on the [HuggingFace Hub](https://huggingface.co/models) (e.g. Qwen-8B) on `MedNLI` you can use the following command (this assumes you are using a CUDA-compatible GPU):
 
 ```bash
 lm_eval --model hf \
-    --model_args pretrained=EleutherAI/gpt-j-6B \
-    --tasks hellaswag \
+    --model_args pretrained=Qwen/Qwen3-8B \
+    --tasks MedNLI_0-shot \
     --device cuda:0 \
     --batch_size 8
-```
-
-Additional arguments can be provided to the model constructor using the `--model_args` flag. Most notably, this supports the common practice of using the `revisions` feature on the Hub to store partially trained checkpoints, or to specify the datatype for running a model:
-
-```bash
-lm_eval --model hf \
-    --model_args pretrained=EleutherAI/pythia-160m,revision=step100000,dtype="float" \
-    --tasks lambada_openai,hellaswag \
-    --device cuda:0 \
-    --batch_size 8
-```
-
-Models that are loaded via both `transformers.AutoModelForCausalLM` (autoregressive, decoder-only GPT style models) and `transformers.AutoModelForSeq2SeqLM` (such as encoder-decoder models like T5) in Huggingface are supported.
-
-Batch size selection can be automated by setting the  ```--batch_size``` flag to ```auto```. This will perform automatic detection of the largest batch size that will fit on your device. On tasks where there is a large difference between the longest and shortest example, it can be helpful to periodically recompute the largest batch size, to gain a further speedup. To do this, append ```:N``` to above flag to automatically recompute the largest batch size ```N``` times. For example, to recompute the batch size 4 times, the command would be:
-
-```bash
-lm_eval --model hf \
-    --model_args pretrained=EleutherAI/pythia-160m,revision=step100000,dtype="float" \
-    --tasks lambada_openai,hellaswag \
-    --device cuda:0 \
-    --batch_size auto:4
 ```
 
 > [!Note]
 > Just like you can provide a local path to `transformers.AutoModel`, you can also provide a local path to `lm_eval` via `--model_args pretrained=/path/to/model`
 
-## Benchmark Composition
+## OpenCTEval Benchmark Composition
 
 (MCQ: Multiple-Choice Question, ENC: Entailment, Neutral, Contradiction)
 
@@ -85,6 +88,9 @@ lm_eval --model hf \
 | [TREC CT Track](lm_eval/tasks/TREC_CT/)                        | **NLI** (ENC), **Relevance Ranking**                |
 | [SemEval NLI4CT](lm_eval/tasks/SemEval_NLI4CT/)                | **NLI** (EC)                                        |
 
+## OpenCTEval Results
+
+The results of evaluating various models on the OpenCTEval benchmark can be found in the [results folder](./outputs/). Detailed analysis and visualizations will be provided in upcoming publications.
 
 ## Citation
 
@@ -97,12 +103,12 @@ Coming soon!
 ```text
 @misc{eval-harness,
   author       = {Gao, Leo and Tow, Jonathan and Abbasi, Baber and Biderman, Stella and Black, Sid and DiPofi, Anthony and Foster, Charles and Golding, Laurence and Hsu, Jeffrey and Le Noac'h, Alain and Li, Haonan and McDonell, Kyle and Muennighoff, Niklas and Ociepa, Chris and Phang, Jason and Reynolds, Laria and Schoelkopf, Hailey and Skowron, Aviya and Sutawika, Lintang and Tang, Eric and Thite, Anish and Wang, Ben and Wang, Kevin and Zou, Andy},
-  title        = {The Language Model Evaluation Harness},
-  month        = 07,
-  year         = 2024,
+  title        = {A framework for few-shot language model evaluation},
+  month        = 12,
+  year         = 2023,
   publisher    = {Zenodo},
-  version      = {v0.4.3},
-  doi          = {10.5281/zenodo.12608602},
-  url          = {https://zenodo.org/records/12608602}
+  version      = {v0.4.0},
+  doi          = {10.5281/zenodo.10256836},
+  url          = {https://zenodo.org/records/10256836}
 }
 ```
