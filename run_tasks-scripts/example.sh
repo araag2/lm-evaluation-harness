@@ -17,7 +17,7 @@ BATCH_SIZE=auto
 SEED=0
 
 # Output base path
-OUTPUT_BASE_PATH=../outputs/
+OUTPUT_BASE_PATH=./outputs/
 RUN_NAME=default_outputs/
 
 echo "=================================================="
