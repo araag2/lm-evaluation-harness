@@ -1,9 +1,5 @@
 # OpenCTEval 
 
-## Announcement
-
-TO:DO - Update this section
-
 ---
 
 ## Overview
@@ -21,10 +17,23 @@ pip install -e .
 ```
 
 ## Repo Structure
+    .
+    ├── docs                # Documentation folder, including original user guides and tutorials
+    ├── examples            # Example notebooks demonstrating how to use the benchmark and evaluation framework
+    ├── lm_eval             # Main package folder
+        ├── api             # API related code
+        ├── filters         # Filters used to process, extract and select data
+        ├── models          # Model wrappers for different model types
+        ├── reasoning_modes # Implementation of multi-turn reasoning modes and voting mechanisms (e.g. Self-Consistency and Chain-of-Thought)
+        └── tasks           # Benchmark tasks implementations
+    ├── outputs             # Folder to store model outputs and evaluation results
+    ├── run_tasks-scripts   # Bash scripts to run evaluation and result analysis
+    ├── scripts             # Utility scripts for various purposes
+    ├── templates           # Templates for creating new tasks
+    ├── tests               # Unit tests for the package
+    └── ...
 
 ## Basic Usage
-
-TO:DO - Update this section
 
 ### User Guide
 
@@ -34,26 +43,24 @@ A list of supported tasks (or groupings of tasks) can be viewed with `lm-eval --
 
 ### Run Task Scripts
 
-You can run evaluation scripts for all benchmark tasks using the bash scripts located in the [run scripts folder](./run_task-scripts/). These scripts have interchangeable model arguments, so you can easily evaluate different models by changing the model-related flags, and different tasks by changing the task-related flags. 
+You can run evaluation scripts for all benchmark tasks using the bash scripts located in the [run scripts folder](./run_tasks-scripts/). These scripts have interchangeable model arguments, so you can easily evaluate different models by changing the model-related flags, and different tasks by changing the task-related flags. 
 
-If you want to run a quick example, you can run the [example script](./run_task-scripts/run_example.sh) which evaluates Qwen-8B on 10 samples of the `MedNLI` task in `0-shot` setting:
+If you want to run a quick example, you can run the [example script](./run_tasks-scripts/example.sh) which evaluates Qwen-8B on 10 samples of the `MedNLI` task in `0-shot` setting:
 
-```bash ./run_task-scripts/example.sh```
+```bash ./run_tasks-scripts/example.sh```
 
-Other available files in the `run_task-scripts` folder include:
-
-## Repository Structure
-
+Other available files in the `run_tasks-scripts` folder include:
     .
-    ├── run_task_scripts/       # Base folder for all bash scripts to run experiments
-        ├── example.sh          # Example script to run a quick evaluation
-
-        ├── run_multi_tasks.sh  # Script to run multiple tasks sequentially, in 0-shot and single-turn CoT settings
-        ├── 
-    └── README.md
-
-
-
+    ├── run_tasks_scripts/             # Base folder for all bash scripts to run experiments
+        ├── example.sh                 # Example script to run a quick evaluation
+        ├── extract_error_analysis.sh  # Script to extract error analysis from model outputs
+        ├── extract_run_results.sh     # Script to extract run results from model outputs
+        ├── run_cross-consistency.sh   # Script to run cross-consistency mode on multiple tasks
+        ├── run_multi_tasks.sh         # Script to run multiple tasks sequentially, in 0-shot and single-turn CoT settings
+        ├── run_multi-turn_CoT.sh      # Script to run multiple tasks sequentially, in multi-turn CoT settings
+        ├── run_multi-turn_SC-CoT.sh   # Script to run multiple tasks sequentially, in multi-turn Self-Consistency CoT settings
+        └── run_only_vote.sh           # Script to run only the voting step of Self-Consistency CoT
+    └── ...
 
 ### Manually Run Hugging Face `transformers`
 
@@ -71,6 +78,8 @@ lm_eval --model hf \
 > Just like you can provide a local path to `transformers.AutoModel`, you can also provide a local path to `lm_eval` via `--model_args pretrained=/path/to/model`
 
 ## OpenCTEval Benchmark Composition
+
+### Task Composition
 
 (MCQ: Multiple-Choice Question, ENC: Entailment, Neutral, Contradiction)
 
@@ -90,7 +99,16 @@ lm_eval --model hf \
 | [TREC CT Track](lm_eval/tasks/TREC_CT/)                        | **NLI** (ENC), **Relevance Ranking**                |
 | [SemEval NLI4CT](lm_eval/tasks/SemEval_NLI4CT/)                | **NLI** (EC)                                        |
 
-## OpenCTEval Results
+### Models Benchmarked
+
+| Model  | Source |
+|--------|--------|
+| Fleming-R1-7B             |     [huggingface](https://huggingface.co/UbiquantAI/Fleming-R1-7B)              |
+| DeepSeek-R1-0528-Qwen3-8B |     [huggingface](https://huggingface.co/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B) |
+| Llama-3.1-8B-Instruct     |     [huggingface](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct)      |
+| Qwen3-8B                  |     [huggingface](https://huggingface.co/unsloth/Qwen3-8B)                      |
+
+### Results
 
 The results of evaluating various models on the OpenCTEval benchmark can be found in the [results folder](./outputs/). Detailed analysis and visualizations will be provided in upcoming publications.
 

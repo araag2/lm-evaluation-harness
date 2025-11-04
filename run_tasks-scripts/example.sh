@@ -5,11 +5,11 @@
 # ================================
 MODEL=vllm
 
-TEST_MODEL= "pretrained=unsloth/Qwen3-8B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8,enable_prefix_caching=True"
+TEST_MODEL="pretrained=unsloth/Qwen3-8B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8,enable_prefix_caching=True"
 
-TEST_TASK="MedNLI"
+TEST_TASK=MedNLI
 
-INFERENCE_MODE="0-shot"
+INFERENCE_MODE=0-shot
 
 # Generation Params
 CUDA_DEVICES=0 
