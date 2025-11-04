@@ -1,6 +1,6 @@
 # TREC Clinical Decision Support (2014, 2015 and 2016)
 
-Huggingface Dataset Link: [TREC Clinical Decision Support](https://huggingface.co/datasets/araag2/TREC_Clincial-Decision-Support)
+Huggingface Dataset Link: [TREC Clinical Decision Support](https://huggingface.co/datasets/araag2/TREC_Clinicial-Decision-Support)
 
 ## Paper
 
