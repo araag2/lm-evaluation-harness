@@ -79,6 +79,8 @@ lm_eval --model hf \
 
 ## OpenCTEval Benchmark Composition
 
+[OpenCTEval on Huggingface](https://huggingface.co/collections/araag2/opencteval-benchmark-datasets)
+
 ### Task Composition
 
 (MCQ: Multiple-Choice Question, ENC: Entailment, Neutral, Contradiction)

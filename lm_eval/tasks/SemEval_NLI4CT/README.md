@@ -1,4 +1,6 @@
-# Task-name
+# NLI4CT: Multi-Evidence Natural Language Inference for Clinical Trial Reports and SemEval-2024 Task 2: Safe Biomedical Natural Language Inference for Clinical Trials
+
+Huggingface Dataset Link: [SemEval_NLI4CT](https://huggingface.co/datasets/araag2/SemEval_NLI4CT)
 
 ## Paper
 
@@ -38,6 +40,10 @@ Homepage: [GitHub Pages](https://sites.google.com/view/nli4ct/)
 * `SemEval_NLI4CT`: `The SemEval NLI4CT task, which includes the 2023 and 2024 tasks on natural language inference for clinical trials, focusing on reasoning over clinical trial reports and statements about them.`
 
 #### Tags
+
+* `0-shot`: `Evaluates models in zero-shot setting`
+* `chain-of-thought`: `Evaluates models with chain-of-thought prompting`
+* `self-consistency`: `Evaluates models with self-consistency sampling`
 
 #### Tasks
 

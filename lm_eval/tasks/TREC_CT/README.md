@@ -1,36 +1,65 @@
-# TREC Clinical Trials (TREC_CT)
+# TREC Clinical Trials (2021, 2022 and 2023)
+
+Huggingface Dataset Link: [TREC Clinical Trials](https://huggingface.co/datasets/araag2/TREC_Clinical-Trials)
 
 ## Paper
 
-Title: ``
+Title: `Overview of the TREC 2021 / 2022 / 2023 Clinical Trials Track`
 
-Paper Link: 
+Paper Link: [2021](https://trec.nist.gov/pubs/trec30/papers/Overview-2021.pdf) and [2022](https://trec.nist.gov/pubs/trec31/papers/Overview_trials.pdf) and [2023](https://trec.nist.gov/pubs/trec32/papers/overview_32.pdf)
 
-Abstract:
-
-``
-
-Homepage: [TREC Biomedical Tracks](https://www.trec-cds.org/)
-
+Homepage: [TREC](https://www.trec-cds.org/)
 
 ### Citation
 
 ```bibtex
+@inproceedings{soboroff2021overview,
+  title={Overview of TREC 2021.},
+  author={Soboroff, Ian},
+  booktitle={TREC},
+  year={2021}
+}
+
+@inproceedings{roberts2022overview,
+  title={Overview of the TREC 2022 Clinical Trials Track.},
+  author={Roberts, Kirk and Demner-Fushman, Dina and Voorhees, Ellen M and Bedrick, Steven and Hersh, William R},
+  booktitle={TREC},
+  year={2022}
+}
+
+@inproceedings{soboroff2023overview,
+  title={Overview of TREC 2023.},
+  author={Soboroff, Ian},
+  booktitle={TREC},
+  year={2023}
+}
 ```
 
 ### Groups, Tags, and Tasks
 
 #### Groups
 
-* `TREC_CT`: `The TREC Clinical Trials task group (including the 2021, 2022, and 2023 versions) in which the task is to classify the relationship between a medical premise and a hypothesis as one of the following: not relevant, possibly relevant and definitely relevant.`
+* `TREC_CT_0-shot`: `Evaluates models on the TREC Clinical Trials dataset in zero-shot setting.`
+* `TREC_CT_CoT`: `Evaluates models on the TREC Clinical Trials dataset with single-turn chain-of-thought prompting.`
+* `TREC_CT_SC`: `Evaluates models on the TREC Clinical Trials dataset with single-turn self-consistency sampling.`
 
 #### Tags
 
+* `0-shot`: `Evaluates models in zero-shot setting`
+* `chain-of-thought`: `Evaluates models with chain-of-thought prompting`
+* `self-consistency`: `Evaluates models with self-consistency sampling`
+
 #### Tasks
 
-* `TREC_CT_2021`: `The TREC Clinical Trials 2021 track.`
-* `TREC_CT_2022`: `The TREC Clinical Trials 2022 track.`
-* `TREC_CT_2023`: `The TREC Clinical Trials 2023 track.`
+* `TREC_CT_2021_0-shot` : `TREC Clinical Trials 2021 in single-turn 0-shot setting`
+* `TREC_CT_2022_0-shot` : `TREC Clinical Trials 2022 in single-turn 0-shot setting`
+* `TREC_CT_2023_0-shot` : `TREC Clinical Trials 2023 in single-turn 0-shot setting` 
+* `TREC_CT_2021_CoT`    : `TREC Clinical Trials 2021 in single-turn chain-of-thought 0-shot setting`
+* `TREC_CT_2022_CoT`    : `TREC Clinical Trials 2022 in single-turn chain-of-thought 0-shot setting`
+* `TREC_CT_2023_CoT`    : `TREC Clinical Trials 2023 in single-turn chain-of-thought 0-shot setting`
+* `TREC_CT_2021_SC`     : `TREC Clinical Trials 2021 in single-turn self-consistency setting`
+* `TREC_CT_2022_SC`     : `TREC Clinical Trials 2022 in single-turn self-consistency setting`
+* `TREC_CT_2023_SC`     : `TREC Clinical Trials 2023 in single-turn self-consistency setting`
 
 ### Checklist
 

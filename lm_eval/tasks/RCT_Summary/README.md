@@ -1,4 +1,4 @@
-# Task-name
+# RCT Summarization Data
 
 ## Paper
 
@@ -28,13 +28,16 @@ Homepage: [GitHub Pages](https://github.com/bwallace/RCT-summarization-data?tab=
 
 #### Groups
 
-* `RCT_Summary`: `The SemEval NLI4CT task, which includes the 2023 and 2024 tasks on natural language inference for clinical trials, focusing on reasoning over clinical trial reports and statements about them.`
+* `RCT_Summary`: `Evaluates models on the RCT Summary dataset, which involves generating narrative summaries of randomized controlled trials.`
 
 #### Tags
+* `chain-of-thought`: `Evaluates models with chain-of-thought prompting`
+* `self-consistency`: `Evaluates models with self-consistency sampling`
 
 #### Tasks
 
-* `RCT_Summary` : `RCT Summary task, generating conclusion sections from Title and Abstract`
+* `RCT_Summary_CoT` : `RCT Summary in single-turn chain-of-thought setting`
+* `RCT_Summary_SC` : `RCT Summary in single-turn self-consistency setting`
 
 ### Checklist
 

@@ -1,4 +1,6 @@
-# Task-name
+# MedNLI — A Natural Language Inference Dataset For The Clinical Domain
+
+Huggingface Dataset Link: [MedNLI](https://huggingface.co/datasets/araag2/MedNLI)
 
 ## Paper
 
@@ -8,7 +10,7 @@ Paper Link: [arXiv](https://arxiv.org/abs/1808.06752)
 
 Abstract:
 
-State of the art models using deep neural networks have become very good in learning an accurate mapping from inputs to outputs. However, they still lack generalization capabilities in conditions that differ from the ones encountered during training. This is even more challenging in specialized, and knowledge intensive domains, where training data is limited. To address this gap, we introduce MedNLI - a dataset annotated by doctors, performing a natural language inference task (NLI), grounded in the medical history of patients. We present strategies to: 1) leverage transfer learning using datasets from the open domain, (e.g. SNLI) and 2) incorporate domain knowledge from external data and lexical sources (e.g. medical terminologies). Our results demonstrate performance gains using both strategies.
+`State of the art models using deep neural networks have become very good in learning an accurate mapping from inputs to outputs. However, they still lack generalization capabilities in conditions that differ from the ones encountered during training. This is even more challenging in specialized, and knowledge intensive domains, where training data is limited. To address this gap, we introduce MedNLI - a dataset annotated by doctors, performing a natural language inference task (NLI), grounded in the medical history of patients. We present strategies to: 1) leverage transfer learning using datasets from the open domain, (e.g. SNLI) and 2) incorporate domain knowledge from external data and lexical sources (e.g. medical terminologies). Our results demonstrate performance gains using both strategies.`
 
 Homepage: [GitHub Pages](https://jgc128.github.io/mednli/)
 
@@ -37,14 +39,15 @@ Homepage: [GitHub Pages](https://jgc128.github.io/mednli/)
 #### Tags
 
 * `0-shot`: `Evaluates models in zero-shot setting`
-* `few-shot`: `Evaluates models in few-shot setting`
 * `chain-of-thought`: `Evaluates models with chain-of-thought prompting`
 * `self-consistency`: `Evaluates models with self-consistency sampling`
 
 #### Tasks
 
-* `MedNLI_0-shot` : `MedNLI in base 0-shot setting`
-* `MedNLI_0-shot_SC` : `MedNLI 0-shot with self-consistency sampling`
+* `MedNLI_0-shot` : `MedNLI in single-turn 0-shot setting`
+* `MedNLI_CoT`    : `MedNLI in single-turn chain-of-thought 0-shot setting`
+* `MedNLI_SC`     : `MedNLI in single-turn self-consistency setting`
+* `MedNLI_CoT_SC` : `MedNLI in single-turn chain-of-thought with self-consistency setting`
 
 ### Checklist
 
