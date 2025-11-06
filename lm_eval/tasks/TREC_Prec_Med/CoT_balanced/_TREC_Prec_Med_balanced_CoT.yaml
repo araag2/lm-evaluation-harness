@@ -1,0 +1,9 @@
+group: TREC_Prec_Med_balanced_CoT
+task:
+  - TREC_Prec-Med_balanced_2017_CoT
+  - TREC_Prec-Med_balanced_2018_CoT
+  - TREC_Prec-Med_balanced_2019_CoT
+tag:
+  - chain-of-thought
+metadata:
+  version: 1.0

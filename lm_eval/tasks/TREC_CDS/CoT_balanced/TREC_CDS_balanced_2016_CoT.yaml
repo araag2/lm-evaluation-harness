@@ -1,0 +1,6 @@
+task: TREC_CDS_balanced_2016_CoT
+dataset_path: araag2/TREC_Clinicial-Decision-Support
+dataset_name: 2016_processed
+include: _balanced_TREC_CDS_CoT.yaml
+metadata:
+  version: 1.0

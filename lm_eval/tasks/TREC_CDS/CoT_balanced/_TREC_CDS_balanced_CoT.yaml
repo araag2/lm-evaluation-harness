@@ -1,0 +1,9 @@
+group: TREC_CDS_balanced_CoT
+task:
+  - TREC_CDS_balanced_2014_CoT
+  - TREC_CDS_balanced_2015_CoT
+  - TREC_CDS_balanced_2016_CoT
+tag:
+  - chain-of-thought
+metadata:
+  version: 1.0

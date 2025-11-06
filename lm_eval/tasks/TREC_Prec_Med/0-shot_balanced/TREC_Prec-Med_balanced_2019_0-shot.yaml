@@ -1,10 +1,7 @@
-dataset_kwargs:
-  trust_remote_code: true
-output_type: multiple_choice
-test_split: test
-doc_to_text: !function utils.doc_to_text
-doc_to_target: "{{ Label }}"
-doc_to_choice: ["not relevant", "possibly relevant", "definitely relevant"]
+task: TREC_Prec-Med_balanced_2019_0-shot
+dataset_path: araag2/TREC_Precision-Medicine
+dataset_name: 2019_processed
+include: _balanced_TREC_Prec-Med_0-shot.yaml
 metric_list:
   - metric: acc
     aggregation: mean
@@ -21,15 +18,10 @@ metric_list:
     higher_is_better: true
     ignore_case: true
     ignore_punctuation: true
-  - metric: MAP
-    aggregation: MAP
-    higher_is_better: true
-    ignore_case: true
-    ignore_punctuation: true
   - metric: nDCG
     aggregation: nDCG
     higher_is_better: true
     ignore_case: true
-    ignore_punctuation: true    
+    ignore_punctuation: true 
 metadata:
   version: 1.0

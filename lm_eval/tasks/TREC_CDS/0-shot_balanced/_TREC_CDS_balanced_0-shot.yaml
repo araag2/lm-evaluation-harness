@@ -1,0 +1,7 @@
+group: TREC_CDS_balanced_0-shot
+task:
+  - TREC_CDS_balanced_2014_0-shot
+  - TREC_CDS_balanced_2015_0-shot
+  - TREC_CDS_balanced_2016_0-shot
+metadata:
+  version: 1.0

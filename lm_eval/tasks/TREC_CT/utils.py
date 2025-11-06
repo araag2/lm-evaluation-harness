@@ -45,7 +45,7 @@ def doc_to_text_verify_reasoning(doc):
 def doc_to_text_answer_selection_after_verify_reasoning(doc):
     return doc_to_text(doc, answer_selection_after_verification_prompt)
 
-def process_docs(dataset):
+def process_docs_balanced(dataset):
     dataset_relevant = dataset.filter(lambda doc: doc["Label"] in ("definitely relevant", "possibly relevant"))
     dataset_irrelevant = dataset.filter(lambda doc: doc["Label"] == "not relevant")
     
