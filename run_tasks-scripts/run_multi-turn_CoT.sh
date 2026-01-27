@@ -15,10 +15,11 @@ PROVIDER=vllm
 #"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8|pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=22000,gpu_memory_utilization=0.75,dtype=float16,swap_space=8"
 
 PAIRS_OF_MODELS=(
-    "pretrained=unsloth/Qwen3-8B,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8|pretrained=unsloth/Qwen3-8B,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
-    "pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8|pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
-    "pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8|pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
-    "pretrained=UbiquantAI/Fleming-R1-7B,max_length=20000,gpu_memory_utilization=0.9,swap_space=8|pretrained=UbiquantAI/Fleming-R1-7B,max_length=20000,gpu_memory_utilization=0.9,swap_space=8"
+    #"pretrained=unsloth/Qwen3-8B,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8|pretrained=unsloth/Qwen3-8B,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
+    "pretrained=google/gemma-3n-E4B-it,max_length=25000,gpu_memory_utilization=0.9,swap_space=8,enable_prefix_caching=True|pretrained=google/gemma-3n-E4B-it,max_length=25000,gpu_memory_utilization=0.9,swap_space=8,enable_prefix_caching=True"
+    #"pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8|pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
+    #"pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8|pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=20000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8"
+    #"pretrained=UbiquantAI/Fleming-R1-7B,max_length=20000,gpu_memory_utilization=0.9,swap_space=8|pretrained=UbiquantAI/Fleming-R1-7B,max_length=20000,gpu_memory_utilization=0.9,swap_space=8"
 )
 
 #"MedNLI:CoT|MedNLI:0-shot"
@@ -42,10 +43,11 @@ PAIRS_OF_MODELS=(
 #"TREC_CT_2023:CoT|TREC_CT_2023:0-shot"
 
 PAIRS_OF_TASK_LIST=(
-    "MedNLI:CoT|MedNLI:0-shot"
-    "HINT:CoT|HINT:0-shot"
-    "MedMCQA:CoT|MedMCQA:0-shot" 
-    "MedQA:CoT|MedQA:0-shot"
+    "Evidence_Inference_v2:CoT|Evidence_Inference_v2:0-shot"
+    "NLI4PR:patient-lang_CoT|NLI4PR:patient-lang_0-shot"
+    "NLI4PR:medical-lang_CoT|NLI4PR:medical-lang_0-shot"
+    "SemEval_NLI4CT:2023_CoT|SemEval_NLI4CT:2023_0-shot"
+    "SemEval_NLI4CT:2024_CoT|SemEval_NLI4CT:2024_0-shot"
 )
 
 MODE=multi-turn_CoT

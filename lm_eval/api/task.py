@@ -1651,6 +1651,8 @@ class ConfigurableTask(Task):
                     if "brier_score" in use_metric
                     else {}
                 ),
+                **({"Precision" : (doc, gold, pred, prob_norm)} if "Precision" in use_metric else {}),
+                **({"Recall" : (doc, gold, pred, prob_norm)} if "Recall" in use_metric else {}),
                 **({"P@5" : (doc, gold, pred, prob_norm)} if "P@5" in use_metric else {}),
                 **({"P@10" : (doc, gold, pred, prob_norm)} if "P@10" in use_metric else {}),
                 **({"P@15" : (doc, gold, pred, prob_norm)} if "P@15" in use_metric else {}),

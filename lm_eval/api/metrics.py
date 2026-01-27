@@ -179,6 +179,34 @@ def R_prec_fn(items):  # This is a passthrough function
     return items
 
 #-----------------------------------------------------------------------#
+@register_aggregation("Precision")
+def Precision_score(items):
+    from sklearn.metrics import precision_score
+    return score_per_query_id(items, score_function_fn=precision_score, cutoff_fn=None)
+
+@register_metric(
+    metric="Precision",
+    higher_is_better=True,
+    output_type=["multiple_choice"], #TO:DO to implement to other types, need to set inputs in api.task.py
+    aggregation="Precision",
+)
+def Precision_fn(items):  # This is a passthrough function
+    return items
+
+@register_aggregation("Recall")
+def Recall_score(items):
+    from sklearn.metrics import recall_score
+    return score_per_query_id(items, score_function_fn=recall_score, cutoff_fn=None)    
+@register_metric(
+    metric="Recall",
+    higher_is_better=True,
+    output_type=["multiple_choice"], #TO:DO to implement to other types, need to set inputs in api.task.py
+    aggregation="Recall",
+)
+def Recall_fn(items):  # This is a passthrough function
+    return items
+
+#-----------------------------------------------------------------------#
 
 @register_aggregation("MAP")
 def MAP_score(items):

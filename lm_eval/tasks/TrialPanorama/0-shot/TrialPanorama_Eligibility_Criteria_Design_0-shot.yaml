@@ -1,0 +1,6 @@
+task: TrialPanorama_Eligibility_Criteria_Design_0-shot
+dataset_path: araag2/TrialPanorama
+dataset_name: eligibility_criteria_design
+include: _default_TrialPanorama_MCQA_0-shot.yaml
+metadata:
+  version: 1.0

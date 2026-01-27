@@ -1,0 +1,11 @@
+group: TrialPanorama_0-shot
+task:
+ - TrialPanorama_Arm_Design_0-shot
+ - TrialPanorama_Eligibility_Criteria_Design_0-shot
+ - TrialPanorama_Evidence_Summarization_0-shot
+ - TrialPanorama_Endpoint_Design_0-shot
+ - TrialPanorama_Study_Screening_0-shot
+tag:
+ - 0-shot
+metadata:
+  version: 1.0

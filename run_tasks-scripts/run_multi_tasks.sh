@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # ================================
 # Models Configuration
 # ================================
@@ -15,7 +14,9 @@ MODEL=vllm
 #"pretrained=google/gemma-3n-E4B-it,max_length=25000"
 #"pretrained=mistralai/Ministral-8B-Instruct-2410,max_length=25000"
 
+
 MODELS=(
+    #"pretrained=linjc16/Panacea-7B-Chat,max_length=25000,gpu_memory_utilization=0.9,swap_space=8,enable_prefix_caching=True"
     "pretrained=unsloth/Qwen3-8B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8,enable_prefix_caching=True"
     #"pretrained=meta-llama/Llama-3.1-8B-Instruct,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8,enable_prefix_caching=True"
     #"pretrained=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,max_length=25000,gpu_memory_utilization=0.9,dtype=float16,swap_space=8,enable_prefix_caching=True"
@@ -37,16 +38,16 @@ MODELS=(
 #Trial_Meta_Analysis_type
 #Trial_Meta_Analysis_binary
 #Trial_Meta_Analysis_continuous
+#TrialPanorama
 
 TASK_LIST=(
-    TREC_Prec_Med
-    TREC_CDS
-    TREC_CT
+    TrialPanorama
 )
 
 INFERENCE_MODES=(
     0-shot
-    CoT
+    #CoT
+    #SC
 )
 
 # Generation Params
@@ -64,11 +65,11 @@ for MODEL_ARGS in "${MODELS[@]}"; do
     echo "[INFO] Running evaluations for:\n Model = $MODEL\n Model Args = $MODEL_ARGS\n. Output Base Path = $OUTPUT_BASE_PATH"
     echo "=================================================="
 
-    echo -e "=================================================="
+    echo "=================================================="
     echo "[INFO] Starting batch execution of ${TASK_LIST[@]} task scripts."
     echo "=================================================="
 
-    echo -e "=================================================="
+    echo "=================================================="
     echo "[INFO] Inference Modes: ${INFERENCE_MODES[@]}"
     echo "=================================================="
 
