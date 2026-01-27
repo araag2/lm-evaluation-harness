@@ -1,0 +1,10 @@
+group: TrialBench_adverse_event_prediction_0-shot
+task:
+ - adverse_event_prediction
+ - adverse_event_prediction_phase1
+ - adverse_event_prediction_phase2
+ - adverse_event_prediction_phase3
+tag:
+ - 0-shot
+metadata:
+  version: 1.0

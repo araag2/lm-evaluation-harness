@@ -1,0 +1,8 @@
+group: TrialBench_patient_dropout_prediction_CoT
+task:
+ - patient_dropout_prediction
+tag:
+ - chain-of-thought
+ - patient_dropout_prediction
+metadata:
+  version: 1.0

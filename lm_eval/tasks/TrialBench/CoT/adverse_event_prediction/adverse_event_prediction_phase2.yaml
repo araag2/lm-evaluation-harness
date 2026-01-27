@@ -1,0 +1,8 @@
+task: TrialBench_adverse_event_prediction_phase2_CoT
+dataset_path: araag2/TrialBench
+dataset_name: adverse_event_prediction
+doc_to_text: !function utils.adverse_event_doc_to_text_reasoning
+process_docs: !function utils.process_phase_2
+include: ../_default_binary.yaml
+metadata:
+  version: 1.0

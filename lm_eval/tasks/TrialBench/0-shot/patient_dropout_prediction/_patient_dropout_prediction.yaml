@@ -1,0 +1,12 @@
+group: TrialBench_patient_dropout_prediction_0-shot
+task:
+ - patient_dropout_prediction
+ - patient_dropout_prediction_phase1
+ - patient_dropout_prediction_phase2
+ - patient_dropout_prediction_phase3
+ - patient_dropout_prediction_phase4
+tag:
+ - 0-shot
+ - patient_dropout_prediction
+metadata:
+  version: 1.0

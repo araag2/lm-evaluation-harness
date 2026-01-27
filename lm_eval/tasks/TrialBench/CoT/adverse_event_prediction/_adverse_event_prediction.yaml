@@ -1,0 +1,11 @@
+group: TrialBench_adverse_event_prediction_CoT
+task:
+ - adverse_event_prediction
+ - adverse_event_prediction_phase1
+ - adverse_event_prediction_phase2
+ - adverse_event_prediction_phase3
+tag:
+ - chain-of-thought
+ - adverse_event_prediction
+metadata:
+  version: 1.0

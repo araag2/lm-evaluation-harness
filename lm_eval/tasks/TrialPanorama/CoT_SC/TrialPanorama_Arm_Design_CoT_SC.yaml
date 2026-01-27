@@ -1,0 +1,6 @@
+task: TrialPanorama_Arm_Design_CoT_SC
+dataset_path: araag2/TrialPanorama
+dataset_name: arm_design_processed
+include: _default_TrialPanorama_MCQA_CoT_SC.yaml
+metadata:
+  version: 1.0

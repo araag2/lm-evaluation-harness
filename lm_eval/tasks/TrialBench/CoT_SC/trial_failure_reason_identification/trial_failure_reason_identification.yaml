@@ -1,0 +1,7 @@
+task: TrialBench_trial_failure_reason_identification_CoT_SC
+dataset_path: araag2/TrialBench
+dataset_name: trial_failure_reason_identification_processed
+doc_to_text: !function utils.trial_failure_doc_to_text_reasoning
+include: ../_default_multiclass.yaml
+metadata:
+  version: 1.0

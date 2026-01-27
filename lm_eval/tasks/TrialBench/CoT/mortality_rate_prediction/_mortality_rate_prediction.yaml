@@ -1,0 +1,8 @@
+group: TrialBench_mortality_rate_prediction_CoT
+task:
+ - mortality_rate_prediction
+tag:
+ - chain-of-thought
+ - mortality_rate_prediction
+metadata:
+  version: 1.0

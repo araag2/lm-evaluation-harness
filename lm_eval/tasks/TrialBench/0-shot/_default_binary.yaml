@@ -2,9 +2,8 @@ dataset_kwargs:
   trust_remote_code: true
 output_type: multiple_choice
 test_split: test
-doc_to_text: !function utils.doc_to_text
-doc_to_target: "{{ Label }}"
-doc_to_choice: ["A", "B", "C", "D"]
+doc_to_target: "{{ Label_Class }}"
+doc_to_choice: ["No", "Yes"]
 metric_list:
   - metric: acc
     aggregation: mean

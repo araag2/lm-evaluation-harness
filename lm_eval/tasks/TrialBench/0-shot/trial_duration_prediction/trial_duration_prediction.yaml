@@ -1,0 +1,8 @@
+task: TrialBench_trial_duration_prediction_0-shot
+dataset_path: araag2/TrialBench
+dataset_name: trial_duration_prediction
+doc_to_text: !function utils.trial_duration_doc_to_text
+process_docs: !function utils.process_docs_exclude_phase4
+include: ../_default_regression.yaml
+metadata:
+  version: 1.0

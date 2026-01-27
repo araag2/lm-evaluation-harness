@@ -1,0 +1,9 @@
+group: TrialBench_mortality_rate_prediction_CoT_SC
+task:
+ - mortality_rate_prediction
+tag:
+ - chain-of-thought
+ - self-consistency
+ - mortality_rate_prediction
+metadata:
+  version: 1.0

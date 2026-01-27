@@ -1,0 +1,12 @@
+group: TrialBench_trial_failure_reason_identification_0-shot
+task:
+ - trial_failure_reason_identification
+ - trial_failure_reason_identification_phase1
+ - trial_failure_reason_identification_phase2
+ - trial_failure_reason_identification_phase3
+ - trial_failure_reason_identification_phase4
+tag:
+ - 0-shot
+ - trial_failure_reason_identification
+metadata:
+  version: 1.0

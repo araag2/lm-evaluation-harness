@@ -1,0 +1,8 @@
+task: TrialBench_patient_dropout_prediction_phase4_0-shot
+dataset_path: araag2/TrialBench
+dataset_name: patient_dropout_prediction
+doc_to_text: !function utils.patient_dropout_doc_to_text
+process_docs: !function utils.process_phase_4
+include: ../_default_binary.yaml
+metadata:
+  version: 1.0

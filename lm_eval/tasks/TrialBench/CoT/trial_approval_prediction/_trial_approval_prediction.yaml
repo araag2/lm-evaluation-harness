@@ -1,0 +1,8 @@
+group: TrialBench_trial_approval_prediction_CoT
+task:
+ - trial_approval_prediction
+tag:
+ - chain-of-thought
+ - trial_approval_prediction
+metadata:
+  version: 1.0

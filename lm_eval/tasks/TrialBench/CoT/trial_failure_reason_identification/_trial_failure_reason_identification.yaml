@@ -1,0 +1,8 @@
+group: TrialBench_trial_failure_reason_identification_CoT
+task:
+ - trial_failure_reason_identification
+tag:
+ - chain-of-thought
+ - trial_failure_reason_identification
+metadata:
+  version: 1.0

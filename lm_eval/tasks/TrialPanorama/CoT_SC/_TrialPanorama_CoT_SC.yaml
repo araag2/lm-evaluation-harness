@@ -1,0 +1,12 @@
+group: TrialPanorama_CoT_SC
+task:
+ - TrialPanorama_Arm_Design_CoT_SC
+ - TrialPanorama_Eligibility_Criteria_Design_CoT_SC
+ - TrialPanorama_Evidence_Summarization_CoT_SC
+ - TrialPanorama_Endpoint_Design_CoT_SC
+ - TrialPanorama_Study_Screening_CoT_SC
+tag:
+ - chain-of-thought
+ - self-consistency
+metadata:
+  version: 1.0

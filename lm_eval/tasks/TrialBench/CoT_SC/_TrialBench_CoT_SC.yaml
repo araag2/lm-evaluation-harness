@@ -1,0 +1,16 @@
+group: TrialBench_CoT_SC
+task:
+ - adverse_event_prediction/adverse_event_prediction
+ - mortality_rate_prediction/mortality_rate_prediction
+ - patient_dropout_prediction/patient_dropout_prediction
+ - trial_approval_prediction/trial_approval_prediction
+ - trial_failure_reason_identification/trial_failure_reason_identification
+ - trial_duration_prediction/trial_duration_prediction
+ - trial_duration_prediction/trial_duration_prediction_phase1
+ - trial_duration_prediction/trial_duration_prediction_phase2
+ - trial_duration_prediction/trial_duration_prediction_phase3
+tag:
+ - chain-of-thought
+ - self-consistency
+metadata:
+  version: 1.0

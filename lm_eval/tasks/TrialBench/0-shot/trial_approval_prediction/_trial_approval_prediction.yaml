@@ -1,0 +1,12 @@
+group: TrialBench_trial_approval_prediction_0-shot
+task:
+ - trial_approval_prediction
+ - trial_approval_prediction_phase1
+ - trial_approval_prediction_phase2
+ - trial_approval_prediction_phase3
+ - trial_approval_prediction_phase4
+tag:
+ - 0-shot
+ - trial_approval_prediction
+metadata:
+  version: 1.0

@@ -1,0 +1,9 @@
+group: TrialBench_adverse_event_prediction_CoT_SC
+task:
+ - adverse_event_prediction
+tag:
+ - chain-of-thought
+ - self-consistency
+ - adverse_event_prediction
+metadata:
+  version: 1.0

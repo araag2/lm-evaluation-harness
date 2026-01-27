@@ -1,0 +1,11 @@
+group: TrialPanorama_CoT
+task:
+ - TrialPanorama_Arm_Design_CoT 
+ - TrialPanorama_Eligibility_Criteria_Design_CoT
+ - TrialPanorama_Evidence_Summarization_CoT
+ - TrialPanorama_Endpoint_Design_CoT
+ - TrialPanorama_Study_Screening_CoT
+tag:
+ - chain-of-thought
+metadata:
+  version: 1.0

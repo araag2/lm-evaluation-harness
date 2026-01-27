@@ -1,0 +1,6 @@
+task: TrialPanorama_Endpoint_Design_CoT
+dataset_path: araag2/TrialPanorama
+dataset_name: endpoint_design_processed
+include: _default_TrialPanorama_MCQA_CoT.yaml
+metadata:
+  version: 1.0

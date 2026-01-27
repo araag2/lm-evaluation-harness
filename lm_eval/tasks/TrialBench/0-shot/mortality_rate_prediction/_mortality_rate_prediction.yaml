@@ -1,0 +1,11 @@
+group: TrialBench_mortality_rate_prediction_0-shot
+task:
+ - mortality_rate_prediction
+ - mortality_rate_prediction_phase1
+ - mortality_rate_prediction_phase2
+ - mortality_rate_prediction_phase3
+tag:
+ - 0-shot
+ - mortality_rate_prediction
+metadata:
+  version: 1.0

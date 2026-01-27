@@ -1,0 +1,12 @@
+group: TrialBench_trial_duration_prediction_CoT_SC
+task:
+ - trial_duration_prediction
+ - trial_duration_prediction_phase1
+ - trial_duration_prediction_phase2
+ - trial_duration_prediction_phase3
+tag:
+ - chain-of-thought
+ - self-consistency
+ - trial_duration_prediction
+metadata:
+  version: 1.0

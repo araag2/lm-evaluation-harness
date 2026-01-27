@@ -1,0 +1,26 @@
+dataset_kwargs:
+  trust_remote_code: true
+output_type: generate_until
+test_split: test
+doc_to_target: "{{ Label_Regre }}"
+generation_kwargs:
+  until:
+    - "<END>"
+    - "<|im_end|>"
+    - "<|endoftext|>"
+    - "<|end_of_text|>"
+    - "<|eot_id|>"
+    - "<end_of_turn>"
+    - "<eos>"
+    - "</s>"
+  do_sample: false
+  max_gen_toks: 50
+metric_list:
+  - metric: mean_squared_error
+    aggregation: mean
+    higher_is_better: false
+  - metric: mean_absolute_error
+    aggregation: mean
+    higher_is_better: false
+metadata:
+  version: 1.0

@@ -1,0 +1,11 @@
+group: TrialBench_trial_duration_prediction_0-shot
+task:
+ - trial_duration_prediction
+ - trial_duration_prediction_phase1
+ - trial_duration_prediction_phase2
+ - trial_duration_prediction_phase3
+tag:
+ - 0-shot
+ - trial_duration_prediction
+metadata:
+  version: 1.0

@@ -1,0 +1,33 @@
+group: TrialBench_0-shot
+task:
+ - adverse_event_prediction/adverse_event_prediction
+ - adverse_event_prediction/adverse_event_prediction_phase1
+ - adverse_event_prediction/adverse_event_prediction_phase2
+ - adverse_event_prediction/adverse_event_prediction_phase3
+ - mortality_rate_prediction/mortality_rate_prediction
+ - mortality_rate_prediction/mortality_rate_prediction_phase1
+ - mortality_rate_prediction/mortality_rate_prediction_phase2
+ - mortality_rate_prediction/mortality_rate_prediction_phase3
+ - patient_dropout_prediction/patient_dropout_prediction
+ - patient_dropout_prediction/patient_dropout_prediction_phase1
+ - patient_dropout_prediction/patient_dropout_prediction_phase2
+ - patient_dropout_prediction/patient_dropout_prediction_phase3
+ - patient_dropout_prediction/patient_dropout_prediction_phase4
+ - trial_approval_prediction/trial_approval_prediction
+ - trial_approval_prediction/trial_approval_prediction_phase1
+ - trial_approval_prediction/trial_approval_prediction_phase2
+ - trial_approval_prediction/trial_approval_prediction_phase3
+ - trial_approval_prediction/trial_approval_prediction_phase4
+ - trial_failure_reason_identification/trial_failure_reason_identification
+ - trial_failure_reason_identification/trial_failure_reason_identification_phase1
+ - trial_failure_reason_identification/trial_failure_reason_identification_phase2
+ - trial_failure_reason_identification/trial_failure_reason_identification_phase3
+ - trial_failure_reason_identification/trial_failure_reason_identification_phase4
+ - trial_duration_prediction/trial_duration_prediction
+ - trial_duration_prediction/trial_duration_prediction_phase1
+ - trial_duration_prediction/trial_duration_prediction_phase2
+ - trial_duration_prediction/trial_duration_prediction_phase3
+tag:
+ - 0-shot
+metadata:
+  version: 1.0

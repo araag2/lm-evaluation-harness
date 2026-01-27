@@ -236,6 +236,115 @@ def MAP_fn(items):  # This is a passthrough function
 
 #-----------------------------------------------------------------------#
 
+@register_aggregation("PR-AUC")
+def PR_AUC_score(items):
+    """
+    Calculate Precision-Recall Area Under Curve (PR-AUC) as an aggregation metric.
+    PR-AUC measures the area under the precision-recall curve, useful for imbalanced datasets.
+
+    Args:
+        items (list): A list of tuples, where each tuple contains:
+            - doc (dict): Document information.
+            - gold (int): The ground truth label.
+            - pred (int): The predicted label.
+            - prob_norm (list[float]): Normalized probability score for each multiple choice option.
+
+    Returns:
+        float: The PR-AUC score. If computation fails, returns 0.0.
+    """
+    from sklearn.metrics import auc, precision_recall_curve
+    
+    # Extract labels and scores
+    # Assuming the last label in available choices is the positive label
+    pos_label_index = len(items[0][3]) - 1
+    
+    y_true = []
+    y_scores = []
+    
+    for doc, gold, pred, prob_norm in items:
+        # Binary classification: 1 if positive class, 0 otherwise
+        y_true.append(1 if gold > 0 else 0)
+        y_scores.append(prob_norm[pos_label_index])
+    
+    # Check if we have both classes
+    if len(set(y_true)) < 2:
+        # If only one class present, PR-AUC is not well-defined
+        return 0.0
+    
+    # Calculate precision-recall curve
+    precision, recall, _ = precision_recall_curve(y_true, y_scores)
+    
+    # Calculate area under the precision-recall curve
+    pr_auc = auc(recall, precision)
+    
+    return pr_auc
+
+@register_metric(
+    metric="PR-AUC",
+    higher_is_better=True,
+    output_type=["multiple_choice"],
+    aggregation="PR-AUC",
+)
+def PR_AUC_fn(items):  # This is a passthrough function
+    return items
+
+#-----------------------------------------------------------------------#
+
+@register_aggregation("ROC-AUC")
+def ROC_AUC_score(items):
+    """
+    Calculate Receiver Operating Characteristic Area Under Curve (ROC-AUC) as an aggregation metric.
+    ROC-AUC measures the area under the ROC curve, indicating the model's ability to distinguish between classes.
+
+    Args:
+        items (list): A list of tuples, where each tuple contains:
+            - doc (dict): Document information.
+            - gold (int): The ground truth label.
+            - pred (int): The predicted label.
+            - prob_norm (list[float]): Normalized probability score for each multiple choice option.
+
+    Returns:
+        float: The ROC-AUC score. If computation fails, returns 0.0.
+    """
+    from sklearn.metrics import roc_auc_score
+    
+    # Extract labels and scores
+    # Assuming the last label in available choices is the positive label
+    pos_label_index = len(items[0][3]) - 1
+    
+    y_true = []
+    y_scores = []
+    
+    for doc, gold, pred, prob_norm in items:
+        # Binary classification: 1 if positive class, 0 otherwise
+        y_true.append(1 if gold > 0 else 0)
+        y_scores.append(prob_norm[pos_label_index])
+    
+    # Check if we have both classes
+    if len(set(y_true)) < 2:
+        # If only one class present, ROC-AUC is not well-defined
+        return 0.0
+    
+    # Calculate ROC-AUC
+    try:
+        roc_auc = roc_auc_score(y_true, y_scores)
+    except ValueError:
+        # Handle any edge cases
+        return 0.0
+    
+    return roc_auc
+
+@register_metric(
+    metric="ROC-AUC",
+    higher_is_better=True,
+    output_type=["multiple_choice"],
+    aggregation="ROC-AUC",
+)
+def ROC_AUC_fn(items):  # This is a passthrough function
+    return items
+
+#-----------------------------------------------------------------------#
+
 def calculate_nDCG(items, k=None):
     """
     Calculate Normalized Discounted Cumulative Gain (nDCG) as an aggregation metric.
