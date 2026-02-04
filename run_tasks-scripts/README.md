@@ -78,6 +78,12 @@ run_tasks-scripts/
 # Full TrialBench evaluation
 ./run_eval.sh --config examples/example_full_trialbench.conf
 
+# OPT-125M testing configurations (fast validation)
+./run_eval.sh --config examples/example_opt125m_small_tasks.conf      # Small tasks, low limit
+./run_eval.sh --config examples/example_opt125m_0shot_tasks_limited.conf  # 0-shot compatible tasks
+./run_eval.sh --config examples/example_opt125m_cot_tasks_limited.conf    # CoT compatible tasks
+./run_eval.sh --config examples/example_opt125m_all_tasks_limited.conf    # All tasks (CoT only)
+
 # Dry-run to preview what would execute
 ./run_eval.sh --config examples/example_full_trialbench.conf --dry-run
 ```

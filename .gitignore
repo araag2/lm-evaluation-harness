@@ -30,6 +30,7 @@ output/
 data/
 temp/
 test_logs/
+samples_*.jsonl
 
 # Caching
 lm_eval/caching/.cache
