@@ -4,5 +4,10 @@ task:
  - SemEval_NLI4CT_2024_CoT
 tag:
  - chain-of-thought
+aggregate_metric_list:
+  - metric: acc
+    aggregation: mean
+    weight_by_size: false
+    filter_list: ["none"]
 metadata:
   version: 1.0

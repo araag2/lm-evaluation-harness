@@ -3,6 +3,17 @@ task:
   - TREC_Prec-Med_2017_SC
   #- TREC_Prec-Med_2018_SC
   #- TREC_Prec-Med_2019_SC
+aggregate_metric_list:
+  - aggregation: mean
+    metric: acc
+  - aggregation: mean
+    metric: P@5
+  - aggregation: mean
+    metric: P@10
+  - aggregation: mean
+    metric: P@15
+  - aggregation: mean
+    metric: R-Prec
 tag:
   - self-consistency
 metadata:

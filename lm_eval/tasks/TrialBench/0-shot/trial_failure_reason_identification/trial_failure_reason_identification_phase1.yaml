@@ -1,6 +1,6 @@
 task: TrialBench_trial_failure_reason_identification_phase1_0-shot
 dataset_path: araag2/TrialBench
-dataset_name: trial_failure_reason_identification
+dataset_name: trial_failure_reason_identification_processed
 doc_to_text: !function utils.trial_failure_doc_to_text
 process_docs: !function utils.process_phase_1
 include: ../_default_multiclass.yaml

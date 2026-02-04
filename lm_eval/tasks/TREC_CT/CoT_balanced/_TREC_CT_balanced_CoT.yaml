@@ -3,6 +3,15 @@ task:
   - TREC_CT_balanced_2021_CoT
   - TREC_CT_balanced_2022_CoT
   - TREC_CT_balanced_2023_CoT
+aggregate_metric_list:
+  - aggregation: mean
+    metric: acc
+  - aggregation: mean
+    metric: nDCG@10
+  - aggregation: mean
+    metric: P@10
+  - aggregation: mean
+    metric: RecRank
 tag:
   - chain-of-thought
 metadata:

@@ -5,6 +5,9 @@ task:
  - TrialPanorama_Evidence_Summarization_0-shot
  - TrialPanorama_Endpoint_Design_0-shot
  - TrialPanorama_Study_Screening_0-shot
+aggregate_metric_list:
+  - aggregation: mean
+    metric: acc
 tag:
  - 0-shot
 metadata:

@@ -1,6 +1,6 @@
 task: TrialBench_trial_duration_prediction_phase3_CoT_SC
 dataset_path: araag2/TrialBench
-dataset_name: trial_duration_prediction
+dataset_name: trial_duration_prediction_processed
 doc_to_text: !function utils.trial_duration_doc_to_text_reasoning
 process_docs: !function utils.process_phase_3
 include: ../_default_regression.yaml

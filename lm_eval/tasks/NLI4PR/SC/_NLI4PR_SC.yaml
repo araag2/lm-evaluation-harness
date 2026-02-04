@@ -4,5 +4,10 @@ tag:
 task:
  - NLI4PR_patient-lang_SC
  - NLI4PR_medical-lang_SC
+aggregate_metric_list:
+  - aggregation: mean
+    metric: acc
+  - aggregation: mean
+    metric: f1
 metadata:
   version: 1.0

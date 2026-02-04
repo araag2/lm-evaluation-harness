@@ -3,5 +3,16 @@ task:
   - TREC_Prec-Med_balanced_2017_0-shot
   - TREC_Prec-Med_balanced_2018_0-shot
   - TREC_Prec-Med_balanced_2019_0-shot
+aggregate_metric_list:
+  - aggregation: mean
+    metric: acc
+  - aggregation: mean
+    metric: P@5
+  - aggregation: mean
+    metric: P@10
+  - aggregation: mean
+    metric: P@15
+  - aggregation: mean
+    metric: R-Prec
 metadata:
   version: 1.0

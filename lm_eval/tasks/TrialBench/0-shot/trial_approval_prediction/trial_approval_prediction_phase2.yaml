@@ -1,6 +1,6 @@
 task: TrialBench_trial_approval_prediction_phase2_0-shot
 dataset_path: araag2/TrialBench
-dataset_name: trial_approval_prediction
+dataset_name: trial_approval_prediction_processed
 doc_to_text: !function utils.trial_approval_doc_to_text
 process_docs: !function utils.process_phase_2
 include: ../_default_binary.yaml

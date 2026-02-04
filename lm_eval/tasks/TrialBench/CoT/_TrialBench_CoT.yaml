@@ -12,6 +12,9 @@ task:
  - trial_duration_prediction/trial_duration_prediction_phase1
  - trial_duration_prediction/trial_duration_prediction_phase2
  - trial_duration_prediction/trial_duration_prediction_phase3
+aggregate_metric_list:
+  - aggregation: mean
+    metric: acc
 tag:
  - chain-of-thought
 metadata:

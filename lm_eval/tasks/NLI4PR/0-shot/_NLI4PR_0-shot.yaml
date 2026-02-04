@@ -4,5 +4,10 @@ tag:
 task:
  - NLI4PR_patient-lang_0-shot
  - NLI4PR_medical-lang_0-shot
+aggregate_metric_list:
+  - aggregation: mean
+    metric: acc
+  - aggregation: mean
+    metric: f1
 metadata:
   version: 1.0

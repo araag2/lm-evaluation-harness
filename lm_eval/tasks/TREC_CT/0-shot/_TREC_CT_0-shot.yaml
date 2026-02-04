@@ -3,5 +3,14 @@ task:
   - TREC_CT_2021_0-shot
   - TREC_CT_2022_0-shot
   - TREC_CT_2023_0-shot
+aggregate_metric_list:
+  - aggregation: mean
+    metric: acc
+  - aggregation: mean
+    metric: nDCG@10
+  - aggregation: mean
+    metric: P@10
+  - aggregation: mean
+    metric: RecRank
 metadata:
   version: 1.0

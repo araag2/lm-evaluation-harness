@@ -5,6 +5,9 @@ task:
  - TrialPanorama_Evidence_Summarization_CoT
  - TrialPanorama_Endpoint_Design_CoT
  - TrialPanorama_Study_Screening_CoT
+aggregate_metric_list:
+  - aggregation: mean
+    metric: acc
 tag:
  - chain-of-thought
 metadata:

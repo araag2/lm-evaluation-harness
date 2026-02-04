@@ -3,5 +3,16 @@ task:
   - TREC_CDS_balanced_2014_0-shot
   - TREC_CDS_balanced_2015_0-shot
   - TREC_CDS_balanced_2016_0-shot
+aggregate_metric_list:
+  - aggregation: mean
+    metric: acc
+  - aggregation: mean
+    metric: P@10
+  - aggregation: mean
+    metric: R-Prec
+  - aggregation: mean
+    metric: MAP
+  - aggregation: mean
+    metric: nDCG
 metadata:
   version: 1.0
