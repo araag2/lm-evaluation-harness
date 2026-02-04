@@ -17,10 +17,11 @@ run_tasks-scripts/
 │   ├── example_full_trialbench.conf
 │   ├── example_multi_turn.conf
 │   ├── example_cross_consistency_tiny.conf
-│   ├── example_opt125m_small_tasks.conf
-│   ├── example_opt125m_0shot_tasks_limited.conf
-│   ├── example_opt125m_cot_tasks_limited.conf
-│   └── example_opt125m_all_tasks_limited.conf
+│   ├── example_opt125m_0-shot_small-tasks_limited.conf
+│   ├── example_opt125m_0-shot_all-tasks_limited.conf
+│   ├── example_opt125m_multi-turn_CoT_small-tasks_limited.conf
+│   ├── example_opt125m_multi-turn_CoT-SC_small-tasks_limited.conf
+│   └── example_opt125m_cross-consistency_small-tasks_limited.conf
 ├── run_eval.sh                # Main unified runner
 ├── run_multi_turn.sh          # Multi-turn evaluation runner
 ├── run_cross_consistency.sh   # Cross-consistency evaluation runner
@@ -79,10 +80,15 @@ run_tasks-scripts/
 ./run_eval.sh --config examples/example_full_trialbench.conf
 
 # OPT-125M testing configurations (fast validation)
-./run_eval.sh --config examples/example_opt125m_small_tasks.conf      # Small tasks, low limit
-./run_eval.sh --config examples/example_opt125m_0shot_tasks_limited.conf  # 0-shot compatible tasks
-./run_eval.sh --config examples/example_opt125m_cot_tasks_limited.conf    # CoT compatible tasks
-./run_eval.sh --config examples/example_opt125m_all_tasks_limited.conf    # All tasks (CoT only)
+./run_eval.sh --config examples/example_opt125m_0-shot_small-tasks_limited.conf    # 0-shot small tasks
+./run_eval.sh --config examples/example_opt125m_0-shot_all-tasks_limited.conf      # 0-shot all compatible tasks
+
+# Multi-turn CoT evaluations
+./run_multi_turn.sh --config examples/example_opt125m_multi-turn_CoT_small-tasks_limited.conf      # CoT pairs
+./run_multi_turn.sh --config examples/example_opt125m_multi-turn_CoT-SC_small-tasks_limited.conf   # CoT-SC pairs
+
+# Cross-consistency evaluation
+./run_cross_consistency.sh --config examples/example_opt125m_cross-consistency_small-tasks_limited.conf
 
 # Dry-run to preview what would execute
 ./run_eval.sh --config examples/example_full_trialbench.conf --dry-run
@@ -139,6 +145,7 @@ The interactive mode guides you through:
 
 Instead of typing full model arguments, use these presets:
 
+- **Tiny Models**: `qwen3-0.5b`, `gemma-270m`
 - **4B Models**: `qwen3-4b`, `gemma-4b`
 - **8B Models**: `qwen3-8b`, `llama-8b`, `deepseek-8b`, `ministral-8b`
 - **Medical Models**: `fleming-7b`, `panacea-7b`
