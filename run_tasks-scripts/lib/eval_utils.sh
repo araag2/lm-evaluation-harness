@@ -94,6 +94,7 @@ run_single_evaluation() {
     fi
     
     eval "$cmd"
+}
 
 # Run multi-turn evaluation
 run_multi_turn_evaluation() {
