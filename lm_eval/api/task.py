@@ -1643,6 +1643,8 @@ class ConfigurableTask(Task):
             result_dict = {
                 **({"acc": acc} if "acc" in use_metric else {}),
                 **({"f1": (gold, pred)} if "f1" in use_metric else {}),
+                **({"Precision": (gold, pred)} if "Precision" in use_metric else {}),
+                **({"Recall": (gold, pred)} if "Recall" in use_metric else {}),
                 **({"mcc": (gold, pred)} if "mcc" in use_metric else {}),
                 **({"acc_norm": acc_norm} if "acc_norm" in use_metric else {}),
                 **({"exact_match": exact_match} if "exact_match" in use_metric else {}),
@@ -1651,8 +1653,6 @@ class ConfigurableTask(Task):
                     if "brier_score" in use_metric
                     else {}
                 ),
-                **({"Precision" : (doc, gold, pred, prob_norm)} if "Precision" in use_metric else {}),
-                **({"Recall" : (doc, gold, pred, prob_norm)} if "Recall" in use_metric else {}),
                 **({"P@5" : (doc, gold, pred, prob_norm)} if "P@5" in use_metric else {}),
                 **({"P@10" : (doc, gold, pred, prob_norm)} if "P@10" in use_metric else {}),
                 **({"P@15" : (doc, gold, pred, prob_norm)} if "P@15" in use_metric else {}),

@@ -182,12 +182,16 @@ def R_prec_fn(items):  # This is a passthrough function
 @register_aggregation("Precision")
 def Precision_score(items):
     from sklearn.metrics import precision_score
-    return score_per_query_id(items, score_function_fn=precision_score, cutoff_fn=None)
+    unzipped_list = list(zip(*items))
+    golds = [1 if g > 0 else 0 for g in unzipped_list[0]]
+    preds = [1 if p > 0 else 0 for p in unzipped_list[1]]
+
+    return precision_score(golds, preds, zero_division=0)
 
 @register_metric(
     metric="Precision",
     higher_is_better=True,
-    output_type=["multiple_choice"], #TO:DO to implement to other types, need to set inputs in api.task.py
+    output_type=["generate_until", "multiple_choice"], #TO:DO to implement to other types, need to set inputs in api.task.py
     aggregation="Precision",
 )
 def Precision_fn(items):  # This is a passthrough function
@@ -196,11 +200,16 @@ def Precision_fn(items):  # This is a passthrough function
 @register_aggregation("Recall")
 def Recall_score(items):
     from sklearn.metrics import recall_score
-    return score_per_query_id(items, score_function_fn=recall_score, cutoff_fn=None)    
+    unzipped_list = list(zip(*items))
+    golds = [1 if g > 0 else 0 for g in unzipped_list[0]]
+    preds = [1 if p > 0 else 0 for p in unzipped_list[1]]
+
+    return recall_score(golds, preds, zero_division=0)
+
 @register_metric(
     metric="Recall",
     higher_is_better=True,
-    output_type=["multiple_choice"], #TO:DO to implement to other types, need to set inputs in api.task.py
+    output_type=["generate_until","multiple_choice"], #TO:DO to implement to other types, need to set inputs in api.task.py
     aggregation="Recall",
 )
 def Recall_fn(items):  # This is a passthrough function
@@ -450,6 +459,38 @@ def RecRank_fn(items):  # This is a passthrough function
 
 #-----------------------------------------------------------------------#
 
+def extract_numeric_value(text):
+    """
+    Extract a numeric value from text. Attempts to find and parse the first
+    numeric value (integer or float) in the given text.
+    
+    Args:
+        text: String that may contain a numeric value
+        
+    Returns:
+        float: The extracted numeric value, or np.nan if extraction fails
+    """
+    if isinstance(text, (int, float)):
+        return float(text)
+    
+    if not isinstance(text, str):
+        return np.nan
+    
+    # Remove common text prefixes/suffixes and extract number
+    text = text.strip()
+    
+    # Try to match a number (including decimals and negatives)
+    match = re.search(r'-?\d+\.?\d*', text)
+    if match:
+        try:
+            return float(match.group())
+        except (ValueError, AttributeError):
+            return np.nan
+    
+    return np.nan
+
+#-----------------------------------------------------------------------#
+
 @register_aggregation("rouge_l")
 def rouge_l(items):
     from rouge_score import rouge_scorer
@@ -640,6 +681,75 @@ def acc_norm_fn(items):  # This is a passthrough function
 )
 def acc_mutual_info_fn(items):  # This is a passthrough function
     return items
+
+#-----------------------------------------------------------------------#
+
+@register_metric(
+    metric="mean_absolute_error",
+    higher_is_better=False,
+    output_type="generate_until",
+    aggregation="mean",
+)
+def mean_absolute_error_fn(items):
+    """
+    Calculate Mean Absolute Error (MAE) for regression tasks.
+    MAE measures the average magnitude of errors between predictions and actual values.
+    
+    Args:
+        items: List of tuples (gold, pred) where gold is the true value and 
+               pred is the predicted value (both may be strings or numeric)
+               
+    Returns:
+        List of absolute errors for each item (excluding invalid extractions)
+    """
+    errors = []
+    refs = list(zip(*items))[0]
+    preds = list(zip(*items))[1]
+    
+    for ref, pred in zip(refs, preds):
+        ref_val = extract_numeric_value(ref)
+        pred_val = extract_numeric_value(pred)
+        
+        if not np.isnan(ref_val) and not np.isnan(pred_val):
+            errors.append(abs(pred_val - ref_val))
+        # Skip items where numeric extraction failed
+    
+    # Return 0 if no valid items, otherwise return the errors
+    return errors if errors else [0.0]
+
+
+@register_metric(
+    metric="mean_squared_error",
+    higher_is_better=False,
+    output_type="generate_until",
+    aggregation="mean",
+)
+def mean_squared_error_fn(items):
+    """
+    Calculate Mean Squared Error (MSE) for regression tasks.
+    MSE measures the average of squared errors between predictions and actual values.
+    
+    Args:
+        items: List of tuples (gold, pred) where gold is the true value and 
+               pred is the predicted value (both may be strings or numeric)
+               
+    Returns:
+        List of squared errors for each item (excluding invalid extractions)
+    """
+    errors = []
+    refs = list(zip(*items))[0]
+    preds = list(zip(*items))[1]
+    
+    for ref, pred in zip(refs, preds):
+        ref_val = extract_numeric_value(ref)
+        pred_val = extract_numeric_value(pred)
+        
+        if not np.isnan(ref_val) and not np.isnan(pred_val):
+            errors.append((pred_val - ref_val) ** 2)
+        # Skip items where numeric extraction failed
+    
+    # Return 0 if no valid items, otherwise return the errors
+    return errors if errors else [0.0]
 
 #-----------------------------------------------------------------------#
 
