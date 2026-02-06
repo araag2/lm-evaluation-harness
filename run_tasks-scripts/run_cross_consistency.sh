@@ -95,6 +95,15 @@ while [[ $# -gt 0 ]]; do
             DRY_RUN=true
             shift
             ;;
+        --config)
+            if [ -f "$2" ]; then
+                source "$2"
+            else
+                log_error "Config file not found: $2"
+                exit 1
+            fi
+            shift 2
+            ;;
         --help|-h)
             cat << EOF
 Cross-Consistency Evaluation Runner
@@ -119,6 +128,7 @@ Evaluation Options:
 
 Other Options:
   --dry-run                               Show what would run without executing
+  --config FILE                           Load configuration from file
   --help, -h                              Show this help message
 
 Examples:
@@ -184,21 +194,33 @@ if [ -n "$LIMIT" ]; then
 fi
 
 # Show configuration
-log_info "Cross-Consistency Evaluation Configuration:"
-log_info "Reasoning Models: ${#REASONING_MODELS[@]} model(s)"
+print_separator
+log_info "Cross-Consistency Evaluation Configuration"
+print_separator
+echo "Provider:           $PROVIDER"
+echo "Reasoning Models:   ${#REASONING_MODELS[@]}"
+echo "Reasoning Model Details:"
 for model in "${REASONING_MODELS[@]}"; do
-    log_info "  - $model"
+    echo "  - $model"
 done
-log_info "Answering Models: ${#ANSWERING_MODELS[@]} model(s)"
+echo "Answering Models:   ${#ANSWERING_MODELS[@]}"
+echo "Answering Model Details:"
 for model in "${ANSWERING_MODELS[@]}"; do
-    log_info "  - $model"
+    echo "  - $model"
 done
-log_info "Reasoning Task: $REASONING_TASK"
-log_info "Answering Task: $ANSWERING_TASK"
-log_info "Output Directory: $OUTPUT_DIR"
+echo "Reasoning Task:     $REASONING_TASK"
+echo "Answering Task:     $ANSWERING_TASK"
+echo "Output Directory:   $OUTPUT_DIR"
+echo "GPU:                $CUDA_DEVICES"
+echo "Batch Size:         $BATCH_SIZE"
+echo "Seed:               $SEED"
 if [ -n "$LIMIT" ]; then
-    log_info "Sample Limit: $LIMIT"
+    echo "Limit:              $LIMIT"
+else
+    echo "Limit:              None"
 fi
+echo "Dry Run:            $DRY_RUN"
+print_separator
 log_info "Command: $CMD"
 
 if [ "$DRY_RUN" = true ]; then
@@ -208,8 +230,35 @@ fi
 
 # Execute
 log_info "Starting cross-consistency evaluation..."
-eval "$CMD"
-
-log_success "Cross-consistency evaluation completed!"
-log_info "Results saved to: $OUTPUT_DIR"</content>
+if eval "$CMD"; then
+    log_success "Cross-consistency evaluation completed!"
+    log_info "Results saved to: $OUTPUT_DIR"
+    
+    # Show summary
+    print_separator
+    log_info "Evaluation Summary"
+    print_separator
+    echo "Total Runs:      1"
+    echo "Successful:      1"
+    echo "Failed:          0"
+    echo ""
+    echo "Successful Runs:"
+    echo "  ✓ Cross-consistency: ${REASONING_TASK} -> ${ANSWERING_TASK}"
+    print_separator
+else
+    log_error "Cross-consistency evaluation failed!"
+    
+    # Show summary
+    print_separator
+    log_info "Evaluation Summary"
+    print_separator
+    echo "Total Runs:      1"
+    echo "Successful:      0"
+    echo "Failed:          1"
+    echo ""
+    echo "Failed Runs:"
+    echo "  ✗ Cross-consistency: ${REASONING_TASK} -> ${ANSWERING_TASK}"
+    print_separator
+    exit 1
+fi</content>
 <parameter name="filePath">/user/home/aguimas/data/PhD/Active_Dev/lm-evaluation-harness/run_tasks-scripts/run_cross_consistency.sh

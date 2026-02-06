@@ -52,7 +52,11 @@ def mode_multi_turn_CoT(args: argparse.Namespace) -> Dict:
                 "pred_probs": [],
             }
 
-            predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chain"] = shorten_reasoning_chain(sample["doc"]["Reasoning_Chain"], 100)
+            #predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chain"] = shorten_reasoning_chain(sample["doc"]["Reasoning_Chain"], 100)
+
+            #TO:DO - add option to shorten reasoning chain in config file and use it here instead of the full chain, which can be very long and hard to read in the output json file.
+            predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chain"] = sample["doc"]["Reasoning_Chain"]
+
             predictions_per_input_doc[doc_id]["pred_probs"] = [prob[0][0] for prob in sample["resps"]]
             predictions_per_input_doc[doc_id]["preds"] = predictions_per_input_doc[doc_id]["pred_probs"].index(max(predictions_per_input_doc[doc_id]["pred_probs"]))
 

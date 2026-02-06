@@ -108,23 +108,30 @@ run_multi_turn_evaluation() {
     local batch_size="${8:-auto}"
     local seed="${9:-0}"
     local cuda_devices="${10:-0}"
+    local limit="${11:-}"
     
     log_info "Running Multi-Turn: ${reasoning_task} -> ${answering_task}"
     log_info "Output: ${output_path}"
     
-    VLLM_WORKER_MULTIPROC_METHOD=spawn \
+    local cmd="VLLM_WORKER_MULTIPROC_METHOD=spawn \
     CUDA_VISIBLE_DEVICES=$cuda_devices \
     python -m lm_eval.reasoning_modes \
         --provider $provider \
         --mode $mode \
-        --reasoning_models "$reasoning_model" \
-        --answering_models "$answering_model" \
-        --reasoning_tasks "$reasoning_task" \
-        --answering_tasks "$answering_task" \
-        --output_path "$output_path" \
+        --reasoning_models \"$reasoning_model\" \
+        --answering_models \"$answering_model\" \
+        --reasoning_tasks \"$reasoning_task\" \
+        --answering_tasks \"$answering_task\" \
+        --output_path \"$output_path\" \
         --batch_size $batch_size \
         --seed $seed \
-        --log_samples
+        --log_samples"
+    
+    if [ -n "$limit" ]; then
+        cmd="$cmd --limit $limit"
+    fi
+    
+    eval "$cmd"
     
     local status=$?
     if [ $status -eq 0 ]; then
@@ -289,6 +296,8 @@ show_summary() {
     local failed_runs="$3"
     local start_time="$4"
     local end_time="$5"
+    local successful_list_name="$6"
+    local failed_list_name="$7"
     
     local duration=$((end_time - start_time))
     local hours=$((duration / 3600))
@@ -302,5 +311,18 @@ show_summary() {
     echo "Successful:      $successful_runs"
     echo "Failed:          $failed_runs"
     echo "Duration:        ${hours}h ${minutes}m ${seconds}s"
+    
+    if [ $successful_runs -gt 0 ]; then
+        echo ""
+        echo "Successful Runs:"
+        eval "for run in \"\${${successful_list_name}[@]}\"; do echo \"  ✓ \$run\"; done"
+    fi
+    
+    if [ $failed_runs -gt 0 ]; then
+        echo ""
+        echo "Failed Runs:"
+        eval "for run in \"\${${failed_list_name}[@]}\"; do echo \"  ✗ \$run\"; done"
+    fi
+    
     print_separator
 }

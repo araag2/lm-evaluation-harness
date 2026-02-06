@@ -200,6 +200,8 @@ TOTAL_RUNS=$((${#MODELS[@]} * ${#TASKS[@]} * ${#MODES[@]}))
 CURRENT_RUN=0
 SUCCESSFUL_RUNS=0
 FAILED_RUNS=0
+SUCCESSFUL_RUN_LIST=()
+FAILED_RUN_LIST=()
 
 # Show configuration
 print_separator
@@ -207,9 +209,15 @@ log_info "Evaluation Configuration"
 print_separator
 echo "Provider:        $PROVIDER"
 echo "Models:          ${#MODELS[@]}"
-echo "Model Details:   $(printf '%s\n' "${MODELS[@]}" | sed 's/^/  - /')"
+echo "Model Details:"
+for model in "${MODELS[@]}"; do
+    echo "  - $model"
+done
 echo "Tasks:           ${#TASKS[@]}"
-echo "Task Details:    $(printf '%s\n' "${TASKS[@]}" | sed 's/^/  - /')"
+echo "Task Details:"
+for task in "${TASKS[@]}"; do
+    echo "  - $task"
+done
 echo "Modes:           ${MODES[*]}"
 echo "Limit:           ${LIMIT:-None}"
 echo "Output Base:     $OUTPUT_BASE"
@@ -264,8 +272,10 @@ for MODEL_ARGS in "${MODELS[@]}"; do
             if run_single_evaluation "$PROVIDER" "$MODEL_ARGS" "$TASK" "$MODE" "$OUTPUT_PATH" \
                                     "$BATCH_SIZE" "$SEED" "$CUDA_DEVICES" "$LIMIT"; then
                 SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
+                SUCCESSFUL_RUN_LIST+=("${TASK} (${MODE}) with ${MODEL_NAME}")
             else
                 FAILED_RUNS=$((FAILED_RUNS + 1))
+                FAILED_RUN_LIST+=("${TASK} (${MODE}) with ${MODEL_NAME}")
                 log_warning "Continuing with next evaluation..."
             fi
             
@@ -278,7 +288,7 @@ done
 END_TIME=$(date +%s)
 
 # Show summary
-show_summary "$TOTAL_RUNS" "$SUCCESSFUL_RUNS" "$FAILED_RUNS" "$START_TIME" "$END_TIME"
+show_summary "$TOTAL_RUNS" "$SUCCESSFUL_RUNS" "$FAILED_RUNS" "$START_TIME" "$END_TIME" SUCCESSFUL_RUN_LIST FAILED_RUN_LIST
 
 # Exit with error if any runs failed
 if [ $FAILED_RUNS -gt 0 ]; then

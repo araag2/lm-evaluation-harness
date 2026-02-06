@@ -29,6 +29,7 @@ OUTPUT_BASE="./outputs"
 CUDA_DEVICES="0"
 BATCH_SIZE="auto"
 SEED="0"
+LIMIT=""
 DRY_RUN=false
 USE_TIMESTAMP=false
 SAME_MODEL=true  # Use same model for reasoning and answering by default
@@ -128,6 +129,10 @@ while [[ $# -gt 0 ]]; do
             SEED="$2"
             shift 2
             ;;
+        --limit)
+            LIMIT="$2"
+            shift 2
+            ;;
         --timestamp)
             USE_TIMESTAMP=true
             shift
@@ -135,6 +140,15 @@ while [[ $# -gt 0 ]]; do
         --dry-run)
             DRY_RUN=true
             shift
+            ;;
+        --config)
+            if [ -f "$2" ]; then
+                source "$2"
+            else
+                log_error "Config file not found: $2"
+                exit 1
+            fi
+            shift 2
             ;;
         --help|-h)
             cat << EOF
@@ -160,10 +174,12 @@ Evaluation Options:
   --gpu ID                         CUDA device ID (default: 0)
   --batch-size SIZE                Batch size (default: auto)
   --seed SEED                      Random seed (default: 0)
+  --limit NUM                      Limit number of samples per task
 
 Other Options:
   --timestamp                      Add timestamp to output paths
   --dry-run                        Show what would run without executing
+  --config FILE                    Load configuration from file
   --help, -h                       Show this help message
 
 Examples:
@@ -212,20 +228,41 @@ TOTAL_RUNS=$((${#REASONING_MODELS[@]} * ${#TASK_PAIRS[@]}))
 CURRENT_RUN=0
 SUCCESSFUL_RUNS=0
 FAILED_RUNS=0
+SUCCESSFUL_RUN_LIST=()
+FAILED_RUN_LIST=()
 
 # Show configuration
 print_separator
 log_info "Multi-Turn Evaluation Configuration"
 print_separator
-echo "Provider:        $PROVIDER"
-echo "Mode:            $MODE"
-echo "Reasoning Models: ${#REASONING_MODELS[@]}"
-echo "Answering Models: ${#ANSWERING_MODELS[@]}"
-echo "Task Pairs:      ${#TASK_PAIRS[@]}"
-echo "Output Base:     $OUTPUT_BASE"
-echo "GPU:             $CUDA_DEVICES"
-echo "Total Runs:      $TOTAL_RUNS"
-echo "Dry Run:         $DRY_RUN"
+echo "Provider:           $PROVIDER"
+echo "Mode:               $MODE"
+echo "Reasoning Models:   ${#REASONING_MODELS[@]}"
+echo "Reasoning Model Details:"
+for model in "${REASONING_MODELS[@]}"; do
+    echo "  - $model"
+done
+echo "Answering Models:   ${#ANSWERING_MODELS[@]}"
+echo "Answering Model Details:"
+for model in "${ANSWERING_MODELS[@]}"; do
+    echo "  - $model"
+done
+echo "Task Pairs:         ${#TASK_PAIRS[@]}"
+echo "Task Details:"
+for pair in "${TASK_PAIRS[@]}"; do
+    echo "  - $pair"
+done
+echo "Output Base:        $OUTPUT_BASE"
+echo "GPU:                $CUDA_DEVICES"
+echo "Batch Size:         $BATCH_SIZE"
+echo "Seed:               $SEED"
+if [ -n "$LIMIT" ]; then
+    echo "Limit:              $LIMIT"
+else
+    echo "Limit:              None"
+fi
+echo "Total Runs:         $TOTAL_RUNS"
+echo "Dry Run:            $DRY_RUN"
 print_separator
 
 # Exit if dry-run
@@ -267,10 +304,12 @@ for i in "${!REASONING_MODELS[@]}"; do
         if run_multi_turn_evaluation "$PROVIDER" "$MODE" \
                                     "$REASONING_MODEL" "$ANSWERING_MODEL" \
                                     "$REASONING_TASK" "$ANSWERING_TASK" \
-                                    "$OUTPUT_PATH" "$BATCH_SIZE" "$SEED" "$CUDA_DEVICES"; then
+                                    "$OUTPUT_PATH" "$BATCH_SIZE" "$SEED" "$CUDA_DEVICES" "$LIMIT"; then
             SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
+            SUCCESSFUL_RUN_LIST+=("${REASONING_TASK} -> ${ANSWERING_TASK} with ${REASONING_MODEL_NAME}")
         else
             FAILED_RUNS=$((FAILED_RUNS + 1))
+            FAILED_RUN_LIST+=("${REASONING_TASK} -> ${ANSWERING_TASK} with ${REASONING_MODEL_NAME}")
             log_warning "Continuing with next evaluation..."
         fi
         
@@ -282,7 +321,7 @@ done
 END_TIME=$(date +%s)
 
 # Show summary
-show_summary "$TOTAL_RUNS" "$SUCCESSFUL_RUNS" "$FAILED_RUNS" "$START_TIME" "$END_TIME"
+show_summary "$TOTAL_RUNS" "$SUCCESSFUL_RUNS" "$FAILED_RUNS" "$START_TIME" "$END_TIME" SUCCESSFUL_RUN_LIST FAILED_RUN_LIST
 
 # Exit with error if any runs failed
 if [ $FAILED_RUNS -gt 0 ]; then

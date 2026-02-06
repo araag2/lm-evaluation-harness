@@ -172,28 +172,31 @@ configure_runtime() {
 
 show_summary_and_confirm() {
     print_separator
-    log_info "Evaluation Summary"
+    log_info "Interactive Evaluation Configuration"
     print_separator
     echo "Mode:            $EVAL_MODE"
     echo "Models:          ${#SELECTED_MODELS[@]}"
-    
+    echo "Model Details:   $(printf '\n%s' "${SELECTED_MODELS[@]}" | sed 's/^/  - /')"
+
     if [ "$EVAL_MODE" = "single" ]; then
         echo "Tasks:           ${#SELECTED_TASKS[@]}"
+        echo "Task Details:    $(printf '\n%s' "${SELECTED_TASKS[@]}" | sed 's/^/  - /')"
         echo "Inference Modes: ${INFERENCE_MODES[*]}"
         TOTAL_RUNS=$((${#SELECTED_MODELS[@]} * ${#SELECTED_TASKS[@]} * ${#INFERENCE_MODES[@]}))
     else
         echo "Task Pairs:      ${#SELECTED_PAIRS[@]}"
+        echo "Pair Details:    $(printf '\n%s' "${SELECTED_PAIRS[@]}" | sed 's/^/  - /')"
         TOTAL_RUNS=$((${#SELECTED_MODELS[@]} * ${#SELECTED_PAIRS[@]}))
     fi
-    
+
     echo "GPU:             $CUDA_DEVICES"
     echo "Batch Size:      $BATCH_SIZE"
     echo "Seed:            $SEED"
-    echo "Output:          $OUTPUT_BASE"
+    echo "Output Base:     $OUTPUT_BASE"
     echo "Timestamp:       $USE_TIMESTAMP"
     echo "Total Runs:      $TOTAL_RUNS"
     print_separator
-    
+
     read -p "Proceed with evaluation? [y/N]: " CONFIRM
     if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
         log_info "Evaluation cancelled"
