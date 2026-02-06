@@ -1,8 +1,0 @@
-task: TrialBench_mortality_rate_prediction_CoT_SC
-dataset_path: araag2/TrialBench
-dataset_name: mortality_rate_prediction_processed
-doc_to_text: !function utils.mortality_rate_doc_to_text_reasoning
-process_docs: !function utils.process_docs_exclude_phase4
-include: _default_TrialBench_binary_CoT_SC.yaml
-metadata:
-  version: 1.0

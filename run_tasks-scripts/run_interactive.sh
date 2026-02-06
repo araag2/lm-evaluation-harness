@@ -47,16 +47,18 @@ select_mode() {
 
 select_models() {
     echo "Select Model Group:"
-    select MODEL_GROUP in "4B Models" "8B Models" "Medical Models" "All Models" "Custom"; do
+    select MODEL_GROUP in "Tiny Models" "4B Models" "8B Models" "Medical Models" "All Models" "Custom"; do
         case $MODEL_GROUP in
+            "Tiny Models") SELECTED_MODELS=("${MODELS_TINY[@]}"); break ;;
             "4B Models") SELECTED_MODELS=("${MODELS_4B[@]}"); break ;;
             "8B Models") SELECTED_MODELS=("${MODELS_8B[@]}"); break ;;
             "Medical Models") SELECTED_MODELS=("${MODELS_MEDICAL[@]}"); break ;;
             "All Models") SELECTED_MODELS=("${MODELS_ALL[@]}"); break ;;
             "Custom")
                 echo "Available model presets:"
-                echo "  qwen3-4b, gemma-4b, qwen3-8b, llama-8b,"
-                echo "  deepseek-8b, ministral-8b, fleming-7b, panacea-7b"
+                echo "  qwen3-0.5b, gemma-270m, qwen3-4b, gemma-4b,"
+                echo "  qwen3-8b, llama-8b, deepseek-8b, ministral-8b,"
+                echo "  fleming-7b, panacea-7b"
                 read -p "Enter model preset(s) (comma-separated): " MODEL_INPUT
                 IFS=',' read -ra MODEL_LIST <<< "$MODEL_INPUT"
                 SELECTED_MODELS=()
@@ -74,15 +76,17 @@ select_models() {
 
 select_tasks() {
     echo "Select Task Group:"
-    select TASK_GROUP in "TrialBench" "TrialPanorama" "MedQA Suite" "Evidence Tasks" "TREC Tasks" "Meta-Analysis" "Summary Tasks" "All Tasks" "Custom"; do
+    select TASK_GROUP in "QA Tasks" "NLI Tasks" "IE Tasks" "ES Tasks" "Ranking Tasks" "TrialBench" "TrialPanorama" "TREC Tasks" "Small Tasks" "All Tasks" "Custom"; do
         case $TASK_GROUP in
+            "QA Tasks") SELECTED_TASKS=("${QA_TASKS[@]}"); break ;;
+            "NLI Tasks") SELECTED_TASKS=("${NLI_TASKS[@]}"); break ;;
+            "IE Tasks") SELECTED_TASKS=("${IE_TASKS[@]}"); break ;;
+            "ES Tasks") SELECTED_TASKS=("${ES_TASKS[@]}"); break ;;
+            "Ranking Tasks") SELECTED_TASKS=("${RANKING_TASKS[@]}"); break ;;
             "TrialBench") SELECTED_TASKS=("${TRIALBENCH_TASKS[@]}"); break ;;
             "TrialPanorama") SELECTED_TASKS=("${TRIALPANORAMA_TASKS[@]}"); break ;;
-            "MedQA Suite") SELECTED_TASKS=("${MEDQA_TASKS[@]}"); break ;;
-            "Evidence Tasks") SELECTED_TASKS=("${EVIDENCE_TASKS[@]}"); break ;;
             "TREC Tasks") SELECTED_TASKS=("${TREC_TASKS[@]}"); break ;;
-            "Meta-Analysis") SELECTED_TASKS=("${META_ANALYSIS_TASKS[@]}"); break ;;
-            "Summary Tasks") SELECTED_TASKS=("${SUMMARY_TASKS[@]}"); break ;;
+            "Small Tasks") SELECTED_TASKS=("${SMALL_TASKS[@]}"); break ;;
             "All Tasks") SELECTED_TASKS=("${ALL_TASKS[@]}"); break ;;
             "Custom")
                 read -p "Enter task name(s) (comma-separated): " TASK_INPUT
@@ -98,11 +102,17 @@ select_tasks() {
 
 select_task_pairs() {
     echo "Select Task Pair Group:"
-    select PAIR_GROUP in "MedQA Pairs" "Evidence Pairs" "TREC Pairs" "All Pairs" "Custom"; do
+    select PAIR_GROUP in "QA Pairs" "NLI Pairs" "IE Pairs" "ES Pairs" "Ranking Pairs" "TrialBench Pairs" "TrialPanorama Pairs" "TREC Pairs" "Small Pairs" "All Pairs" "Custom"; do
         case $PAIR_GROUP in
-            "MedQA Pairs") SELECTED_PAIRS=("${QA_TASK_PAIRS[@]}"); break ;;
-            "Evidence Pairs") SELECTED_PAIRS=("${NLI_TASK_PAIRS[@]}"); break ;;
+            "QA Pairs") SELECTED_PAIRS=("${QA_TASK_PAIRS[@]}"); break ;;
+            "NLI Pairs") SELECTED_PAIRS=("${NLI_TASK_PAIRS[@]}"); break ;;
+            "IE Pairs") SELECTED_PAIRS=("${IE_TASK_PAIRS[@]}"); break ;;
+            "ES Pairs") SELECTED_PAIRS=("${ES_TASK_PAIRS[@]}"); break ;;
+            "Ranking Pairs") SELECTED_PAIRS=("${RANKING_TASK_PAIRS[@]}"); break ;;
+            "TrialBench Pairs") SELECTED_PAIRS=("${TRIALBENCH_TASK_PAIRS[@]}"); break ;;
+            "TrialPanorama Pairs") SELECTED_PAIRS=("${TRIALPANORAMA_TASK_PAIRS[@]}"); break ;;
             "TREC Pairs") SELECTED_PAIRS=("${TREC_TASK_PAIRS[@]}"); break ;;
+            "Small Pairs") SELECTED_PAIRS=("${SMALL_TASK_PAIRS[@]}"); break ;;
             "All Pairs") SELECTED_PAIRS=("${ALL_TASK_PAIRS[@]}"); break ;;
             "Custom")
                 read -p "Enter task pair (format: 'task:CoT|task:0-shot'): " PAIR_INPUT

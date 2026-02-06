@@ -1,6 +1,9 @@
-group: TrialBench_mortality_rate_prediction_CoT
+group: TrialBench_mortality_rate_prediction_CoT_group
 task:
  - mortality_rate_prediction
+ - mortality_rate_prediction_phase1
+ - mortality_rate_prediction_phase2
+ - mortality_rate_prediction_phase3
 tag:
  - chain-of-thought
  - mortality_rate_prediction

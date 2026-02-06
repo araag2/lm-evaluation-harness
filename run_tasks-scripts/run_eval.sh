@@ -18,6 +18,7 @@ source "${SCRIPT_DIR}/lib/eval_utils.sh"
 # Source configurations
 source "${SCRIPT_DIR}/config/models.conf"
 source "${SCRIPT_DIR}/config/tasks.conf"
+source "${SCRIPT_DIR}/config/tasks_pairs.conf"
 
 # Default values
 PROVIDER="vllm"
@@ -45,6 +46,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --model-group)
             case "$2" in
+                TINY) MODELS=("${MODELS_TINY[@]}") ;;
                 4B) MODELS=("${MODELS_4B[@]}") ;;
                 8B) MODELS=("${MODELS_8B[@]}") ;;
                 MEDICAL) MODELS=("${MODELS_MEDICAL[@]}") ;;
@@ -59,13 +61,15 @@ while [[ $# -gt 0 ]]; do
             ;;
         --task-group)
             case "$2" in
+                QA) TASKS=("${QA_TASKS[@]}") ;;
+                NLI) TASKS=("${NLI_TASKS[@]}") ;;
+                IE) TASKS=("${IE_TASKS[@]}") ;;
+                ES) TASKS=("${ES_TASKS[@]}") ;;
+                RANKING) TASKS=("${RANKING_TASKS[@]}") ;;
                 TRIALBENCH) TASKS=("${TRIALBENCH_TASKS[@]}") ;;
                 TRIALPANORAMA) TASKS=("${TRIALPANORAMA_TASKS[@]}") ;;
-                MEDQA) TASKS=("${MEDQA_TASKS[@]}") ;;
-                EVIDENCE) TASKS=("${EVIDENCE_TASKS[@]}") ;;
                 TREC) TASKS=("${TREC_TASKS[@]}") ;;
-                META_ANALYSIS) TASKS=("${META_ANALYSIS_TASKS[@]}") ;;
-                SUMMARY) TASKS=("${SUMMARY_TASKS[@]}") ;;
+                SMALL) TASKS=("${SMALL_TASKS[@]}") ;;
                 ALL) TASKS=("${ALL_TASKS[@]}") ;;
                 *) log_error "Unknown task group: $2"; exit 1 ;;
             esac
@@ -124,11 +128,11 @@ Usage: $0 [OPTIONS]
 
 Model Selection:
   --model MODEL[,MODEL2,...]       Specify model(s) by preset name or full args
-  --model-group GROUP              Use predefined model group (4B, 8B, MEDICAL, ALL)
+  --model-group GROUP              Use predefined model group (TINY, 4B, 8B, MEDICAL, ALL)
 
 Task Selection:
   --task TASK[,TASK2,...]          Specify task(s) by name
-  --task-group GROUP               Use predefined task group (TRIALBENCH, MEDQA, etc.)
+  --task-group GROUP               Use predefined task group (QA, NLI, IE, ES, RANKING, TRIALBENCH, TRIALPANORAMA, TREC, SMALL, ALL)
 
 Evaluation Options:
   --mode MODE[,MODE2,...]          Inference mode(s) (0-shot, CoT, SC)
@@ -146,19 +150,19 @@ Other Options:
   --help, -h                       Show this help message
 
 Model Presets:
-  qwen3-4b, gemma-4b, qwen3-8b, llama-8b, deepseek-8b, 
-  ministral-8b, fleming-7b, panacea-7b
+  qwen3-0.5b, gemma-270m, qwen3-4b, gemma-4b, qwen3-8b, llama-8b, 
+  deepseek-8b, ministral-8b, fleming-7b, panacea-7b
 
 Task Groups:
-  TRIALBENCH, TRIALPANORAMA, MEDQA, EVIDENCE, TREC, 
-  META_ANALYSIS, SUMMARY, ALL
+  QA, NLI, IE, ES, RANKING,
+  TRIALBENCH, TRIALPANORAMA, TREC, SMALL, ALL
 
 Examples:
   # Run single model on single task
   $0 --model qwen3-4b --task MedQA --mode 0-shot
 
   # Run multiple models on task group
-  $0 --model qwen3-4b,llama-8b --task-group MEDQA --modes "0-shot,CoT"
+  $0 --model qwen3-4b,llama-8b --task-group QA --modes "0-shot,CoT"
 
   # Use model group with dry-run
   $0 --model-group 8B --task-group TRIALBENCH --modes "0-shot,CoT,SC" --dry-run
@@ -203,8 +207,11 @@ log_info "Evaluation Configuration"
 print_separator
 echo "Provider:        $PROVIDER"
 echo "Models:          ${#MODELS[@]}"
+echo "Model Details:   $(printf '%s\n' "${MODELS[@]}" | sed 's/^/  - /')"
 echo "Tasks:           ${#TASKS[@]}"
+echo "Task Details:    $(printf '%s\n' "${TASKS[@]}" | sed 's/^/  - /')"
 echo "Modes:           ${MODES[*]}"
+echo "Limit:           ${LIMIT:-None}"
 echo "Output Base:     $OUTPUT_BASE"
 echo "GPU:             $CUDA_DEVICES"
 echo "Batch Size:      $BATCH_SIZE"

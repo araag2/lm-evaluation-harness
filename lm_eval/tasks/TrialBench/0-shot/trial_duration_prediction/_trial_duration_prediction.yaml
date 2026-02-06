@@ -1,4 +1,4 @@
-group: TrialBench_trial_duration_prediction_0-shot
+group: TrialBench_trial_duration_prediction_0-shot_group
 task:
  - trial_duration_prediction
  - trial_duration_prediction_phase1

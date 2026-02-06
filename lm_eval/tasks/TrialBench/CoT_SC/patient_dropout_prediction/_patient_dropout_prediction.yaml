@@ -1,6 +1,10 @@
-group: TrialBench_patient_dropout_prediction_CoT_SC
+group: TrialBench_patient_dropout_prediction_CoT_SC_group
 task:
  - patient_dropout_prediction
+ - patient_dropout_prediction_phase1
+ - patient_dropout_prediction_phase2
+ - patient_dropout_prediction_phase3
+ - patient_dropout_prediction_phase4
 tag:
  - chain-of-thought
  - self-consistency

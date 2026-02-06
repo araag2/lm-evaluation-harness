@@ -127,7 +127,7 @@ Examples:
      --reasoning-task MedQA:CoT --answering-task MedQA:0-shot
 
   # Test with tiny models and limited samples
-  $0 --model-group TINY --reasoning-task MedQA:CoT --answering-task MedQA:0-shot --limit 10
+  $0 --model-group TINY --reasoning-task MedQA_0-shot:MedQA --answering-task MedQA_0-shot:MedQA --limit 10
 
   # Full evaluation with 8B models
   $0 --model-group 8B --reasoning-task MedQA:CoT --answering-task MedQA:0-shot

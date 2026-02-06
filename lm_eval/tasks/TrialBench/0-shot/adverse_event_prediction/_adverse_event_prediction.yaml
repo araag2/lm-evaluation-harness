@@ -1,4 +1,4 @@
-group: TrialBench_adverse_event_prediction_0-shot
+group: TrialBench_adverse_event_prediction_0-shot_group
 task:
  - adverse_event_prediction
  - adverse_event_prediction_phase1

@@ -1,4 +1,4 @@
-group: TrialBench_mortality_rate_prediction_0-shot
+group: TrialBench_mortality_rate_prediction_0-shot_group
 task:
  - mortality_rate_prediction
  - mortality_rate_prediction_phase1

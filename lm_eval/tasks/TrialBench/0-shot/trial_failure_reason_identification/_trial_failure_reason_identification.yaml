@@ -1,4 +1,4 @@
-group: TrialBench_trial_failure_reason_identification_0-shot
+group: TrialBench_trial_failure_reason_identification_0-shot_group
 task:
  - trial_failure_reason_identification
  - trial_failure_reason_identification_phase1

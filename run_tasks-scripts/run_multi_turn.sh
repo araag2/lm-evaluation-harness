@@ -53,6 +53,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --model-group)
             case "$2" in
+                TINY) 
+                    REASONING_MODELS=("${MODELS_TINY[@]}")
+                    ANSWERING_MODELS=("${MODELS_TINY[@]}")
+                    ;;
                 4B) 
                     REASONING_MODELS=("${MODELS_4B[@]}")
                     ANSWERING_MODELS=("${MODELS_4B[@]}")
@@ -91,9 +95,15 @@ while [[ $# -gt 0 ]]; do
             ;;
         --task-pairs)
             case "$2" in
-                MEDQA) TASK_PAIRS=("${QA_TASK_PAIRS[@]}") ;;
-                EVIDENCE) TASK_PAIRS=("${NLI_TASK_PAIRS[@]}") ;;
+                QA) TASK_PAIRS=("${QA_TASK_PAIRS[@]}") ;;
+                NLI) TASK_PAIRS=("${NLI_TASK_PAIRS[@]}") ;;
+                IE) TASK_PAIRS=("${IE_TASK_PAIRS[@]}") ;;
+                ES) TASK_PAIRS=("${ES_TASK_PAIRS[@]}") ;;
+                RANKING) TASK_PAIRS=("${RANKING_TASK_PAIRS[@]}") ;;
+                TRIALBENCH) TASK_PAIRS=("${TRIALBENCH_TASK_PAIRS[@]}") ;;
+                TRIALPANORAMA) TASK_PAIRS=("${TRIALPANORAMA_TASK_PAIRS[@]}") ;;
                 TREC) TASK_PAIRS=("${TREC_TASK_PAIRS[@]}") ;;
+                SMALL) TASK_PAIRS=("${SMALL_TASK_PAIRS[@]}") ;;
                 ALL) TASK_PAIRS=("${ALL_TASK_PAIRS[@]}") ;;
                 *) 
                     # Custom pair format: "task1:CoT|task1:0-shot"
@@ -137,12 +147,12 @@ Mode Selection:
 
 Model Selection:
   --model MODEL[,MODEL2,...]       Use same model(s) for reasoning and answering
-  --model-group GROUP              Use predefined model group (4B, 8B, MEDICAL, ALL)
+  --model-group GROUP              Use predefined model group (TINY, 4B, 8B, MEDICAL, ALL)
   --reasoning-model MODEL          Separate reasoning model
   --answering-model MODEL          Separate answering model
 
 Task Selection:
-  --task-pairs GROUP               Task pair group (MEDQA, EVIDENCE, TREC, ALL)
+  --task-pairs GROUP               Task pair group (QA, NLI, IE, ES, RANKING, TRIALBENCH, TRIALPANORAMA, TREC, SMALL, ALL)
                                    Or custom pair: "task:CoT|task:0-shot"
 
 Evaluation Options:
@@ -157,8 +167,8 @@ Other Options:
   --help, -h                       Show this help message
 
 Examples:
-  # Run CoT with single model on MedQA tasks
-  $0 --mode multi-turn_CoT --model qwen3-4b --task-pairs MEDQA
+  # Run CoT with single model on QA tasks
+  $0 --mode multi-turn_CoT --model qwen3-4b --task-pairs QA
 
   # Run SC-CoT with all 8B models on all tasks
   $0 --mode multi-turn_CoT-SC --model-group 8B --task-pairs ALL

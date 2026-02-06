@@ -1,6 +1,10 @@
-group: TrialBench_trial_approval_prediction_CoT
+group: TrialBench_trial_approval_prediction_CoT_group
 task:
  - trial_approval_prediction
+ - trial_approval_prediction_phase1
+ - trial_approval_prediction_phase2
+ - trial_approval_prediction_phase3
+ - trial_approval_prediction_phase4
 tag:
  - chain-of-thought
  - trial_approval_prediction

@@ -1,4 +1,4 @@
-group: TrialBench_trial_duration_prediction_CoT_SC
+group: TrialBench_trial_duration_prediction_CoT_SC_group
 task:
  - trial_duration_prediction
  - trial_duration_prediction_phase1

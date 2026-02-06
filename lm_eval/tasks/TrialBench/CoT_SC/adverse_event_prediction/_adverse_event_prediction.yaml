@@ -1,6 +1,9 @@
-group: TrialBench_adverse_event_prediction_CoT_SC
+group: TrialBench_adverse_event_prediction_CoT_SC_group
 task:
  - adverse_event_prediction
+ - adverse_event_prediction_phase1
+ - adverse_event_prediction_phase2
+ - adverse_event_prediction_phase3
 tag:
  - chain-of-thought
  - self-consistency

@@ -1,3 +1,0 @@
-include: 
-  - _default_binary.yaml
-  - _TrialBench_CoT_SC.yaml

@@ -1,4 +1,4 @@
-group: TrialBench_trial_approval_prediction_0-shot
+group: TrialBench_trial_approval_prediction_0-shot_group
 task:
  - trial_approval_prediction
  - trial_approval_prediction_phase1

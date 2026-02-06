@@ -1,6 +1,10 @@
-group: TrialBench_trial_failure_reason_identification_CoT_SC
+group: TrialBench_trial_failure_reason_identification_CoT_SC_group
 task:
  - trial_failure_reason_identification
+ - trial_failure_reason_identification_phase1
+ - trial_failure_reason_identification_phase2
+ - trial_failure_reason_identification_phase3
+ - trial_failure_reason_identification_phase4
 tag:
  - chain-of-thought
  - self-consistency

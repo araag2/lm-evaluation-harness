@@ -1,0 +1,8 @@
+task: TrialBench_patient_dropout_prediction_phase3_CoT_SC
+dataset_path: araag2/TrialBench
+dataset_name: patient_dropout_prediction_processed
+doc_to_text: !function utils.patient_dropout_doc_to_text_reasoning
+process_docs: !function utils.process_phase_3
+include: ../_default_binary.yaml
+metadata:
+  version: 1.0

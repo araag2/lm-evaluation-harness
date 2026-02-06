@@ -1,4 +1,4 @@
-group: TrialBench_patient_dropout_prediction_0-shot
+group: TrialBench_patient_dropout_prediction_0-shot_group
 task:
  - patient_dropout_prediction
  - patient_dropout_prediction_phase1
