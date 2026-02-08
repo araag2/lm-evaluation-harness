@@ -17,11 +17,11 @@ run_tasks-scripts/
 │   ├── example_full_trialbench.conf
 │   ├── example_multi_turn.conf
 │   ├── example_cross_consistency_tiny.conf
-│   ├── example_opt125m_0-shot_small-tasks_limited.conf
-│   ├── example_opt125m_0-shot_all-tasks_limited.conf
-│   ├── example_opt125m_multi-turn_CoT_small-tasks_limited.conf
-│   ├── example_opt125m_multi-turn_CoT-SC_small-tasks_limited.conf
-│   └── example_opt125m_cross-consistency_small-tasks_limited.conf
+│   ├── example_qwen2-0.5b_0-shot_small-tasks_limited.conf
+│   ├── example_qwen2-0.5b_0-shot_all-tasks_limited.conf
+│   ├── example_qwen2-0.5b_multi-turn_CoT_small-tasks_limited.conf
+│   ├── example_qwen2-0.5b_multi-turn_CoT-SC_small-tasks_limited.conf
+│   └── example_qwen2-0.5b_cross-consistency_small-tasks_limited.conf
 ├── run_eval.sh                # Main unified runner
 ├── run_multi_turn.sh          # Multi-turn evaluation runner
 ├── run_cross_consistency.sh   # Cross-consistency evaluation runner
@@ -74,24 +74,24 @@ run_tasks-scripts/
 
 ```bash
 # Quick test run
-./run_eval.sh --config examples/example_quick_run.conf
+./run_eval.sh --config examples/default/quick_run.conf
 
 # Full TrialBench evaluation
-./run_eval.sh --config examples/example_full_trialbench.conf
+./run_eval.sh --config examples/default/full_trialbench.conf
 
 # OPT-125M testing configurations (fast validation)
-./run_eval.sh --config examples/example_opt125m_0-shot_small-tasks_limited.conf    # 0-shot small tasks
-./run_eval.sh --config examples/example_opt125m_0-shot_all-tasks_limited.conf      # 0-shot all compatible tasks
+./run_eval.sh --config examples/default/qwen2-0.5b_0-shot_small-tasks_limited.conf    # 0-shot small tasks
+./run_eval.sh --config examples/default/qwen2-0.5b_0-shot_all-tasks_limited.conf      # 0-shot all compatible tasks
 
 # Multi-turn CoT evaluations
-./run_multi_turn.sh --config examples/example_opt125m_multi-turn_CoT_small-tasks_limited.conf      # CoT pairs
-./run_multi_turn.sh --config examples/example_opt125m_multi-turn_CoT-SC_small-tasks_limited.conf   # CoT-SC pairs
+./run_multi_turn.sh --config examples/default/qwen2-0.5b_multi-turn_CoT_small-tasks_limited.conf      # CoT pairs
+./run_multi_turn.sh --config examples/default/qwen2-0.5b_multi-turn_CoT-SC_small-tasks_limited.conf   # CoT-SC pairs
 
 # Cross-consistency evaluation
-./run_cross_consistency.sh --config examples/example_opt125m_cross-consistency_small-tasks_limited.conf
+./run_cross_consistency.sh --config examples/default/qwen2-0.5b_cross-consistency_small-tasks_limited.conf
 
 # Dry-run to preview what would execute
-./run_eval.sh --config examples/example_full_trialbench.conf --dry-run
+./run_eval.sh --config examples/default/full_trialbench.conf --dry-run
 ```
 
 ### 4. Multi-Turn Evaluations
@@ -124,7 +124,7 @@ Cross-consistency evaluates reasoning chains by having multiple models verify ea
     --answering-task MedQA:0-shot --limit 10
 
 # Use configuration file
-./run_cross_consistency.sh --config examples/example_cross_consistency_tiny.conf
+./run_cross_consistency.sh --config examples/default/cross_consistency_tiny.conf
 ```
 
 ### 5. Interactive Mode
