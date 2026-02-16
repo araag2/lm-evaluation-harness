@@ -230,6 +230,15 @@ fi
 
 # Execute
 log_info "Starting cross-consistency evaluation..."
+
+# Clear GPU memory before starting evaluation
+log_info "Clearing GPU memory..."
+CUDA_VISIBLE_DEVICES=$CUDA_DEVICES python -c "import torch; torch.cuda.empty_cache(); import gc; gc.collect(); print('GPU memory cleared')" || true
+
+# Kill any remaining vLLM processes
+pkill -f "EngineCore" || true
+pkill -f "vllm" || true
+
 if eval "$CMD"; then
     log_success "Cross-consistency evaluation completed!"
     log_info "Results saved to: $OUTPUT_DIR"

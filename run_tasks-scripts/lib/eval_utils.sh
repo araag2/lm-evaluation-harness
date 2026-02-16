@@ -79,6 +79,7 @@ run_single_evaluation() {
     log_info "Output: ${output_path}"
     
     local cmd="VLLM_WORKER_MULTIPROC_METHOD=spawn \
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
     CUDA_VISIBLE_DEVICES=$cuda_devices \
     python -m lm_eval \
         --model $provider \
@@ -92,6 +93,14 @@ run_single_evaluation() {
     if [ -n "$limit" ]; then
         cmd="$cmd --limit $limit"
     fi
+    
+    # Clear GPU memory before starting evaluation
+    log_info "Clearing GPU memory..."
+    CUDA_VISIBLE_DEVICES=$cuda_devices python -c "import torch; torch.cuda.empty_cache(); import gc; gc.collect(); print('GPU memory cleared')" || true
+    
+    # Kill any remaining vLLM processes
+    pkill -f "EngineCore" || true
+    pkill -f "vllm" || true
     
     eval "$cmd"
 }
@@ -114,6 +123,7 @@ run_multi_turn_evaluation() {
     log_info "Output: ${output_path}"
     
     local cmd="VLLM_WORKER_MULTIPROC_METHOD=spawn \
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
     CUDA_VISIBLE_DEVICES=$cuda_devices \
     python -m lm_eval.reasoning_modes \
         --provider $provider \
@@ -130,6 +140,14 @@ run_multi_turn_evaluation() {
     if [ -n "$limit" ]; then
         cmd="$cmd --limit $limit"
     fi
+    
+    # Clear GPU memory before starting evaluation
+    log_info "Clearing GPU memory..."
+    CUDA_VISIBLE_DEVICES=$cuda_devices python -c "import torch; torch.cuda.empty_cache(); import gc; gc.collect(); print('GPU memory cleared')" || true
+    
+    # Kill any remaining vLLM processes
+    pkill -f "EngineCore" || true
+    pkill -f "vllm" || true
     
     eval "$cmd"
     
