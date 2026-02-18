@@ -1,6 +1,5 @@
 from lm_eval.reasoning_modes.reasoning_utils import *
-from lm_eval.reasoning_modes.voting.simple_voting_modes import simple_voting_modes
-from lm_eval.reasoning_modes.voting.mbr_voting_modes import mbr_voting_modes
+from lm_eval.reasoning_modes.voting.voting_modes import run_voting_modes
 
 def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
     if len(args.reasoning_models) != 1 or len(args.answering_models) != 1:
@@ -38,44 +37,26 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace) -> Dict:
             doc_to_text_module= doc_to_text_module
         )
 
-        for sample in raw_output["samples"][full_task_name]:
+        samples = raw_output["samples"][full_task_name]
+        extract_predictions_from_samples(samples, doc_to_choice, existing=predictions_per_input_doc)
+
+        # Accumulate reasoning chains (SC-specific: one chain per iteration)
+        for sample in samples:
             doc_id = sample["doc_id"]
-            if doc_id not in predictions_per_input_doc:
-                predictions_per_input_doc[doc_id] = {
-                    "doc" : copy.deepcopy(sample["doc"]),
-                    "preds": [],
-                    "pred_probs": [],
-                }
-
+            if "Reasoning_Chains" not in predictions_per_input_doc[doc_id]["doc"]:
                 predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"] = []
-
             predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(sample["doc"]["Reasoning_Chain"])
 
-            pred_probs = [prob[0][0] for prob in sample["resps"]]
-
-            predictions_per_input_doc[doc_id]["pred_probs"].append(pred_probs)    
-            predictions_per_input_doc[doc_id]["preds"].append(pred_probs.index(max(pred_probs)))
-
-
-    aggregated_metrics = simple_voting_modes(
-        predictions_per_input_doc=predictions_per_input_doc,
-        doc_to_choice=doc_to_choice,
-        task_def=task_def,
+    aggregated_metrics = run_voting_modes(
+        args,
+        predictions_per_input_doc,
+        doc_to_choice,
+        task_def,
+        base_dataset=base_dataset,
+        answering_model=answering_model,
+        answering_task=full_task_name,
+        doc_to_text_module=doc_to_text_module,
     )
-
-    #mbr_metrics = mbr_voting_modes(
-    #    args=args,
-    #    predictions_per_input_doc=predictions_per_input_doc,
-    #    base_dataset=base_dataset,
-    #    answering_model=answering_model,
-    #    answering_task=full_task_name,
-    #    doc_to_text_module=doc_to_text_module,
-    #    doc_to_choice=doc_to_choice,
-    #    task_def=task_def
-    #)
-    #
-    #aggregated_metrics.update(mbr_metrics["results"])
-
 
     return {
         "mode": "multi-turn_CoT-SC",
