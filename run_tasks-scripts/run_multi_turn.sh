@@ -157,7 +157,7 @@ Multi-Turn Evaluation Runner
 Usage: $0 [OPTIONS]
 
 Mode Selection:
-  --mode MODE                      Evaluation mode (multi-turn_CoT, multi-turn_CoT-SC, multi-turn_CoT-MBR)
+  --mode MODE                      Evaluation mode (multi-turn_CoT, multi-turn_CoT-SC, multi-turn_CoT-MBR, self-refine_CoT)
 
 Model Selection:
   --model MODEL[,MODEL2,...]       Use same model(s) for reasoning and answering
@@ -294,12 +294,7 @@ for i in "${!REASONING_MODELS[@]}"; do
         # Build output path
         TASK_NAME=$(echo ${REASONING_TASK} | tr ':' '_')
         OUTPUT_PATH="${OUTPUT_BASE}/${MODE}/${TASK_NAME}/${REASONING_MODEL_NAME}"
-        
-        if [ "$USE_TIMESTAMP" = true ]; then
-            OUTPUT_PATH=$(create_output_dir "$OUTPUT_PATH" true)
-        else
-            mkdir -p "$OUTPUT_PATH"
-        fi
+        mkdir -p "$OUTPUT_PATH"
         
         if run_multi_turn_evaluation "$PROVIDER" "$MODE" \
                                     "$REASONING_MODEL" "$ANSWERING_MODEL" \

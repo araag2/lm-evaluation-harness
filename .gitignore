@@ -31,6 +31,8 @@ data/
 temp/
 test_logs/
 samples_*.jsonl
+# Full-sample outputs (large); Summary_*.json files are tracked
+FullSamples_*.json
 
 # Caching
 lm_eval/caching/.cache

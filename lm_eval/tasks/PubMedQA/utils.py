@@ -16,7 +16,11 @@ def label_to_index(doc) -> int:
 def format_context(contexts):
     return "\n".join([f"- <{label}> : {context}" for label, context in contexts])
 
-relevant_keys = ["Context", "Question", "Reasoning_Chain", "Verified_Reasoning_Chain"]
+self_refine_feedback_prompt = "You are a medical expert specialized in biomedical question answering reviewing a reasoning chain based on a PubMed article.\n\nPubMed Article Information: \n\n{{Context}}\n\nQuestion: {{Question}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nCritique this reasoning chain. Identify any logical gaps, unsupported conclusions, unclear steps, or factual inaccuracies.\n\nProvide at least 2-3 specific points of improvement.\nFeedback: "
+
+self_refine_refine_prompt = "You are a medical expert specialized in biomedical question answering tasked with improving a reasoning chain based on a PubMed article.\n\nPubMed Article Information: \n\n{{Context}}\n\nQuestion: {{Question}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nFeedback: {{Feedback}}\n\nGiven the feedback above, revise the reasoning chain to:\n1 - Fill logical gaps with evidence from the PubMed article.\n2 - Clarify unclear reasoning steps.\n3 - Ensure all conclusions are directly supported.\nLet's think step by step, and at the very end write your answer in the form: \nAnswer: [Yes / No / Maybe] <END>"
+
+relevant_keys = ["Context", "Question", "Reasoning_Chain", "Verified_Reasoning_Chain", "Feedback"]
 
 def doc_to_text(doc, prompt = baseline_prompt):
     res = prompt
@@ -36,3 +40,9 @@ def doc_to_text_verify_reasoning(doc):
 
 def doc_to_text_answer_selection_after_verify_reasoning(doc):
     return doc_to_text(doc, answer_selection_after_verification_prompt)
+
+def doc_to_text_self_refine_feedback(doc):
+    return doc_to_text(doc, self_refine_feedback_prompt)
+
+def doc_to_text_self_refine_refine(doc):
+    return doc_to_text(doc, self_refine_refine_prompt)

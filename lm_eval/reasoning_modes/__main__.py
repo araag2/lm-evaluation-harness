@@ -1,3 +1,4 @@
+import copy
 import json
 import argparse
 import os
@@ -9,6 +10,7 @@ from lm_eval.reasoning_modes.multi_turn_CoT import mode_multi_turn_CoT
 from lm_eval.reasoning_modes.multi_turn_CoT_SC import mode_multi_turn_CoT_SC
 from lm_eval.reasoning_modes.cross_consistency import mode_cross_consistency
 from lm_eval.reasoning_modes.only_vote import mode_only_vote
+from lm_eval.reasoning_modes.Self_Refine_CoT import mode_self_refine_CoT
 
 # ---------------------------------------------------------------------------
 # Mode registry — add new modes here without touching main()
@@ -18,7 +20,18 @@ MODE_REGISTRY = {
     "multi-turn_CoT-SC": mode_multi_turn_CoT_SC,
     "cross-consistency": mode_cross_consistency,
     "only-vote":         mode_only_vote,
+    "self-refine_CoT":   mode_self_refine_CoT,
 }
+
+
+def make_summary_output(out: dict) -> dict:
+    """Return a copy of ``out`` with each sample's ``doc`` stripped to ``id`` and ``Label`` only."""
+    summary = copy.deepcopy(out)
+    for info in summary.get("samples", {}).values():
+        if "doc" in info:
+            doc = info["doc"]
+            info["doc"] = {k: doc[k] for k in ("id", "Label") if k in doc}
+    return summary
 
 
 def safe_open_w(path: str) -> object:
@@ -72,6 +85,12 @@ def main():
                         help="Skip MBR voting strategies.")
     parser.set_defaults(simple_voting=True, mbr_voting=False)
 
+    # Self-Refine flags
+    parser.add_argument('--refine_iterations', type=int, default=1,
+                        help="Number of Self-Refine feedback+refinement iterations.")
+    parser.add_argument('--stop_on_degradation', action='store_true',
+                        help="Stop Self-Refine early if answer log-likelihood decreases.")
+
     # Output Args
     parser.add_argument('--output_path', type=str, default="/cfs/home/u021010/PhD/active_dev/outputs/CoT-Debug/")
 
@@ -84,8 +103,11 @@ def main():
     out = mode_fn(args)
 
     if args.output_path:
-        with safe_open_w(f"{args.output_path}Summary_{datetime.now().strftime('%Y-%m-%dT%H-%M')}.json") as f:
+        timestamp = datetime.now().strftime('%Y-%m-%dT%H-%M')
+        with safe_open_w(f"{args.output_path}FullSamples_{timestamp}.json") as f:
             json.dump(out, f, indent=4, default=make_json_serializable)
+        with safe_open_w(f"{args.output_path}Summary_{timestamp}.json") as f:
+            json.dump(make_summary_output(out), f, indent=4, default=make_json_serializable)
         print(f"\n✅ Results written to {args.output_path}")
 
 

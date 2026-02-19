@@ -3,7 +3,7 @@ import copy
 import importlib
 import argparse
 
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any
 from datasets import Dataset, DatasetDict
 from lm_eval import evaluator, tasks
 
@@ -28,10 +28,12 @@ def format_results_dict(results: Dict[str, Any]) -> Dict[str, Any]:
 # Dataset Helpers
 # -------------------------
 
-def dataset_list_to_dataset_dict(dataset_list: list[dict], split_name: str = "test") -> DatasetDict:
-    """Convert a list of dictionaries into a DatasetDict."""
+def dataset_list_to_dataset_dict(dataset_list, split_name: str = "test") -> DatasetDict:
+    """Convert a list of dicts, a Dataset, or a DatasetDict into a DatasetDict."""
     if isinstance(dataset_list, DatasetDict):
         return dataset_list
+    if isinstance(dataset_list, Dataset):
+        return DatasetDict({split_name: dataset_list})
     return DatasetDict({split_name: Dataset.from_list(dataset_list)})
 
 
@@ -193,6 +195,47 @@ def run_answering_for_dataset(
     )
 
     return results
+
+
+def run_answering_for_datasets(
+    args: argparse.Namespace,
+    answering_model: str,
+    tasks_and_datasets: List[Tuple[str, Any]],
+    doc_to_text_module: str,
+    doc_to_text_func_name: str = "doc_to_text_answer_selection",
+) -> Dict[str, Any]:
+    """
+    Run answering for *multiple* datasets under a single model load.
+
+    ``tasks_and_datasets`` is a list of ``(task_name, dataset_with_reasoning)`` pairs.
+    All patched tasks are evaluated in one ``simple_evaluate`` call so the model is
+    loaded only once, regardless of how many datasets are passed.
+
+    Returns the raw ``simple_evaluate`` result dict whose ``"samples"`` key is keyed
+    by task name — same structure as ``run_answering_for_dataset``.
+    """
+    doc_to_text_func = getattr(importlib.import_module(doc_to_text_module), doc_to_text_func_name)
+
+    patched_tasks = []
+    for task_name, dataset_with_reasoning in tasks_and_datasets:
+        patched_tasks.append(build_patched_task(task_name, dataset_with_reasoning, doc_to_text_func))
+
+    print(
+        f"[Answering] model={answering_model}  tasks={[t for t, _ in tasks_and_datasets]}  "
+        f"prompt_fn={doc_to_text_func_name}"
+        + (f"  limit={args.limit}" if args.limit is not None else "")
+    )
+
+    return evaluator.simple_evaluate(
+        model=args.provider,
+        model_args=answering_model,
+        tasks=patched_tasks,
+        batch_size=args.batch_size,
+        limit=args.limit,
+        log_samples=args.log_samples,
+        random_seed=args.seed,
+    )
+
 
 # -------------------------
 # Prediction Extraction

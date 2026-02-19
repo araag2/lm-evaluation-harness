@@ -22,7 +22,11 @@ pos_answers = ["not relevant", "possibly relevant", "definitely relevant"]
 def label_to_index(doc) -> int:
     return pos_answers.index(doc["Label"])
 
-relevant_keys = ["Title", "Summary", "Detailed_description", "Eligibility", "Patient", "Reasoning_Chain", "Verified_Reasoning_Chain"]
+self_refine_feedback_prompt = "You are a medical expert reviewing a reasoning chain about whether a clinical trial is relevant to a patient description.\n\nClinical Trial Title:\n\n{{Title}}\n\nClinical Trial Summary:\n\n{{Summary}}\n\nClinical Trial Detailed Description:\n\n{{Detailed_description}}\n\nClinical Trial Eligibility Criteria:\n\n{{Eligibility}}\n\nPatient Description: \n\n{{Patient}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nCritique this reasoning chain. Identify any logical gaps, unsupported conclusions, unclear steps, or factual inaccuracies.\n\nProvide at least 2-3 specific points of improvement.\nFeedback: "
+
+self_refine_refine_prompt = "You are a medical expert tasked with improving a reasoning chain about whether a clinical trial is relevant to a patient description. The possible relevance levels are:\n- Not Relevant: The clinical trial does not pertain to the patient's condition, demographics, or other factors.\n- Possibly Relevant: The clinical trial may be relevant to the patient's condition, demographics, or other factors, but there is some uncertainty.\n- Definitely Relevant: The clinical trial is clearly relevant to the patient's condition, demographics, or other factors.\n\nClinical Trial Title:\n\n{{Title}}\n\nClinical Trial Summary:\n\n{{Summary}}\n\nClinical Trial Detailed Description:\n\n{{Detailed_description}}\n\nClinical Trial Eligibility Criteria:\n\n{{Eligibility}}\n\nPatient Description: \n\n{{Patient}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nFeedback: {{Feedback}}\n\nGiven the feedback above, revise the reasoning chain to:\n1 - Fill logical gaps with evidence from the clinical trial information and patient description.\n2 - Clarify unclear reasoning steps.\n3 - Ensure all conclusions are directly supported.\nLet's think step by step, and at the very end write your answer in the form: \nAnswer: [not relevant / possibly relevant / definitely relevant] <END>"
+
+relevant_keys = ["Title", "Summary", "Detailed_description", "Eligibility", "Patient", "Reasoning_Chain", "Verified_Reasoning_Chain", "Feedback"]
 
 def doc_to_text(doc, prompt = baseline_prompt):
     res = prompt
@@ -44,6 +48,12 @@ def doc_to_text_verify_reasoning(doc):
 
 def doc_to_text_answer_selection_after_verify_reasoning(doc):
     return doc_to_text(doc, answer_selection_after_verification_prompt)
+
+def doc_to_text_self_refine_feedback(doc):
+    return doc_to_text(doc, self_refine_feedback_prompt)
+
+def doc_to_text_self_refine_refine(doc):
+    return doc_to_text(doc, self_refine_refine_prompt)
 
 def process_docs_balanced(dataset):
     dataset_relevant = dataset.filter(lambda doc: doc["Label"] in ("definitely relevant", "possibly relevant"))

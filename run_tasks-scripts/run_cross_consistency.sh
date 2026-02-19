@@ -19,11 +19,14 @@ source "${SCRIPT_DIR}/config/models.conf"
 source "${SCRIPT_DIR}/config/tasks.conf"
 
 # Default values
+PROVIDER="vllm"
 REASONING_MODELS=()
 ANSWERING_MODELS=()
 REASONING_TASK=""
 ANSWERING_TASK=""
 OUTPUT_BASE="./outputs/cross_consistency"
+CUDA_DEVICES="0"
+BATCH_SIZE="auto"
 LIMIT=""
 SEED="0"
 DRY_RUN=false
@@ -81,6 +84,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --output)
             OUTPUT_BASE="$2"
+            shift 2
+            ;;
+        --gpu|--cuda)
+            CUDA_DEVICES="$2"
+            shift 2
+            ;;
+        --batch-size)
+            BATCH_SIZE="$2"
             shift 2
             ;;
         --limit)
@@ -174,19 +185,24 @@ if [ -z "$ANSWERING_TASK" ]; then
     exit 1
 fi
 
-# Create output directory
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-OUTPUT_DIR="${OUTPUT_BASE}/${TIMESTAMP}"
+# Build output path: OUTPUT_BASE/cross-consistency/<answering_task_name>/
+TASK_NAME=$(echo "${ANSWERING_TASK}" | tr ':' '_')
+OUTPUT_DIR="${OUTPUT_BASE}/cross-consistency/${TASK_NAME}"
 mkdir -p "$OUTPUT_DIR"
 
 # Build command
-CMD="python -m lm_eval.reasoning_modes"
+CMD="VLLM_WORKER_MULTIPROC_METHOD=spawn \\
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \\
+    CUDA_VISIBLE_DEVICES=$CUDA_DEVICES \\
+    python -m lm_eval.reasoning_modes"
+CMD="$CMD --provider $PROVIDER"
 CMD="$CMD --mode cross-consistency"
 CMD="$CMD --reasoning_models $(printf '%s,' "${REASONING_MODELS[@]}" | sed 's/,$//')"
 CMD="$CMD --answering_models $(printf '%s,' "${ANSWERING_MODELS[@]}" | sed 's/,$//')"
 CMD="$CMD --reasoning_tasks $REASONING_TASK"
 CMD="$CMD --answering_tasks $ANSWERING_TASK"
-CMD="$CMD --output_path $OUTPUT_DIR"
+CMD="$CMD --output_path ${OUTPUT_DIR}"
+CMD="$CMD --batch_size $BATCH_SIZE"
 CMD="$CMD --seed $SEED"
 
 if [ -n "$LIMIT" ]; then
@@ -269,5 +285,4 @@ else
     echo "  ✗ Cross-consistency: ${REASONING_TASK} -> ${ANSWERING_TASK}"
     print_separator
     exit 1
-fi</content>
-<parameter name="filePath">/user/home/aguimas/data/PhD/Active_Dev/lm-evaluation-harness/run_tasks-scripts/run_cross_consistency.sh
+fi

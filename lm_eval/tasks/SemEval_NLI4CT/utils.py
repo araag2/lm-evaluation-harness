@@ -51,7 +51,14 @@ def label_to_index(doc) -> int:
 def format_sections(sections):
    return '\n'.join(sections) if sections else ""
 
-relevant_keys = ["Section_id", "Primary_Section", "Statement", "Reasoning_Chain", "Verified_Reasoning_Chain"]
+single_self_refine_feedback_prompt = "You are a medical expert reviewing a reasoning chain that determines the semantic entailment relationship between a section of a Clinical Trial Report (CTR) and a clinical statement.\n\nSection Name:\n\n{{Section_id}}\n\nCTR Section: \n\n{{Primary_Section}}\n\nHypothesis: {{Statement}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nCritique this reasoning chain. Identify any logical gaps, unsupported conclusions, unclear steps, or factual inaccuracies.\n\nProvide at least 2-3 specific points of improvement.\nFeedback: "
+
+single_self_refine_refine_prompt = "You are a medical expert tasked with improving a reasoning chain that determines the semantic entailment relationship between a section of a Clinical Trial Report (CTR) and a clinical statement. The task is to classify the relationship as one of the following: Entailment (supported by the CTR) or Contradiction (in conflict with the CTR).\n\nSection Name:\n\n{{Section_id}}\n\nCTR Section: \n\n{{Primary_Section}}\n\nHypothesis: {{Statement}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nFeedback: {{Feedback}}\n\nGiven the feedback above, revise the reasoning chain to:\n1 - Fill logical gaps with evidence from the CTR section.\n2 - Clarify unclear reasoning steps.\n3 - Ensure all conclusions are directly supported.\nLet's think step by step, and at the very end write your answer in the form: \nAnswer: [Entailment / Contradiction] <END>"
+
+comparison_self_refine_feedback_prompt = replace_prompt_parts(single_self_refine_feedback_prompt)
+comparison_self_refine_refine_prompt = replace_prompt_parts(single_self_refine_refine_prompt)
+
+relevant_keys = ["Section_id", "Primary_Section", "Statement", "Reasoning_Chain", "Verified_Reasoning_Chain", "Feedback"]
 
 def doc_to_text_process(doc, prompt):
     res = prompt
@@ -74,3 +81,9 @@ def doc_to_text_verify_reasoning(doc):
 
 def doc_to_text_answer_selection_after_verify_reasoning(doc):
     return doc_to_text_process(doc, single_answer_selection_after_verification_prompt if "Secondary_Section" not in doc else comparison_answer_selection_after_verification_prompt)
+
+def doc_to_text_self_refine_feedback(doc):
+    return doc_to_text_process(doc, single_self_refine_feedback_prompt if "Secondary_Section" not in doc else comparison_self_refine_feedback_prompt)
+
+def doc_to_text_self_refine_refine(doc):
+    return doc_to_text_process(doc, single_self_refine_refine_prompt if "Secondary_Section" not in doc else comparison_self_refine_refine_prompt)

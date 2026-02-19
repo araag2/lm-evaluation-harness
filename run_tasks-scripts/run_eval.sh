@@ -262,12 +262,7 @@ for MODEL_ARGS in "${MODELS[@]}"; do
             show_progress "$CURRENT_RUN" "$TOTAL_RUNS" "${TASK} (${MODE}) with ${MODEL_NAME}"
             
             OUTPUT_PATH=$(build_output_path "$OUTPUT_BASE" "$TASK" "$MODE" "$MODEL_NAME")
-            
-            if [ "$USE_TIMESTAMP" = true ]; then
-                OUTPUT_PATH=$(create_output_dir "$OUTPUT_PATH" true)
-            else
-                mkdir -p "$OUTPUT_PATH"
-            fi
+            mkdir -p "$OUTPUT_PATH"
             
             if run_single_evaluation "$PROVIDER" "$MODEL_ARGS" "$TASK" "$MODE" "$OUTPUT_PATH" \
                                     "$BATCH_SIZE" "$SEED" "$CUDA_DEVICES" "$LIMIT"; then

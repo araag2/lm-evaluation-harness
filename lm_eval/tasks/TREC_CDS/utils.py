@@ -15,7 +15,11 @@ pos_answers = ["not relevant", "possibly relevant", "definitely relevant"]
 def label_to_index(doc) -> int:
     return pos_answers.index(doc["Label"])
 
-relevant_keys = ["Title", "Abstract", "Body", "Question", "Patient_Summary", "Reasoning_Chain", "Verified_Reasoning_Chain"]
+self_refine_feedback_prompt = "You are a medical expert reviewing a reasoning chain about the relevance of a biomedical article to a clinical question and patient description.\n\nArticle Title:\n\n{{Title}}\n\nArticle Abstract:\n\n{{Abstract}}\n\nArticle Body:\n\n{{Body}}\n\nClinical Question:\n\n{{Question}}\n\nPatient Description:\n\n{{Patient_Summary}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nCritique this reasoning chain. Identify any logical gaps, unsupported conclusions, unclear steps, or factual inaccuracies.\n\nProvide at least 2-3 specific points of improvement.\nFeedback: "
+
+self_refine_refine_prompt = "You are a medical expert tasked with improving a reasoning chain about the relevance of a biomedical article to a clinical question and patient description. The possible relevance judgements are:\n- Not Relevant: The article does not provide information that helps answer the clinical question in the context of the patient description.\n- Possibly Relevant: The article provides some information that might help answer the clinical question, but it is not definitive or directly applicable.\n- Definitely Relevant: The article provides clear and direct information that helps answer the clinical question in the context of the patient description.\n\nArticle Title:\n\n{{Title}}\n\nArticle Abstract:\n\n{{Abstract}}\n\nArticle Body:\n\n{{Body}}\n\nClinical Question:\n\n{{Question}}\n\nPatient Description:\n\n{{Patient_Summary}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nFeedback: {{Feedback}}\n\nGiven the feedback above, revise the reasoning chain to:\n1 - Fill logical gaps with evidence from the article and patient description.\n2 - Clarify unclear reasoning steps.\n3 - Ensure all conclusions are directly supported.\nLet's think step by step, and at the very end write your answer in the form: \nAnswer: [not relevant / possibly relevant / definitely relevant] <END>"
+
+relevant_keys = ["Title", "Abstract", "Body", "Question", "Patient_Summary", "Reasoning_Chain", "Verified_Reasoning_Chain", "Feedback"]
 
 def doc_to_text(doc, prompt = baseline_prompt):
     res = prompt
@@ -37,6 +41,12 @@ def doc_to_text_verify_reasoning(doc):
 
 def doc_to_text_answer_selection_after_verify_reasoning(doc):
     return doc_to_text(doc, answer_selection_after_verification_prompt)
+
+def doc_to_text_self_refine_feedback(doc):
+    return doc_to_text(doc, self_refine_feedback_prompt)
+
+def doc_to_text_self_refine_refine(doc):
+    return doc_to_text(doc, self_refine_refine_prompt)
 
 def process_docs_balanced(dataset):
     dataset_relevant = dataset.filter(lambda doc: doc["Label"] in ("definitely relevant", "possibly relevant"))

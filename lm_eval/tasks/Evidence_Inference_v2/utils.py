@@ -13,7 +13,11 @@ pos_answers = ["significantly decreased", "no significant difference", "signific
 def label_to_index(doc) -> int:
     return pos_answers.index(doc["Label"])
 
-relevant_keys = ["Article_Content", "Question", "Reasoning_Chain", "Verified_Reasoning_Chain"]
+self_refine_feedback_prompt = "You are a medical expert reviewing a reasoning chain about the direction of an outcome reported in a clinical article.\n\nArticle: {{Article_Content}}\nQuestion: {{Question}}\nReasoning Chain: {{Reasoning_Chain}}\n\nCritique this reasoning chain. Identify any logical gaps, unsupported conclusions, unclear steps, or factual inaccuracies.\n\nProvide at least 2-3 specific points of improvement.\nFeedback: "
+
+self_refine_refine_prompt = "You are a medical expert tasked with improving a reasoning chain about the direction of an outcome reported in a clinical article.\n\nArticle: {{Article_Content}}\nQuestion: {{Question}}\nReasoning Chain: {{Reasoning_Chain}}\nFeedback: {{Feedback}}\n\nGiven the feedback above, revise the reasoning chain to:\n1 - Fill logical gaps with evidence from the article.\n2 - Clarify unclear reasoning steps.\n3 - Ensure all conclusions are directly supported.\nLet's think step by step, and at the very end write your answer in the form:\nAnswer: [significantly increased / no significant difference / significantly decreased] <END>"
+
+relevant_keys = ["Article_Content", "Question", "Reasoning_Chain", "Verified_Reasoning_Chain", "Feedback"]
 
 def doc_to_text(doc, prompt = baseline_prompt):
     res = prompt
@@ -33,3 +37,9 @@ def doc_to_text_verify_reasoning(doc):
 
 def doc_to_text_answer_selection_after_verify_reasoning(doc):
     return doc_to_text(doc, answer_selection_after_verification_prompt)
+
+def doc_to_text_self_refine_feedback(doc):
+    return doc_to_text(doc, self_refine_feedback_prompt)
+
+def doc_to_text_self_refine_refine(doc):
+    return doc_to_text(doc, self_refine_refine_prompt)

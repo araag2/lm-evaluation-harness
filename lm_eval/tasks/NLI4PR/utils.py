@@ -40,7 +40,14 @@ pos_answers = ["Contradiction", "Entailment"]
 def label_to_index(doc) -> int:
     return pos_answers.index(doc["Label"])
 
-relevant_keys = ["CTR_Context", "Description_Medical-Language", "Description_Patient-Language", "Reasoning_Chain", "Verified_Reasoning_Chain"]
+medical_self_refine_feedback_prompt = "You are a medical expert AI assistant reviewing a reasoning chain for natural language inference in clinical trial recruitment. The task determines if a patient's medical profile entails or contradicts the eligibility criteria of a Clinical Trial Report.\n\nClinical Trial Report Context: {{CTR_Context}}\n\nPatient Description: {{Description_Medical-Language}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nCritique this reasoning chain. Identify any logical gaps, unsupported conclusions, unclear steps, or factual inaccuracies.\n\nProvide at least 2-3 specific points of improvement.\nFeedback: "
+
+medical_self_refine_refine_prompt = "You are a medical expert AI assistant tasked with improving a reasoning chain for natural language inference in clinical trial recruitment. The task determines if a patient's medical profile entails or contradicts the eligibility criteria of a Clinical Trial Report.\n\nClinical Trial Report Context: {{CTR_Context}}\n\nPatient Description: {{Description_Medical-Language}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nFeedback: {{Feedback}}\n\nGiven the feedback above, revise the reasoning chain to:\n1 - Fill logical gaps with evidence from the Clinical Trial Report.\n2 - Clarify unclear reasoning steps.\n3 - Ensure all conclusions are directly supported.\nLet's think step by step, and at the very end write your answer in the form: \nAnswer: [Entailment / Contradiction] <END>"
+
+patient_self_refine_feedback_prompt = replace_prompt_parts(medical_self_refine_feedback_prompt)
+patient_self_refine_refine_prompt = replace_prompt_parts(medical_self_refine_refine_prompt)
+
+relevant_keys = ["CTR_Context", "Description_Medical-Language", "Description_Patient-Language", "Reasoning_Chain", "Verified_Reasoning_Chain", "Feedback"]
 
 def doc_to_text_process(doc, prompt):
     res = prompt
@@ -63,3 +70,9 @@ def doc_to_text_verify_reasoning(doc):
 
 def doc_to_text_answer_selection_after_verify_reasoning(doc):
     return doc_to_text_process(doc, patient_answer_selection_after_verification_prompt if "Description_Patient-Language" in doc else answer_selection_after_verification_prompt)
+
+def doc_to_text_self_refine_feedback(doc):
+    return doc_to_text_process(doc, patient_self_refine_feedback_prompt if "Description_Patient-Language" in doc else medical_self_refine_feedback_prompt)
+
+def doc_to_text_self_refine_refine(doc):
+    return doc_to_text_process(doc, patient_self_refine_refine_prompt if "Description_Patient-Language" in doc else medical_self_refine_refine_prompt)

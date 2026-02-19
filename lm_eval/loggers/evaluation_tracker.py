@@ -231,18 +231,11 @@ class EvaluationTracker:
                 path = Path(self.output_path if self.output_path else Path.cwd())
                 self.date_id = datetime.now().isoformat().replace(":", "-")
                 if path.suffix == ".json":
-                    path.parent.mkdir(parents=True, exist_ok=True)
-                    file_results_aggregated = path.with_name(
-                        f"{path.stem}_{self.date_id}.json"
-                    )
-                else:
-                    path = path.joinpath(
-                        self.general_config_tracker.model_name_sanitized
-                    )
-                    path.mkdir(parents=True, exist_ok=True)
-                    file_results_aggregated = path.joinpath(
-                        f"results_{self.date_id}.json"
-                    )
+                    path = path.parent
+                path.mkdir(parents=True, exist_ok=True)
+                file_results_aggregated = path.joinpath(
+                    f"results_{self.date_id}.json"
+                )
 
                 file_results_aggregated.open("w", encoding="utf-8").write(dumped)
 
@@ -300,10 +293,6 @@ class EvaluationTracker:
                 path = Path(self.output_path if self.output_path else Path.cwd())
                 if path.suffix == ".json":
                     path = path.parent
-                else:
-                    path = path.joinpath(
-                        self.general_config_tracker.model_name_sanitized
-                    )
                 path.mkdir(parents=True, exist_ok=True)
 
                 file_results_samples = path.joinpath(

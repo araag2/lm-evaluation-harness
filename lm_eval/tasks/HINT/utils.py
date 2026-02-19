@@ -23,7 +23,11 @@ def fix_formatting(text):
     text = re.sub(r'\n {3,}', ' ', text)
     return re.sub(r'[\[\]\']', '', text).strip()
 
-relevant_keys = ["Diseases", "ICD_Codes", "Drugs", "SMILES", "CT_Criteria", "Reasoning_Chain", "Verified_Reasoning_Chain"]
+self_refine_feedback_prompt = "Your task is to critique a reasoning chain that predicts the outcome (Success or Failure) of a clinical trial.\n\nDiseases: {{Diseases}}\n\nICD Codes: {{ICD_Codes}}\n\nDrugs: {{Drugs}}\n\nSMILES: {{SMILES}}\n\nCT Criteria: {{CT_Criteria}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nCritique this reasoning chain. Identify any logical gaps, unsupported conclusions, unclear steps, or factual inaccuracies.\n\nProvide at least 2-3 specific points of improvement.\nFeedback: "
+
+self_refine_refine_prompt = "Your task is to improve a reasoning chain that predicts the outcome (Success or Failure) of a clinical trial.\n\nDiseases: {{Diseases}}\n\nICD Codes: {{ICD_Codes}}\n\nDrugs: {{Drugs}}\n\nSMILES: {{SMILES}}\n\nCT Criteria: {{CT_Criteria}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nFeedback: {{Feedback}}\n\nGiven the feedback above, revise the reasoning chain to:\n1 - Fill logical gaps with evidence from the clinical trial information (Diseases, Drugs, CT Criteria).\n2 - Clarify unclear reasoning steps.\n3 - Ensure all conclusions are directly supported.\nLet's think step by step, and at the very end write your answer in the form:\nAnswer: [Success / Failure] <END>"
+
+relevant_keys = ["Diseases", "ICD_Codes", "Drugs", "SMILES", "CT_Criteria", "Reasoning_Chain", "Verified_Reasoning_Chain", "Feedback"]
 
 def doc_to_text(doc, prompt = baseline_prompt):
     res = prompt
@@ -43,3 +47,9 @@ def doc_to_text_verify_reasoning(doc):
 
 def doc_to_text_answer_selection_after_verify_reasoning(doc):
     return doc_to_text(doc, answer_selection_after_verification_prompt)
+
+def doc_to_text_self_refine_feedback(doc):
+    return doc_to_text(doc, self_refine_feedback_prompt)
+
+def doc_to_text_self_refine_refine(doc):
+    return doc_to_text(doc, self_refine_refine_prompt)

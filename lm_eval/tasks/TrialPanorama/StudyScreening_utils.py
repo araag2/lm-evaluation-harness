@@ -13,7 +13,11 @@ pos_answers = ['excluded', 'included']
 def label_to_index(doc) -> int:
     return pos_answers.index(doc["Label"])
 
-relevant_keys = ["Background", "Objective", "Selection_Criteria", "trial_pmid", "Trial_Title", "Trial_Abstract", "Reasoning_Chain", "Verified_Reasoning_Chain"]
+SS_self_refine_feedback_prompt="You are a medical expert reviewing a reasoning chain about whether a candidate study should be included or excluded in an eligibility study.\n**Background:** {{Background}}\n**Objective:** {{Objective}}\n**Selection Criteria:** {{Selection_Criteria}}\n**Candidate Study:**\n- **PMID: {{trial_pmid}}** - {{Trial_Title}} \n- **Abstract:** {{Trial_Abstract}}\nReasoning Chain: {{Reasoning_Chain}}\n\nCritique this reasoning chain. Identify any logical gaps, unsupported conclusions, unclear steps, or factual inaccuracies.\n\nProvide at least 2-3 specific points of improvement.\nFeedback: "
+
+SS_self_refine_refine_prompt="You are a medical expert tasked with improving a reasoning chain about whether a candidate study should be included or excluded in an eligibility study.\n**Background:** {{Background}}\n**Objective:** {{Objective}}\n**Selection Criteria:** {{Selection_Criteria}}\n**Candidate Study:**\n- **PMID: {{trial_pmid}}** - {{Trial_Title}} \n- **Abstract:** {{Trial_Abstract}}\nReasoning Chain: {{Reasoning_Chain}}\nFeedback: {{Feedback}}\n\nGiven the feedback above, revise the reasoning chain to:\n1 - Fill logical gaps with evidence from the study information (Background, Objective, Selection Criteria).\n2 - Clarify unclear reasoning steps.\n3 - Ensure all conclusions are directly supported.\nLet's think step by step, and at the very end write your answer in the form: \nAnswer: [included / excluded] <END>"
+
+relevant_keys = ["Background", "Objective", "Selection_Criteria", "trial_pmid", "Trial_Title", "Trial_Abstract", "Reasoning_Chain", "Verified_Reasoning_Chain", "Feedback"]
 
 def SS_doc_to_text(doc, prompt = SS_baseline_prompt):
     res = prompt
@@ -33,3 +37,9 @@ def SS_doc_to_text_verify_reasoning(doc):
 
 def SS_doc_to_text_answer_selection_after_verify_reasoning(doc):
     return SS_doc_to_text(doc, SS_answer_selection_after_verification_prompt)
+
+def SS_doc_to_text_self_refine_feedback(doc):
+    return SS_doc_to_text(doc, SS_self_refine_feedback_prompt)
+
+def SS_doc_to_text_self_refine_refine(doc):
+    return SS_doc_to_text(doc, SS_self_refine_refine_prompt)
