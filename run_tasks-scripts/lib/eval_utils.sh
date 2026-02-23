@@ -63,6 +63,17 @@ build_output_path() {
     echo "$path"
 }
 
+# Check if an output directory already contains results (skip-if-exists guard)
+has_existing_results() {
+    local output_path="$1"
+    # lm_eval writes results_*.json or FullSamples_*.json
+    if ls "${output_path}"/*.json &>/dev/null 2>&1 || \
+       ls "${output_path}"/*/*.json &>/dev/null 2>&1; then
+        return 0  # results exist
+    fi
+    return 1  # no results
+}
+
 # Run single evaluation
 run_single_evaluation() {
     local provider="$1"
@@ -98,10 +109,62 @@ run_single_evaluation() {
     log_info "Clearing GPU memory..."
     CUDA_VISIBLE_DEVICES=$cuda_devices python -c "import torch; torch.cuda.empty_cache(); import gc; gc.collect(); print('GPU memory cleared')" || true
     
-    # Kill any remaining vLLM processes
-    pkill -f "EngineCore" || true
-    pkill -f "vllm" || true
+    # Kill any remaining vLLM processes within this job's process group only
+    # (scoped to avoid killing sibling SLURM jobs on the same node)
+    local _pgid
+    _pgid=$(ps -o pgid= -p $$ 2>/dev/null | tr -d ' ')
+    if [ -n "$_pgid" ]; then
+        pkill -g "$_pgid" -f "EngineCore" 2>/dev/null || true
+        pkill -g "$_pgid" -f "vllm" 2>/dev/null || true
+    fi
     
+    eval "$cmd"
+}
+
+# Run batch single-turn evaluation — all tasks in ONE lm_eval call so the model
+# is loaded exactly once per (model, mode) combination instead of once per task.
+run_batch_evaluation() {
+    local provider="$1"
+    local model_args="$2"
+    local task_list="$3"    # comma-separated: "MedQA_0-shot,MedMCQA_0-shot,..."
+    local output_path="$4"  # base dir; lm_eval creates per-task subdirs automatically
+    local batch_size="${5:-auto}"
+    local seed="${6:-0}"
+    local cuda_devices="${7:-0}"
+    local limit="${8:-}"
+
+    local n_tasks
+    n_tasks=$(echo "$task_list" | tr ',' '\n' | wc -l)
+    log_info "Running batch: ${n_tasks} tasks in a single model load"
+    log_info "Output base: ${output_path}"
+
+    local cmd="VLLM_WORKER_MULTIPROC_METHOD=spawn \
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+    CUDA_VISIBLE_DEVICES=$cuda_devices \
+    python -m lm_eval \
+        --model $provider \
+        --model_args \"$model_args\" \
+        --tasks \"$task_list\" \
+        --batch_size $batch_size \
+        --seed $seed \
+        --output_path \"$output_path\" \
+        --log_samples"
+
+    if [ -n "$limit" ]; then
+        cmd="$cmd --limit $limit"
+    fi
+
+    # Clear GPU memory before starting
+    log_info "Clearing GPU memory..."
+    CUDA_VISIBLE_DEVICES=$cuda_devices python -c "import torch; torch.cuda.empty_cache(); import gc; gc.collect(); print('GPU memory cleared')" || true
+
+    local _pgid
+    _pgid=$(ps -o pgid= -p $$ 2>/dev/null | tr -d ' ')
+    if [ -n "$_pgid" ]; then
+        pkill -g "$_pgid" -f "EngineCore" 2>/dev/null || true
+        pkill -g "$_pgid" -f "vllm" 2>/dev/null || true
+    fi
+
     eval "$cmd"
 }
 
@@ -130,8 +193,8 @@ run_multi_turn_evaluation() {
         --mode $mode \
         --reasoning_models \"$reasoning_model\" \
         --answering_models \"$answering_model\" \
-        --reasoning_tasks \"$reasoning_task\" \
-        --answering_tasks \"$answering_task\" \
+        --reasoning_tasks $reasoning_task \
+        --answering_tasks $answering_task \
         --output_path \"$output_path\" \
         --batch_size $batch_size \
         --seed $seed \
@@ -145,9 +208,13 @@ run_multi_turn_evaluation() {
     log_info "Clearing GPU memory..."
     CUDA_VISIBLE_DEVICES=$cuda_devices python -c "import torch; torch.cuda.empty_cache(); import gc; gc.collect(); print('GPU memory cleared')" || true
     
-    # Kill any remaining vLLM processes
-    pkill -f "EngineCore" || true
-    pkill -f "vllm" || true
+    # Kill any remaining vLLM processes within this job's process group only
+    local _pgid
+    _pgid=$(ps -o pgid= -p $$ 2>/dev/null | tr -d ' ')
+    if [ -n "$_pgid" ]; then
+        pkill -g "$_pgid" -f "EngineCore" 2>/dev/null || true
+        pkill -g "$_pgid" -f "vllm" 2>/dev/null || true
+    fi
     
     eval "$cmd"
     
@@ -157,52 +224,6 @@ run_multi_turn_evaluation() {
         return 0
     else
         log_error "Failed: ${reasoning_task} -> ${answering_task} - Exit code: $status"
-        return $status
-    fi
-}
-
-# Run cross-consistency evaluation
-run_cross_consistency() {
-    local provider="$1"
-    local reasoning_model="$2"
-    local answering_models="$3"  # Space-separated list
-    local reasoning_task="$4"
-    local answering_task="$5"
-    local output_path="$6"
-    local vote_file="${7:-}"
-    local batch_size="${8:-auto}"
-    local seed="${9:-0}"
-    local cuda_devices="${10:-0}"
-    
-    log_info "Running Cross-Consistency: ${reasoning_task} -> ${answering_task}"
-    log_info "Output: ${output_path}"
-    
-    local cmd="VLLM_WORKER_MULTIPROC_METHOD=spawn \
-    CUDA_VISIBLE_DEVICES=$cuda_devices \
-    python -m lm_eval.reasoning_modes \
-        --provider $provider \
-        --mode cross-consistency \
-        --reasoning_models $reasoning_model \
-        --answering_models $answering_models \
-        --reasoning_tasks $reasoning_task \
-        --answering_tasks $answering_task \
-        --output_path $output_path \
-        --batch_size $batch_size \
-        --seed $seed \
-        --log_samples"
-    
-    if [ -n "$vote_file" ]; then
-        cmd="$cmd --vote_file $vote_file"
-    fi
-    
-    eval $cmd
-    
-    local status=$?
-    if [ $status -eq 0 ]; then
-        log_success "Completed Cross-Consistency"
-        return 0
-    else
-        log_error "Failed Cross-Consistency - Exit code: $status"
         return $status
     fi
 }

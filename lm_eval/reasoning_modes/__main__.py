@@ -104,11 +104,24 @@ def main():
 
     if args.output_path:
         timestamp = datetime.now().strftime('%Y-%m-%dT%H-%M')
-        with safe_open_w(f"{args.output_path}FullSamples_{timestamp}.json") as f:
-            json.dump(out, f, indent=4, default=make_json_serializable)
-        with safe_open_w(f"{args.output_path}Summary_{timestamp}.json") as f:
-            json.dump(make_summary_output(out), f, indent=4, default=make_json_serializable)
-        print(f"\n✅ Results written to {args.output_path}")
+        # mode_fn may return a list (batched multi-task) or a single dict
+        outputs = out if isinstance(out, list) else [out]
+
+        for result in outputs:
+            task_key   = result.get("answering_task", result.get("reasoning_task", "unknown"))
+            task_name  = task_key.split(":")[0]          # "MedQA:0-shot" → "MedQA"
+            raw_model  = result.get("reasoning_model", result.get("answering_model", "unknown"))
+            import re as _re
+            m = _re.search(r'pretrained=([^,)]+)', raw_model)
+            model_name = m.group(1).replace('/', '_') if m else raw_model
+
+            task_output_path = os.path.join(args.output_path, task_name, model_name)
+            os.makedirs(task_output_path, exist_ok=True)
+            with safe_open_w(os.path.join(task_output_path, f"FullSamples_{timestamp}.json")) as f:
+                json.dump(result, f, indent=4, default=make_json_serializable)
+            with safe_open_w(os.path.join(task_output_path, f"Summary_{timestamp}.json")) as f:
+                json.dump(make_summary_output(result), f, indent=4, default=make_json_serializable)
+            print(f"\n✅ Results written to {task_output_path}")
 
 
 if __name__ == "__main__":

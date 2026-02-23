@@ -1,11 +1,11 @@
 #!/bin/bash
 # ================================================
-# Unified Evaluation Runner
+# Single-Turn Evaluation Runner
 # ================================================
 # Usage examples:
-#   ./run_eval.sh --model qwen3-4b --task MedQA --mode 0-shot
-#   ./run_eval.sh --model llama-8b --task-group MEDQA_TASKS --modes "0-shot CoT"
-#   ./run_eval.sh --config my_eval.conf --dry-run
+#   ./run_single_turn.sh --model qwen3-4b --task MedQA --mode 0-shot
+#   ./run_single_turn.sh --model llama-8b --task-group MEDQA_TASKS --modes "0-shot CoT"
+#   ./run_single_turn.sh --config my_eval.conf --dry-run
 
 set -e
 
@@ -33,6 +33,7 @@ LIMIT=""
 DRY_RUN=false
 USE_TIMESTAMP=false
 VERBOSE=false
+SKIP_EXISTING=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -103,6 +104,10 @@ while [[ $# -gt 0 ]]; do
             USE_TIMESTAMP=true
             shift
             ;;
+        --skip-existing)
+            SKIP_EXISTING=true
+            shift
+            ;;
         --dry-run)
             DRY_RUN=true
             shift
@@ -122,7 +127,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --help|-h)
             cat << EOF
-Unified Evaluation Runner
+Single-Turn Evaluation Runner
 
 Usage: $0 [OPTIONS]
 
@@ -168,7 +173,7 @@ Examples:
   $0 --model-group 8B --task-group TRIALBENCH --modes "0-shot,CoT,SC" --dry-run
 
   # Load from config file
-  $0 --config my_evaluation.conf
+  $0 --config examples/default/quick_run.conf
 
 EOF
             exit 0
@@ -195,8 +200,9 @@ fi
 # Check GPU availability
 check_gpu "$CUDA_DEVICES"
 
-# Calculate total runs
-TOTAL_RUNS=$((${#MODELS[@]} * ${#TASKS[@]} * ${#MODES[@]}))
+# One lm_eval call per (model, mode) — all tasks batched inside
+TOTAL_RUNS=$((${#MODELS[@]} * ${#MODES[@]}))
+log_info "Task batching enabled: ${#TASKS[@]} tasks will be evaluated per model+mode in a single model load."
 CURRENT_RUN=0
 SUCCESSFUL_RUNS=0
 FAILED_RUNS=0
@@ -224,7 +230,7 @@ echo "Output Base:     $OUTPUT_BASE"
 echo "GPU:             $CUDA_DEVICES"
 echo "Batch Size:      $BATCH_SIZE"
 echo "Seed:            $SEED"
-echo "Total Runs:      $TOTAL_RUNS"
+echo "Total Runs:      $TOTAL_RUNS  (batched: ${#TASKS[@]} tasks per run)"
 echo "Dry Run:         $DRY_RUN"
 print_separator
 
@@ -251,31 +257,44 @@ fi
 # Record start time
 START_TIME=$(date +%s)
 
-# Main execution loop
+# Main execution loop — one lm_eval call per (model, mode), all tasks batched
 for MODEL_ARGS in "${MODELS[@]}"; do
     MODEL_NAME=$(get_model_name "$MODEL_ARGS")
-    
-    for TASK in "${TASKS[@]}"; do
-        for MODE in "${MODES[@]}"; do
-            CURRENT_RUN=$((CURRENT_RUN + 1))
-            
-            show_progress "$CURRENT_RUN" "$TOTAL_RUNS" "${TASK} (${MODE}) with ${MODEL_NAME}"
-            
-            OUTPUT_PATH=$(build_output_path "$OUTPUT_BASE" "$TASK" "$MODE" "$MODEL_NAME")
-            mkdir -p "$OUTPUT_PATH"
-            
-            if run_single_evaluation "$PROVIDER" "$MODEL_ARGS" "$TASK" "$MODE" "$OUTPUT_PATH" \
-                                    "$BATCH_SIZE" "$SEED" "$CUDA_DEVICES" "$LIMIT"; then
-                SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
-                SUCCESSFUL_RUN_LIST+=("${TASK} (${MODE}) with ${MODEL_NAME}")
-            else
-                FAILED_RUNS=$((FAILED_RUNS + 1))
-                FAILED_RUN_LIST+=("${TASK} (${MODE}) with ${MODEL_NAME}")
-                log_warning "Continuing with next evaluation..."
-            fi
-            
-            echo ""
+
+    for MODE in "${MODES[@]}"; do
+        CURRENT_RUN=$((CURRENT_RUN + 1))
+
+        show_progress "$CURRENT_RUN" "$TOTAL_RUNS" "${#TASKS[@]} tasks (${MODE}) with ${MODEL_NAME}"
+
+        # Build comma-separated task list for this mode
+        TASK_LIST=""
+        for TASK in "${TASKS[@]}"; do
+            TASK_LIST="${TASK_LIST:+${TASK_LIST},}${TASK}_${MODE}"
         done
+
+        # Output base for this (mode, model); lm_eval creates per-task subdirs inside
+        OUTPUT_PATH="${OUTPUT_BASE}/single-turn/${MODE}/${MODEL_NAME}"
+        mkdir -p "$OUTPUT_PATH"
+
+        if [ "$SKIP_EXISTING" = true ] && has_existing_results "$OUTPUT_PATH"; then
+            log_info "Skipping (results exist): ${MODE} / ${MODEL_NAME}"
+            SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
+            SUCCESSFUL_RUN_LIST+=("[SKIPPED] ${#TASKS[@]} tasks (${MODE}) with ${MODEL_NAME}")
+            echo ""
+            continue
+        fi
+
+        if run_batch_evaluation "$PROVIDER" "$MODEL_ARGS" "$TASK_LIST" "$OUTPUT_PATH" \
+                                "$BATCH_SIZE" "$SEED" "$CUDA_DEVICES" "$LIMIT"; then
+            SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
+            SUCCESSFUL_RUN_LIST+=("${#TASKS[@]} tasks (${MODE}) with ${MODEL_NAME}")
+        else
+            FAILED_RUNS=$((FAILED_RUNS + 1))
+            FAILED_RUN_LIST+=("${#TASKS[@]} tasks (${MODE}) with ${MODEL_NAME}")
+            log_warning "Continuing with next evaluation..."
+        fi
+
+        echo ""
     done
 done
 

@@ -183,6 +183,10 @@ show_summary_and_confirm() {
         echo "Task Details:    $(printf '\n%s' "${SELECTED_TASKS[@]}" | sed 's/^/  - /')"
         echo "Inference Modes: ${INFERENCE_MODES[*]}"
         TOTAL_RUNS=$((${#SELECTED_MODELS[@]} * ${#SELECTED_TASKS[@]} * ${#INFERENCE_MODES[@]}))
+    elif [ "$EVAL_MODE" = "cross-consistency" ]; then
+        echo "Task Pairs:      ${#SELECTED_PAIRS[@]}"
+        echo "Pair Details:    $(printf '\n%s' "${SELECTED_PAIRS[@]}" | sed 's/^/  - /')"
+        TOTAL_RUNS=${#SELECTED_PAIRS[@]}
     else
         echo "Task Pairs:      ${#SELECTED_PAIRS[@]}"
         echo "Pair Details:    $(printf '\n%s' "${SELECTED_PAIRS[@]}" | sed 's/^/  - /')"
@@ -241,6 +245,46 @@ run_single_mode() {
     return $failed
 }
 
+run_cross_consistency_mode() {
+    local total_runs=${#SELECTED_PAIRS[@]}
+    local current_run=0
+    local successful=0
+    local failed=0
+
+    local reasoning_models_str=$(IFS=','; echo "${SELECTED_MODELS[*]}")
+    local answering_models_str="$reasoning_models_str"
+
+    for TASK_PAIR in "${SELECTED_PAIRS[@]}"; do
+        current_run=$((current_run + 1))
+
+        REASONING_TASK="${TASK_PAIR%%|*}"
+        ANSWERING_TASK="${TASK_PAIR##*|}"
+
+        show_progress "$current_run" "$total_runs" "${REASONING_TASK} -> ${ANSWERING_TASK}"
+
+        TASK_NAME="${ANSWERING_TASK%%:*}"
+        OUTPUT_PATH="${OUTPUT_BASE}/cross-consistency/${TASK_NAME}"
+
+        if [ "$USE_TIMESTAMP" = true ]; then
+            OUTPUT_PATH=$(create_output_dir "$OUTPUT_PATH" true)
+        else
+            mkdir -p "$OUTPUT_PATH"
+        fi
+
+        if run_multi_turn_evaluation "vllm" "cross-consistency" \
+                                    "$reasoning_models_str" "$answering_models_str" \
+                                    "$REASONING_TASK" "$ANSWERING_TASK" \
+                                    "$OUTPUT_PATH" "$BATCH_SIZE" "$SEED" "$CUDA_DEVICES"; then
+            successful=$((successful + 1))
+        else
+            failed=$((failed + 1))
+        fi
+        echo ""
+    done
+
+    return $failed
+}
+
 run_multi_turn_mode() {
     local total_runs=$((${#SELECTED_MODELS[@]} * ${#SELECTED_PAIRS[@]}))
     local current_run=0
@@ -258,7 +302,7 @@ run_multi_turn_mode() {
             
             show_progress "$current_run" "$total_runs" "${REASONING_TASK} -> ${ANSWERING_TASK}"
             
-            TASK_NAME=$(echo ${REASONING_TASK} | tr ':' '_')
+            TASK_NAME="${REASONING_TASK%%:*}"
             OUTPUT_PATH="${OUTPUT_BASE}/${EVAL_MODE}/${TASK_NAME}/${MODEL_NAME}"
             
             if [ "$USE_TIMESTAMP" = true ]; then
@@ -314,6 +358,9 @@ main() {
     
     if [ "$EVAL_MODE" = "single" ]; then
         run_single_mode
+        RESULT=$?
+    elif [ "$EVAL_MODE" = "cross-consistency" ]; then
+        run_cross_consistency_mode
         RESULT=$?
     else
         run_multi_turn_mode

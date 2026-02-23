@@ -115,6 +115,10 @@ def run_reasoning(args: argparse.Namespace) -> Dict[str, Dict[str, List[dict]]]:
     """
     Run the reasoning step for every (model, task) pair.
 
+    All reasoning tasks for a given model are batched into a SINGLE
+    ``simple_evaluate`` call so the model is loaded exactly once per model,
+    regardless of how many reasoning tasks are requested.
+
     Returns a nested dict::
 
         {
@@ -130,30 +134,31 @@ def run_reasoning(args: argparse.Namespace) -> Dict[str, Dict[str, List[dict]]]:
 
     n_models = len(args.reasoning_models)
     n_tasks  = len(args.reasoning_tasks)
-    total    = n_models * n_tasks
-    done     = 0
 
-    for model_name in args.reasoning_models:
-        for task in args.reasoning_tasks:
-            done += 1
-            full_task_name = task.replace(":", "_")
-            print(
-                f"[Reasoning {done}/{total}] model={model_name}  task={full_task_name}"
-                + (f"  limit={args.limit}" if args.limit is not None else "")
-            )
+    for model_idx, model_name in enumerate(args.reasoning_models, 1):
+        all_full_task_names = [t.replace(":", "_") for t in args.reasoning_tasks]
+        print(
+            f"[Reasoning model {model_idx}/{n_models}] model={model_name}  "
+            f"tasks={all_full_task_names}  (batched: {n_tasks} tasks, 1 model load)"
+            + (f"  limit={args.limit}" if args.limit is not None else "")
+        )
 
-            results = evaluator.simple_evaluate(
-                model=args.provider,
-                model_args=model_name,
-                tasks=[full_task_name],
-                batch_size=args.batch_size,
-                limit=args.limit,
-                log_samples=args.log_samples,
-                random_seed=args.seed,
-            )
+        results = evaluator.simple_evaluate(
+            model=args.provider,
+            model_args=model_name,
+            tasks=all_full_task_names,
+            batch_size=args.batch_size,
+            limit=args.limit,
+            log_samples=True,      # always needed to extract samples
+            random_seed=args.seed,
+        )
 
+        for task, full_task_name in zip(args.reasoning_tasks, all_full_task_names):
             res_per_model_task[model_name][task] = results["samples"][full_task_name]
-            print(f"[Reasoning {done}/{total}] done — {len(res_per_model_task[model_name][task])} samples collected.")
+            print(
+                f"[Reasoning] done — task={full_task_name}  "
+                f"{len(res_per_model_task[model_name][task])} samples collected."
+            )
 
     return res_per_model_task
 
@@ -201,28 +206,36 @@ def run_answering_for_datasets(
     args: argparse.Namespace,
     answering_model: str,
     tasks_and_datasets: List[Tuple[str, Any]],
-    doc_to_text_module: str,
+    doc_to_text_module,  # str (shared) or List[str] (one per task)
     doc_to_text_func_name: str = "doc_to_text_answer_selection",
 ) -> Dict[str, Any]:
     """
     Run answering for *multiple* datasets under a single model load.
 
     ``tasks_and_datasets`` is a list of ``(task_name, dataset_with_reasoning)`` pairs.
+    ``doc_to_text_module`` can be a single module path (string, shared by all tasks)
+    or a list of per-task module paths.
+
     All patched tasks are evaluated in one ``simple_evaluate`` call so the model is
     loaded only once, regardless of how many datasets are passed.
 
     Returns the raw ``simple_evaluate`` result dict whose ``"samples"`` key is keyed
     by task name — same structure as ``run_answering_for_dataset``.
     """
-    doc_to_text_func = getattr(importlib.import_module(doc_to_text_module), doc_to_text_func_name)
+    modules = (
+        doc_to_text_module
+        if isinstance(doc_to_text_module, list)
+        else [doc_to_text_module] * len(tasks_and_datasets)
+    )
 
     patched_tasks = []
-    for task_name, dataset_with_reasoning in tasks_and_datasets:
+    for (task_name, dataset_with_reasoning), module in zip(tasks_and_datasets, modules):
+        doc_to_text_func = getattr(importlib.import_module(module), doc_to_text_func_name)
         patched_tasks.append(build_patched_task(task_name, dataset_with_reasoning, doc_to_text_func))
 
     print(
         f"[Answering] model={answering_model}  tasks={[t for t, _ in tasks_and_datasets]}  "
-        f"prompt_fn={doc_to_text_func_name}"
+        f"prompt_fn={doc_to_text_func_name}  (batched: {len(tasks_and_datasets)} tasks, 1 model load)"
         + (f"  limit={args.limit}" if args.limit is not None else "")
     )
 

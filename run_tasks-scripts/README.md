@@ -22,7 +22,7 @@ run_tasks-scripts/
 │   ├── example_qwen2-0.5b_multi-turn_CoT_small-tasks_limited.conf
 │   ├── example_qwen2-0.5b_multi-turn_CoT-SC_small-tasks_limited.conf
 │   └── example_qwen2-0.5b_cross-consistency_small-tasks_limited.conf
-├── run_eval.sh                # Main unified runner
+├── run_single_turn.sh         # Single-turn (0-shot/CoT/SC) runner
 ├── run_multi_turn.sh          # Multi-turn evaluation runner
 ├── run_cross_consistency.sh   # Cross-consistency evaluation runner
 ├── run_interactive.sh         # Interactive menu-driven runner
@@ -35,26 +35,26 @@ run_tasks-scripts/
 
 ```bash
 # Run a single model on a single task
-./run_eval.sh --model qwen3-4b --task MedQA --mode 0-shot
+./run_single_turn.sh --model qwen3-4b --task MedQA --mode 0-shot
 
 # Run multiple models on multiple tasks
-./run_eval.sh --model qwen3-4b,llama-8b --task MedQA,MedMCQA --modes "0-shot,CoT"
+./run_single_turn.sh --model qwen3-4b,llama-8b --task MedQA,MedMCQA --modes "0-shot,CoT"
 
 # Test with limited samples for quick validation
-./run_eval.sh --model opt125m --task MedQA --mode 0-shot --limit 10
+./run_single_turn.sh --model opt125m --task MedQA --mode 0-shot --limit 10
 ```
 
 ### 2. Using Model and Task Groups
 
 ```bash
 # Run all 8B models on all TrialBench tasks
-./run_eval.sh --model-group 8B --task-group TRIALBENCH --modes "0-shot,CoT,SC"
+./run_single_turn.sh --model-group 8B --task-group TRIALBENCH --modes "0-shot,CoT,SC"
 
 # Run all medical models on MedQA suite
-./run_eval.sh --model-group MEDICAL --task-group MEDQA --mode 0-shot
+./run_single_turn.sh --model-group MEDICAL --task-group MEDQA --mode 0-shot
 
 # Test with tiny model (fast testing)
-./run_eval.sh --model-group TINY --task MedQA --mode 0-shot
+./run_single_turn.sh --model-group TINY --task MedQA --mode 0-shot
 ```
 
 ### 2.5 Mode Compatibility Notes
@@ -74,14 +74,14 @@ run_tasks-scripts/
 
 ```bash
 # Quick test run
-./run_eval.sh --config examples/default/quick_run.conf
+./run_single_turn.sh --config examples/default/quick_run.conf
 
 # Full TrialBench evaluation
-./run_eval.sh --config examples/default/full_trialbench.conf
+./run_single_turn.sh --config examples/default/full_trialbench.conf
 
 # OPT-125M testing configurations (fast validation)
-./run_eval.sh --config examples/default/qwen2-0.5b_0-shot_small-tasks_limited.conf    # 0-shot small tasks
-./run_eval.sh --config examples/default/qwen2-0.5b_0-shot_all-tasks_limited.conf      # 0-shot all compatible tasks
+./run_single_turn.sh --config examples/default/qwen2-0.5b_0-shot_small-tasks_limited.conf    # 0-shot small tasks
+./run_single_turn.sh --config examples/default/qwen2-0.5b_0-shot_all-tasks_limited.conf      # 0-shot all compatible tasks
 
 # Multi-turn CoT evaluations
 ./run_multi_turn.sh --config examples/default/qwen2-0.5b_multi-turn_CoT_small-tasks_limited.conf      # CoT pairs
@@ -91,7 +91,7 @@ run_tasks-scripts/
 ./run_cross_consistency.sh --config examples/default/qwen2-0.5b_cross-consistency_small-tasks_limited.conf
 
 # Dry-run to preview what would execute
-./run_eval.sh --config examples/default/full_trialbench.conf --dry-run
+./run_single_turn.sh --config examples/default/full_trialbench.conf --dry-run
 ```
 
 ### 4. Multi-Turn Evaluations
@@ -165,7 +165,7 @@ Instead of typing full model arguments, use these presets:
 
 ## Common Options
 
-### run_eval.sh
+### run_single_turn.sh
 
 ```bash
 --model MODEL[,MODEL2,...]       # Specify model(s) by preset or full args
@@ -237,7 +237,7 @@ VERBOSE=true
 Then run:
 
 ```bash
-./run_eval.sh --config my_evaluation.conf
+./run_single_turn.sh --config my_evaluation.conf
 ```
 
 ## Advanced Examples
@@ -245,7 +245,7 @@ Then run:
 ### Example 1: Test Single Model on All Tasks
 
 ```bash
-./run_eval.sh \
+./run_single_turn.sh \
     --model qwen3-4b \
     --task-group ALL \
     --mode 0-shot \
@@ -256,7 +256,7 @@ Then run:
 ### Example 2: Compare All Models on Single Task
 
 ```bash
-./run_eval.sh \
+./run_single_turn.sh \
     --model-group ALL \
     --task MedQA \
     --modes "0-shot,CoT,SC" \
@@ -268,14 +268,14 @@ Then run:
 
 ```bash
 # Preview what would run
-./run_eval.sh \
+./run_single_turn.sh \
     --model-group 8B \
     --task-group TRIALBENCH \
     --modes "0-shot,CoT,SC" \
     --dry-run
 
 # If satisfied, execute without --dry-run
-./run_eval.sh \
+./run_single_turn.sh \
     --model-group 8B \
     --task-group TRIALBENCH \
     --modes "0-shot,CoT,SC"
@@ -284,7 +284,7 @@ Then run:
 ### Example 4: Custom GPU and Batch Settings
 
 ```bash
-./run_eval.sh \
+./run_single_turn.sh \
     --model qwen3-8b \
     --task-group MEDQA \
     --mode CoT \
@@ -365,7 +365,7 @@ outputs/
 **Solution**: Reduce `gpu_memory_utilization` in model config or use smaller batch size
 
 **Issue**: Permission denied  
-**Solution**: Make scripts executable: `chmod +x run_eval.sh run_multi_turn.sh run_interactive.sh`
+**Solution**: Make scripts executable: `chmod +x run_single_turn.sh run_multi_turn.sh run_interactive.sh`
 
 ## Migration from Old Scripts
 

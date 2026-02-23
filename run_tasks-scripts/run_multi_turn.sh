@@ -1,10 +1,11 @@
 #!/bin/bash
 # ================================================
-# Multi-Turn Evaluation Runner (CoT, SC-CoT, MBR)
+# Multi-Turn Evaluation Runner (CoT, SC-CoT, MBR, Cross-Consistency)
 # ================================================
 # Usage examples:
 #   ./run_multi_turn.sh --mode multi-turn_CoT --model qwen3-4b --task-pairs MEDQA
 #   ./run_multi_turn.sh --mode multi-turn_CoT-SC --model-group 8B --task-pairs ALL
+#   ./run_multi_turn.sh --mode cross-consistency --model-group 8B --task-pairs ALL
 
 set -e
 
@@ -33,6 +34,7 @@ LIMIT=""
 DRY_RUN=false
 USE_TIMESTAMP=false
 SAME_MODEL=true  # Use same model for reasoning and answering by default
+SKIP_EXISTING=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -137,6 +139,10 @@ while [[ $# -gt 0 ]]; do
             USE_TIMESTAMP=true
             shift
             ;;
+        --skip-existing)
+            SKIP_EXISTING=true
+            shift
+            ;;
         --dry-run)
             DRY_RUN=true
             shift
@@ -157,7 +163,8 @@ Multi-Turn Evaluation Runner
 Usage: $0 [OPTIONS]
 
 Mode Selection:
-  --mode MODE                      Evaluation mode (multi-turn_CoT, multi-turn_CoT-SC, multi-turn_CoT-MBR, self-refine_CoT)
+  --mode MODE                      Evaluation mode (multi-turn_CoT, multi-turn_CoT-SC, multi-turn_CoT-MBR, self-refine_CoT, cross-consistency)
+                                   Note: cross-consistency passes all models in a single call per task pair
 
 Model Selection:
   --model MODEL[,MODEL2,...]       Use same model(s) for reasoning and answering
@@ -224,7 +231,13 @@ fi
 check_gpu "$CUDA_DEVICES"
 
 # Calculate total runs
-TOTAL_RUNS=$((${#REASONING_MODELS[@]} * ${#TASK_PAIRS[@]}))
+if [ "$MODE" = "cross-consistency" ]; then
+    TOTAL_RUNS=${#TASK_PAIRS[@]}
+else
+    # One Python call per model — all task pairs are batched inside
+    TOTAL_RUNS=${#REASONING_MODELS[@]}
+    log_info "Task-pair batching enabled: ${#TASK_PAIRS[@]} task pairs will be evaluated per model in a single model load."
+fi
 CURRENT_RUN=0
 SUCCESSFUL_RUNS=0
 FAILED_RUNS=0
@@ -261,7 +274,7 @@ if [ -n "$LIMIT" ]; then
 else
     echo "Limit:              None"
 fi
-echo "Total Runs:         $TOTAL_RUNS"
+echo "Total Runs:         $TOTAL_RUNS  (batched: ${#TASK_PAIRS[@]} task pairs per run)"
 echo "Dry Run:            $DRY_RUN"
 print_separator
 
@@ -275,42 +288,89 @@ fi
 START_TIME=$(date +%s)
 
 # Main execution loop
-for i in "${!REASONING_MODELS[@]}"; do
-    REASONING_MODEL="${REASONING_MODELS[$i]}"
-    ANSWERING_MODEL="${ANSWERING_MODELS[$i]}"
-    
-    REASONING_MODEL_NAME=$(get_model_name "$REASONING_MODEL")
-    ANSWERING_MODEL_NAME=$(get_model_name "$ANSWERING_MODEL")
-    
+if [ "$MODE" = "cross-consistency" ]; then
+    # Cross-consistency: one call per task pair with ALL models passed together
+    REASONING_MODELS_STR=$(IFS=','; echo "${REASONING_MODELS[*]}")
+    ANSWERING_MODELS_STR=$(IFS=','; echo "${ANSWERING_MODELS[*]}")
+
     for TASK_PAIR in "${TASK_PAIRS[@]}"; do
         CURRENT_RUN=$((CURRENT_RUN + 1))
-        
+
         # Split task pair
         REASONING_TASK="${TASK_PAIR%%|*}"
         ANSWERING_TASK="${TASK_PAIR##*|}"
-        
+
         show_progress "$CURRENT_RUN" "$TOTAL_RUNS" "${REASONING_TASK} -> ${ANSWERING_TASK}"
-        
-        # Build output path
-        TASK_NAME=$(echo ${REASONING_TASK} | tr ':' '_')
-        OUTPUT_PATH="${OUTPUT_BASE}/${MODE}/${TASK_NAME}/${REASONING_MODEL_NAME}"
+
+        # Build output path (no model subdir — all models run together)
+        TASK_NAME="${ANSWERING_TASK%%:*}"
+        OUTPUT_PATH="${OUTPUT_BASE}/${MODE}/${TASK_NAME}"
         mkdir -p "$OUTPUT_PATH"
-        
+
         if run_multi_turn_evaluation "$PROVIDER" "$MODE" \
-                                    "$REASONING_MODEL" "$ANSWERING_MODEL" \
+                                    "$REASONING_MODELS_STR" "$ANSWERING_MODELS_STR" \
                                     "$REASONING_TASK" "$ANSWERING_TASK" \
                                     "$OUTPUT_PATH" "$BATCH_SIZE" "$SEED" "$CUDA_DEVICES" "$LIMIT"; then
             SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
-            SUCCESSFUL_RUN_LIST+=("${REASONING_TASK} -> ${ANSWERING_TASK} with ${REASONING_MODEL_NAME}")
+            SUCCESSFUL_RUN_LIST+=("${REASONING_TASK} -> ${ANSWERING_TASK}")
         else
             FAILED_RUNS=$((FAILED_RUNS + 1))
-            FAILED_RUN_LIST+=("${REASONING_TASK} -> ${ANSWERING_TASK} with ${REASONING_MODEL_NAME}")
+            FAILED_RUN_LIST+=("${REASONING_TASK} -> ${ANSWERING_TASK}")
             log_warning "Continuing with next evaluation..."
         fi
-        
+
         echo ""
     done
-done
+else
+    # CoT / CoT-SC / self-refine: one Python call per model, ALL task pairs batched
+    for i in "${!REASONING_MODELS[@]}"; do
+        REASONING_MODEL="${REASONING_MODELS[$i]}"
+        ANSWERING_MODEL="${ANSWERING_MODELS[$i]}"
+
+        REASONING_MODEL_NAME=$(get_model_name "$REASONING_MODEL")
+
+        CURRENT_RUN=$((CURRENT_RUN + 1))
+        show_progress "$CURRENT_RUN" "$TOTAL_RUNS" "${#TASK_PAIRS[@]} task pairs with ${REASONING_MODEL_NAME}"
+
+        # Build space-separated task lists — argparse nargs='+' expects separate tokens
+        REASONING_TASKS_STR=""
+        ANSWERING_TASKS_STR=""
+        for TASK_PAIR in "${TASK_PAIRS[@]}"; do
+            REASONING_TASK="${TASK_PAIR%%|*}"
+            ANSWERING_TASK="${TASK_PAIR##*|}"
+            REASONING_TASKS_STR="${REASONING_TASKS_STR}${REASONING_TASK} "
+            ANSWERING_TASKS_STR="${ANSWERING_TASKS_STR}${ANSWERING_TASK} "
+        done
+        REASONING_TASKS_STR="${REASONING_TASKS_STR% }"
+        ANSWERING_TASKS_STR="${ANSWERING_TASKS_STR% }"
+
+        # Output base: pass the mode-level dir; __main__.py appends {task}/{model}
+        OUTPUT_PATH="${OUTPUT_BASE}/${MODE}"
+        mkdir -p "$OUTPUT_PATH"
+
+        if [ "$SKIP_EXISTING" = true ] && has_existing_results "${OUTPUT_PATH}/${REASONING_MODEL_NAME}"; then
+            log_info "Skipping (results exist): ${MODE} / ${REASONING_MODEL_NAME}"
+            SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
+            SUCCESSFUL_RUN_LIST+=("[SKIPPED] ${#TASK_PAIRS[@]} task pairs with ${REASONING_MODEL_NAME}")
+            echo ""
+            continue
+        fi
+
+        if run_multi_turn_evaluation "$PROVIDER" "$MODE" \
+                                    "$REASONING_MODEL" "$ANSWERING_MODEL" \
+                                    "$REASONING_TASKS_STR" "$ANSWERING_TASKS_STR" \
+                                    "$OUTPUT_PATH" "$BATCH_SIZE" "$SEED" "$CUDA_DEVICES" "$LIMIT"; then
+            SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
+            SUCCESSFUL_RUN_LIST+=("${#TASK_PAIRS[@]} task pairs with ${REASONING_MODEL_NAME}")
+        else
+            FAILED_RUNS=$((FAILED_RUNS + 1))
+            FAILED_RUN_LIST+=("${#TASK_PAIRS[@]} task pairs with ${REASONING_MODEL_NAME}")
+            log_warning "Continuing with next evaluation..."
+        fi
+
+        echo ""
+    done
+fi
 
 # Record end time
 END_TIME=$(date +%s)
