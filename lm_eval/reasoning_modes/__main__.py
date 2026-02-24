@@ -11,26 +11,35 @@ from lm_eval.reasoning_modes.multi_turn_CoT_SC import mode_multi_turn_CoT_SC
 from lm_eval.reasoning_modes.cross_consistency import mode_cross_consistency
 from lm_eval.reasoning_modes.only_vote import mode_only_vote
 from lm_eval.reasoning_modes.Self_Refine_CoT import mode_self_refine_CoT
+from lm_eval.reasoning_modes.Self_Refine_CoT_Experimental import mode_self_refine_CoT_experimental
 
 # ---------------------------------------------------------------------------
 # Mode registry — add new modes here without touching main()
 # ---------------------------------------------------------------------------
 MODE_REGISTRY = {
-    "multi-turn_CoT":    mode_multi_turn_CoT,
-    "multi-turn_CoT-SC": mode_multi_turn_CoT_SC,
-    "cross-consistency": mode_cross_consistency,
-    "only-vote":         mode_only_vote,
-    "self-refine_CoT":   mode_self_refine_CoT,
+    "multi-turn_CoT":                  mode_multi_turn_CoT,
+    "multi-turn_CoT-SC":               mode_multi_turn_CoT_SC,
+    "cross-consistency":               mode_cross_consistency,
+    "only-vote":                       mode_only_vote,
+    "self-refine_CoT":                 mode_self_refine_CoT,
+    "self-refine_CoT_experimental":    mode_self_refine_CoT_experimental,
 }
 
 
 def make_summary_output(out: dict) -> dict:
-    """Return a copy of ``out`` with each sample's ``doc`` stripped to ``id`` and ``Label`` only."""
+    """Return a copy of ``out`` with each sample stripped to essentials.
+
+    * ``doc`` is reduced to ``id`` and ``Label`` only.
+    * Full prompt strings (``answering_prompt``, any ``*_Prompt`` doc fields)
+      are removed to keep the summary file compact.
+    """
     summary = copy.deepcopy(out)
     for info in summary.get("samples", {}).values():
         if "doc" in info:
             doc = info["doc"]
             info["doc"] = {k: doc[k] for k in ("id", "Label") if k in doc}
+        # Drop verbose prompt strings that belong in FullSamples only
+        info.pop("answering_prompt", None)
     return summary
 
 
@@ -85,16 +94,45 @@ def main():
                         help="Skip MBR voting strategies.")
     parser.set_defaults(simple_voting=True, mbr_voting=False)
 
+    # Tier-2 LLM-scored voting (opt-in; requires explicit strategy names)
+    from lm_eval.reasoning_modes.voting.strategies.llm_metrics import TIER2_STRATEGY_META
+    parser.add_argument(
+        '--tier2_strategies', nargs='+', default=[],
+        choices=list(TIER2_STRATEGY_META.keys()),
+        metavar='STRATEGY',
+        help=(
+            "One or more Tier-2 chain-scoring strategies to run after the main SC loop. "
+            "Available: " + ", ".join(TIER2_STRATEGY_META.keys())
+        ),
+    )
+    parser.add_argument(
+        '--judge_model', type=str, default=None,
+        help=(
+            "lm-eval model_args string for the external judge model used by "
+            "'judge'-source Tier-2 strategies (e.g. 'pretrained=Qwen/Qwen3-8B')."
+        ),
+    )
+
     # Self-Refine flags
     parser.add_argument('--refine_iterations', type=int, default=1,
                         help="Number of Self-Refine feedback+refinement iterations.")
     parser.add_argument('--stop_on_degradation', action='store_true',
                         help="Stop Self-Refine early if answer log-likelihood decreases.")
+    parser.add_argument('--no_stop_on_degradation', action='store_true',
+                        help="Disable degradation-based early stopping (overrides the "
+                             "self-refine_CoT_experimental default of True).")
+    parser.add_argument('--feedback_max_tokens', type=int, default=1000,
+                        help="Max tokens for feedback generation in Self-Refine (default: 1000).")
 
     # Output Args
     parser.add_argument('--output_path', type=str, default="/cfs/home/u021010/PhD/active_dev/outputs/CoT-Debug/")
 
     args = parser.parse_args()
+
+    # self-refine_CoT_experimental defaults stop_on_degradation to True
+    # unless the user explicitly opts out with --no_stop_on_degradation
+    if args.mode == "self-refine_CoT_experimental" and not args.no_stop_on_degradation:
+        args.stop_on_degradation = True
 
     mode_fn = MODE_REGISTRY.get(args.mode)
     if mode_fn is None:
@@ -110,10 +148,20 @@ def main():
         for result in outputs:
             task_key   = result.get("answering_task", result.get("reasoning_task", "unknown"))
             task_name  = task_key.split(":")[0]          # "MedQA:0-shot" → "MedQA"
-            raw_model  = result.get("reasoning_model", result.get("answering_model", "unknown"))
+            # Support both singular (CoT) and plural (cross-consistency) model keys
             import re as _re
-            m = _re.search(r'pretrained=([^,)]+)', raw_model)
-            model_name = m.group(1).replace('/', '_') if m else raw_model
+            raw_model = result.get("reasoning_model") or result.get("answering_model")
+            if raw_model is None:
+                model_list = result.get("reasoning_models") or result.get("answering_models") or []
+                raw_model  = "_".join(
+                    _re.search(r'pretrained=([^,)]+)', m).group(1).replace('/', '_')
+                    for m in model_list
+                    if _re.search(r'pretrained=([^,)]+)', m)
+                ) or "unknown"
+                model_name = raw_model
+            else:
+                m = _re.search(r'pretrained=([^,)]+)', raw_model)
+                model_name = m.group(1).replace('/', '_') if m else raw_model
 
             task_output_path = os.path.join(args.output_path, task_name, model_name)
             os.makedirs(task_output_path, exist_ok=True)

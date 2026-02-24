@@ -52,6 +52,16 @@ def collect_results_from_default_file(path: str) -> List[Dict[str, Any]]:
         return []
     
     results = []
+
+    # Try to infer the evaluation mode from the folder path
+    known_modes = ["multi-turn_CoT", "self-refine_CoT", "cross-consistency",
+                   "multi-turn_CoT-SC", "multi-turn_CoT-MBR"]
+    path_str = str(path)
+    inferred_mode = "0-shot"
+    for m in known_modes:
+        if m in path_str:
+            inferred_mode = m
+            break
     
     for task_name, result_dict in data.get("results", {}).items():
         config = data.get("configs", {}).get(task_name, {})
@@ -66,6 +76,7 @@ def collect_results_from_default_file(path: str) -> List[Dict[str, Any]]:
 
         result_entry = {
             "Dataset": task_name,
+            "Mode": inferred_mode,
             "Model": model_name,
             "Model_Full": pretrained,
             "Timestamp": timestamp,
@@ -92,12 +103,22 @@ def collect_results_from_summary_file(path: str) -> List[Dict[str, Any]]:
     
     results = []
 
+    mode = data.get("mode", "N/A")
+    reasoning_task = data.get("reasoning_task", "")
+    # Extract base dataset name (e.g. "MedNLI" from "MedNLI:CoT")
+    base_dataset = reasoning_task.split(":")[0] if ":" in reasoning_task else reasoning_task
+
+    # Strip HuggingFace org prefix (e.g. "unsloth/Qwen3-8B" → "Qwen3-8B")
+    raw_model = data.get("reasoning_model", "").split(",")[0][11:]
+    model_name = raw_model.split("/")[-1] if "/" in raw_model else raw_model
+
     if "acc" in data.get("results", {}).keys() or "acc,none" in data.get("results", {}).keys():
         model_args = data.get("config", {}).get("model_args", "N/A")
 
         result_entry = {
-            "Dataset": data.get("reasoning_task", {}),
-            "Model": data.get("reasoning_model", {}).split(",")[0][11:],
+            "Dataset": base_dataset,
+            "Mode": mode,
+            "Model": model_name,
             "Model Args": model_args,
             "Path": path
         }
@@ -111,15 +132,16 @@ def collect_results_from_summary_file(path: str) -> List[Dict[str, Any]]:
             model_args = data.get("config", {}).get("model_args", "N/A")
 
             result_entry = {
-                "Dataset": data.get("reasoning_task", {}),
+                "Dataset": base_dataset,
+                "Mode": mode,
                 "Voting_Method": voting_method,
-                "Model": data.get("reasoning_model", {}).split(",")[0][11:],
+                "Model": model_name,
                 "Model Args": model_args,
                 "Path": path
             }
 
             result_entry.update(extract_metrics(result_dict))
-            results.append(result_entry)     
+            results.append(result_entry)
 
     else:
         for task_name, result_dict in data.get("results", {}).items():
@@ -127,13 +149,14 @@ def collect_results_from_summary_file(path: str) -> List[Dict[str, Any]]:
 
             result_entry = {
                 "Dataset": task_name,
-                "Model": data.get("reasoning_model", {}).split(",")[0][11:],
+                "Mode": mode,
+                "Model": model_name,
                 "Model Args": model_args,
                 "Path": path
             }
 
             result_entry.update(extract_metrics(result_dict))
-            results.append(result_entry)        
+            results.append(result_entry)
 
     return results
 
@@ -190,7 +213,8 @@ def compute_summary_statistics(df: pd.DataFrame) -> pd.DataFrame:
     numeric_cols = [col for col in df.columns 
                    if col not in reserved_cols 
                    and pd.api.types.is_numeric_dtype(df[col])
-                   and not col.endswith("_stderr")]
+                   and not col.endswith("_stderr")
+                   and not col.endswith("_rank")]
     
     if not numeric_cols:
         return pd.DataFrame()
@@ -203,18 +227,23 @@ def compute_summary_statistics(df: pd.DataFrame) -> pd.DataFrame:
 
 def add_rankings(df: pd.DataFrame) -> pd.DataFrame:
     """Add ranking columns for each metric (1 = best)."""
-    reserved_cols = {"Dataset", "Model", "Model_Full", "Timestamp", "Model Args", "Path", "Voting_Method"}
+    reserved_cols = {"Dataset", "Mode", "Model", "Model_Full", "Timestamp", "Model Args", "Path", "Voting_Method"}
     numeric_cols = [col for col in df.columns 
                    if col not in reserved_cols 
                    and pd.api.types.is_numeric_dtype(df[col])]
+
+    # Group rankings within the same dataset+mode combination when available
+    group_cols = [c for c in ["Dataset", "Mode", "Voting_Method"] if c in df.columns]
+    if not group_cols:
+        group_cols = ["Dataset"]
     
     for col in numeric_cols:
         # Assume higher is better for most metrics (acc, f1, etc.)
         # Lower is better for loss, perplexity
         if any(x in col.lower() for x in ['loss', 'perplexity', 'error']):
-            df[f"{col}_rank"] = df.groupby("Dataset")[col].rank(ascending=True, method='min')
+            df[f"{col}_rank"] = df.groupby(group_cols)[col].rank(ascending=True, method='min')
         else:
-            df[f"{col}_rank"] = df.groupby("Dataset")[col].rank(ascending=False, method='min')
+            df[f"{col}_rank"] = df.groupby(group_cols)[col].rank(ascending=False, method='min')
     
     return df
 
@@ -235,12 +264,88 @@ def save_csv(df: pd.DataFrame, path: Path):
     print(f"    - Saved CSV to:     {path}")
 
 
+def _format_group_table(
+    group_df: pd.DataFrame,
+    numeric_cols: List[str],
+    non_rank_numeric: List[str],
+    drop_cols: List[str],
+) -> pd.DataFrame:
+    """Format a single group dataframe for Markdown output (in-place formatting)."""
+
+    def to_ordinal(n: float) -> str:
+        if pd.isna(n):
+            return "N/A"
+        n = int(n)
+        suffix = 'th' if 10 <= n % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
+        return f"{n}{suffix}"
+
+    group_df = group_df.copy()
+
+    # Always drop Dataset (redundant — table header carries that info) plus caller-specified cols
+    group_df = group_df.drop(columns=list(set(drop_cols) | {"Dataset"}), errors="ignore")
+
+    # Filter columns where all values are NaN
+    cols_to_keep = []
+    for col in group_df.columns:
+        if col in numeric_cols:
+            if not group_df[col].isna().all():
+                cols_to_keep.append(col)
+        else:
+            cols_to_keep.append(col)
+    group_df = group_df[cols_to_keep]
+
+    # Drop 'alias' (lm-eval task alias) — table header already carries dataset context
+    group_df = group_df.drop(columns=["alias"], errors="ignore")
+
+    # Column ordering: Model first, then Path, then metrics
+    fixed_first = [c for c in ["Model"] if c in group_df.columns]
+    fixed_last  = [c for c in ["Path"] if c in group_df.columns]
+    metric_order = [c for c in group_df.columns if c not in fixed_first + fixed_last]
+    group_df = group_df[fixed_first + metric_order + fixed_last]
+
+    # Highlight best per metric and format as percentage
+    current_non_rank = [c for c in non_rank_numeric if c in group_df.columns]
+    for metric in current_non_rank:
+        higher_is_better = not any(x in metric.lower() for x in ['loss', 'perplexity', 'error'])
+        subset = group_df[metric]
+        if subset.isna().all() or len(subset) == 0:
+            continue
+        try:
+            best_idx = subset.idxmax() if higher_is_better else subset.idxmin()
+            if pd.isna(best_idx):
+                raise ValueError
+            for idx in subset.index:
+                val = group_df.loc[idx, metric]
+                if pd.notna(val):
+                    fmt = f"{val * 100:.2f}"
+                    group_df.loc[idx, metric] = f"**{fmt}**" if idx == best_idx else fmt
+                else:
+                    group_df.loc[idx, metric] = "N/A"
+        except (ValueError, TypeError):
+            for idx in subset.index:
+                val = group_df.loc[idx, metric]
+                group_df.loc[idx, metric] = f"{val * 100:.2f}" if pd.notna(val) else "N/A"
+
+    # Format paths as links
+    if "Path" in group_df.columns:
+        group_df["Path"] = group_df["Path"].apply(
+            lambda x: f"[📁]({x})" if pd.notna(x) else ""
+        )
+
+    # Format rank columns as ordinals
+    for rank_col in [c for c in group_df.columns if c.endswith("_rank")]:
+        group_df[rank_col] = group_df[rank_col].apply(to_ordinal)
+
+    return group_df
+
+
 def save_markdown(df: pd.DataFrame, path: Path):
-    """Save results to Markdown with separate tables per dataset."""
+    """Save results to Markdown with separate tables per (Dataset, Mode) group,
+    followed by combined per-dataset tables."""
     df = df.copy()
     df = df.drop(columns=["Model Args", "Model_Full", "Timestamp"], errors="ignore")
 
-    # Sort by model priority
+    # ── model sort order ─────────────────────────────────────────────────────
     model_order = ["Fleming", "Panacea", "Qwen", "Llama", "deepseek", "DeepSeek", "Mistral", "Gemma"]
 
     def get_model_priority(model_name: str) -> int:
@@ -248,175 +353,112 @@ def save_markdown(df: pd.DataFrame, path: Path):
             if key in str(model_name):
                 return i
         return len(model_order)
-    
-    def to_ordinal(n: float) -> str:
-        """Convert a number to ordinal string (1st, 2nd, 3rd, etc.)."""
-        if pd.isna(n):
-            return "N/A"
-        n = int(n)
-        if 10 <= n % 100 <= 20:
-            suffix = 'th'
-        else:
-            suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
-        return f"{n}{suffix}"
 
+    # Sort entire dataframe: Dataset → Mode → Model
+    sort_keys = [c for c in ["Dataset", "Mode"] if c in df.columns]
     if "Model" in df.columns:
         df = df.sort_values(
-            by="Model",
-            key=lambda col: col.map(get_model_priority),
+            by=sort_keys + ["Model"],
+            key=lambda col: col.map(get_model_priority) if col.name == "Model" else col,
         )
 
-    # Identify ALL numeric columns (including ranks this time)
-    numeric_cols = [col for col in df.select_dtypes(include=["float", "int"]).columns]
-    # Separate non-rank numeric columns for formatting
-    non_rank_numeric = [col for col in numeric_cols if not col.endswith("_rank")]
-    
-    # Build markdown content with separate tables per dataset
+    # ── numeric column sets ───────────────────────────────────────────────────
+    numeric_cols = list(df.select_dtypes(include=["float", "int"]).columns)
+    non_rank_numeric = [c for c in numeric_cols if not c.endswith("_rank")]
+
     markdown_content = ["# Evaluation Results\n\n"]
-    
+
     if "Dataset" not in df.columns:
-        # If no dataset column, create single table
-        df_formatted = df.copy()
-        
-        # Filter out columns where all values are NaN
-        cols_to_keep = []
-        for col in df_formatted.columns:
-            if col in numeric_cols:
-                if not df_formatted[col].isna().all():
-                    cols_to_keep.append(col)
-            else:
-                cols_to_keep.append(col)
-        df_formatted = df_formatted[cols_to_keep]
-        
-        # Format non-rank numeric columns
-        for col in non_rank_numeric:
-            if col in df_formatted.columns:
-                df_formatted[col] = df_formatted[col].apply(
-                    lambda x: f"{x * 100:.2f}" if pd.notna(x) else "N/A"
-                )
-        if "Path" in df_formatted.columns:
-            df_formatted["Path"] = df_formatted["Path"].apply(
-                lambda x: f"[📁]({x})" if pd.notna(x) else ""
-            )
-        
-        # Format rank columns as ordinals (1st, 2nd, 3rd, etc.)
-        rank_cols = [col for col in df_formatted.columns if col.endswith("_rank")]
-        for rank_col in rank_cols:
-            df_formatted[rank_col] = df_formatted[rank_col].apply(to_ordinal)
-        
-        markdown_content.append(df_formatted.to_markdown(index=False, disable_numparse=True))
+        # Fallback: single table
+        formatted = _format_group_table(df, numeric_cols, non_rank_numeric,
+                                        drop_cols=[])
+        markdown_content.append(formatted.to_markdown(index=False, disable_numparse=True))
+        markdown_content.append("\n\n")
     else:
-        # Create separate table for each dataset
-        for dataset in sorted(df["Dataset"].unique()):
-            markdown_content.append(f"## {dataset}\n\n")
-            
-            dataset_df = df[df["Dataset"] == dataset].copy()
-            
-            # Filter out ALL columns where all values are NaN for this dataset (INCLUDING rank columns)
-            cols_to_keep = []
-            for col in dataset_df.columns:
-                # Skip the grouping Dataset column - it's redundant with alias
-                if col == "Dataset":
-                    continue
-                # For numeric columns (including ranks), check if all NaN
-                if col in numeric_cols:
-                    if not dataset_df[col].isna().all():
-                        cols_to_keep.append(col)
-                else:
-                    # Keep all non-numeric columns
-                    cols_to_keep.append(col)
-            
-            dataset_df = dataset_df[cols_to_keep]
-            
-            # Rename 'alias' to 'Dataset' if it exists
-            if "alias" in dataset_df.columns:
-                dataset_df = dataset_df.rename(columns={"alias": "Dataset"})
-            
-            # Reorder columns: Dataset (alias), Model, Path, then metrics
-            ordered_cols = []
-            if "Dataset" in dataset_df.columns:  # This is the renamed 'alias' column
-                ordered_cols.append("Dataset")
-            if "Model" in dataset_df.columns:
-                ordered_cols.append("Model")
-            if "Path" in dataset_df.columns:
-                ordered_cols.append("Path")
-            
-            # Add remaining columns (metrics)
-            for col in dataset_df.columns:
-                if col not in ordered_cols:
-                    ordered_cols.append(col)
-            
-            dataset_df = dataset_df[ordered_cols]
-            
-            # Highlight best values per metric (only for non-rank numeric columns)
-            for metric in non_rank_numeric:
-                if metric not in dataset_df.columns:
-                    continue
-                
-                # Determine if higher or lower is better
-                higher_is_better = not any(x in metric.lower() for x in ['loss', 'perplexity', 'error'])
-                
-                subset = dataset_df[metric]
-                
-                # Skip if no valid numeric values
-                if subset.isna().all() or len(subset) == 0:
-                    continue
-                
-                try:
-                    # Find best index
-                    if higher_is_better:
-                        best_idx = subset.idxmax()
-                    else:
-                        best_idx = subset.idxmin()
-                    
-                    # Check if best_idx is valid (not NaN)
-                    if pd.isna(best_idx):
-                        # Just format without highlighting
-                        for idx in subset.index:
-                            val = dataset_df.loc[idx, metric]
-                            if pd.notna(val):
-                                dataset_df.loc[idx, metric] = f"{val * 100:.2f}"
-                            else:
-                                dataset_df.loc[idx, metric] = "N/A"
-                        continue
-                    
-                    # Format all values
-                    for idx in subset.index:
-                        val = dataset_df.loc[idx, metric]
-                        if pd.notna(val):
-                            if idx == best_idx:
-                                dataset_df.loc[idx, metric] = f"**{val * 100:.2f}**"
-                            else:
-                                dataset_df.loc[idx, metric] = f"{val * 100:.2f}"
-                        else:
-                            dataset_df.loc[idx, metric] = "N/A"
-                except (ValueError, TypeError):
-                    # If idxmax/idxmin fails, just format the values
-                    for idx in subset.index:
-                        val = dataset_df.loc[idx, metric]
-                        if pd.notna(val):
-                            dataset_df.loc[idx, metric] = f"{val * 100:.2f}"
-                        else:
-                            dataset_df.loc[idx, metric] = "N/A"
-            
-            # Add links to result files if Path column exists
-            if "Path" in dataset_df.columns:
-                dataset_df["Path"] = dataset_df["Path"].apply(
-                    lambda x: f"[📁]({x})" if pd.notna(x) else ""
-                )
-            
-            # Format rank columns as ordinals (1st, 2nd, 3rd, etc.)
-            rank_cols = [col for col in dataset_df.columns if col.endswith("_rank")]
-            for rank_col in rank_cols:
-                dataset_df[rank_col] = dataset_df[rank_col].apply(to_ordinal)
-            
-            markdown_content.append(dataset_df.to_markdown(index=False, disable_numparse=True))
+        has_mode = "Mode" in df.columns
+
+        # ── Section 1: one table per (Dataset, Mode) ─────────────────────────
+        markdown_content.append("## Results by Mode\n\n")
+
+        if has_mode:
+            groups = df.groupby(["Dataset", "Mode"], sort=False)
+            group_keys = sorted(groups.groups.keys())  # sort by (dataset, mode)
+        else:
+            groups = df.groupby(["Dataset"], sort=False)
+            group_keys = sorted(groups.groups.keys())
+
+        for key in group_keys:
+            group_df = groups.get_group(key).copy()
+            if has_mode:
+                dataset, mode = key
+                header = f"### {dataset} — {mode}"
+                drop_cols = ["Dataset", "Mode"]
+            else:
+                dataset = key
+                header = f"### {dataset}"
+                drop_cols = ["Dataset"]
+
+            markdown_content.append(f"{header}\n\n")
+            formatted = _format_group_table(
+                group_df, numeric_cols, non_rank_numeric, drop_cols=drop_cols
+            )
+            markdown_content.append(formatted.to_markdown(index=False, disable_numparse=True))
             markdown_content.append("\n\n")
-    
+
+        # ── Section 2: combined table per base Dataset (strips _0-shot suffix) ─
+        markdown_content.append("---\n\n## Combined Results by Dataset\n\n")
+
+        def _base_dataset(name: str) -> str:
+            """Normalise dataset name: strip trailing _0-shot so CoT and 0-shot rows share a group."""
+            return name.removesuffix("_0-shot") if isinstance(name, str) else name
+
+        df["_BaseDataset"] = df["Dataset"].apply(_base_dataset)
+
+        rank_cols_global = [c for c in df.columns if c.endswith("_rank")]
+
+        for base_ds in sorted(df["_BaseDataset"].unique()):
+            markdown_content.append(f"### {base_ds} (all modes)\n\n")
+            combined_df = df[df["_BaseDataset"] == base_ds].copy()
+
+            # Drop stale per-mode ranks and recompute fresh across all rows in this group
+            combined_df = combined_df.drop(columns=rank_cols_global, errors="ignore")
+            combined_df = combined_df.drop(columns=["_BaseDataset"], errors="ignore")
+            fresh_metric_cols = [
+                c for c in combined_df.columns
+                if c not in {"Dataset", "Mode", "Model", "Model_Full", "Timestamp",
+                             "Model Args", "Path", "Voting_Method"}
+                and pd.api.types.is_numeric_dtype(combined_df[c])
+            ]
+            for col in fresh_metric_cols:
+                ascending = any(x in col.lower() for x in ['loss', 'perplexity', 'error'])
+                combined_df[f"{col}_rank"] = combined_df[col].rank(
+                    ascending=ascending, method='min'
+                )
+
+            # Recompute numeric_cols / non_rank_numeric for this combined slice
+            comb_numeric = list(combined_df.select_dtypes(include=["float", "int"]).columns)
+            comb_non_rank = [c for c in comb_numeric if not c.endswith("_rank")]
+
+            # Keep Mode column so rows are distinguishable
+            formatted = _format_group_table(
+                combined_df, comb_numeric, comb_non_rank,
+                drop_cols=[]  # Dataset already dropped inside _format_group_table
+            )
+            # Ensure Mode is the first column after Model
+            if "Mode" in formatted.columns and "Model" in formatted.columns:
+                other_cols = [c for c in formatted.columns if c not in ("Model", "Mode")]
+                formatted = formatted[["Model", "Mode"] + other_cols]
+
+            markdown_content.append(formatted.to_markdown(index=False, disable_numparse=True))
+            markdown_content.append("\n\n")
+
+        # Clean up helper column
+        df.drop(columns=["_BaseDataset"], errors="ignore", inplace=True)
+
     # Write to file
     with open(path, 'w') as f:
         f.write(''.join(markdown_content))
-    
+
     print(f"    - Saved Markdown to:{path}")
 
 
@@ -446,120 +488,190 @@ def save_latex(df, path):
 
 
 def save_visualizations(df: pd.DataFrame, output_dir: Path, output_name: str):
-    """Generate visualizations grouped by dataset."""
-    reserved_cols = {"Dataset", "Model", "Model_Full", "Timestamp", "Model Args", "Path", "Voting_Method"}
-    metric_columns = [col for col in df.columns 
-                     if col not in reserved_cols 
-                     and pd.api.types.is_numeric_dtype(df[col])
-                     and not col.endswith("_rank")]
+    """Generate charts and heatmaps.
+
+    Charts   → output_dir/charts/      one bar chart per base dataset (all modes, sorted descending)
+    Heatmaps → output_dir/heatmaps/    one heatmap per (base_dataset × mode) + one global heatmap
+    """
+    charts_dir   = output_dir / "charts"
+    heatmaps_dir = output_dir / "heatmaps"
+    charts_dir.mkdir(parents=True, exist_ok=True)
+    heatmaps_dir.mkdir(parents=True, exist_ok=True)
+
+    reserved_cols = {"Dataset", "Mode", "Model", "Model_Full", "Timestamp",
+                     "Model Args", "Path", "Voting_Method", "_BaseDataset", "_Label", "_ModeRank"}
+    metric_columns = [
+        col for col in df.columns
+        if col not in reserved_cols
+        and pd.api.types.is_numeric_dtype(df[col])
+        and not col.endswith("_rank")
+    ]
 
     if not metric_columns:
         print("[INFO] No numeric metrics found for visualization")
         return
-
     if "Dataset" not in df.columns or "Model" not in df.columns:
         print("[INFO] Missing Dataset or Model columns for visualization")
         return
 
-    # 1. Combined charts per dataset (all metrics in one figure)
-    for dataset in sorted(df["Dataset"].unique()):
-        dataset_df = df[df["Dataset"] == dataset]
-        
-        # Find metrics that have at least one valid value for this dataset
-        available_metrics = []
-        for metric in metric_columns:
-            if metric in dataset_df.columns and not dataset_df[metric].isna().all():
-                available_metrics.append(metric)
-        
-        if not available_metrics:
-            continue
-        
-        try:
-            # Create subplots: one row per metric
-            n_metrics = len(available_metrics)
-            fig, axes = plt.subplots(n_metrics, 1, figsize=(10, 4 * n_metrics))
-            
-            # Handle single metric case
-            if n_metrics == 1:
-                axes = [axes]
-            
-            for ax, metric in zip(axes, available_metrics):
-                df_plot = dataset_df[["Model", metric]].dropna().copy()
-                if df_plot.empty:
-                    ax.text(0.5, 0.5, 'No data available', 
-                           ha='center', va='center', transform=ax.transAxes)
-                    ax.set_title(f"{metric}")
-                    continue
-                
-                df_plot[metric] *= 100
-                df_plot = df_plot.sort_values(metric, ascending=False)
-                
-                colors = plt.cm.viridis(np.linspace(0, 1, len(df_plot)))
-                ax.bar(df_plot["Model"], df_plot[metric], color=colors)
-                ax.set_ylabel(f'{metric} (%)')
-                ax.set_title(f"{metric}")
-                ax.tick_params(axis='x', rotation=45)
-                ax.grid(axis='y', alpha=0.3)
-                
-                # Format x-axis labels
-                ax.set_xticklabels(df_plot["Model"], rotation=45, ha='right')
-            
-            # Add overall title
-            fig.suptitle(f'{dataset}', fontsize=16, fontweight='bold', y=0.995)
-            plt.tight_layout(rect=[0, 0, 1, 0.99])
-            
-            safe_dataset_name = dataset.replace('/', '_').replace(' ', '_').replace(':', '_')
-            chart_path = output_dir / f"{output_name}_{safe_dataset_name}_combined.png"
-            plt.savefig(chart_path, dpi=150, bbox_inches='tight')
-            plt.close()
-            print(f"    - Saved chart:         {chart_path}")
-        except Exception as e:
-            print(f"    - Failed to create chart for '{dataset}': {e}")
+    MODE_ORDER = ["0-shot", "multi-turn_CoT", "multi-turn_CoT-SC",
+                  "multi-turn_CoT-MBR", "cross-consistency", "self-refine_CoT"]
 
-    # 2. Heatmap per Dataset (Models as rows, Metrics as columns)
-    try:
-        for dataset in sorted(df["Dataset"].unique()):
-            dataset_df = df[df["Dataset"] == dataset]
-            
-            # Find metrics with valid data
-            available_metrics = [m for m in metric_columns 
-                               if m in dataset_df.columns and not dataset_df[m].isna().all()]
-            
-            if not available_metrics:
-                continue
-            
-            # Pivot: Models as rows, Metrics as columns
-            pivot = dataset_df.pivot_table(
-                values=available_metrics,
-                index='Model',
-                aggfunc='first'
-            )
-            
-            if pivot.empty:
-                continue
-            
-            pivot = pivot * 100  # Convert to percentage
-            
-            # Dynamic figure size based on content
-            fig_width = max(12, len(pivot.columns) * 1.5)
-            fig_height = max(6, len(pivot) * 0.8)
-            
-            plt.figure(figsize=(fig_width, fig_height))
-            sns.heatmap(pivot, annot=True, fmt='.2f', cmap='RdYlGn', 
-                       cbar_kws={'label': 'Score (%)'}, 
-                       vmin=0, vmax=100, linewidths=0.5)
-            plt.title(f'{dataset}\n(Models × Metrics)', fontsize=14, fontweight='bold')
-            plt.xlabel('Metrics')
-            plt.ylabel('Models')
-            plt.tight_layout()
-            
-            safe_dataset_name = dataset.replace('/', '_').replace(' ', '_').replace(':', '_')
-            heatmap_path = output_dir / f"{output_name}_heatmap_{safe_dataset_name}.png"
-            plt.savefig(heatmap_path, dpi=150, bbox_inches='tight')
+    def mode_rank(mode: str) -> int:
+        try:
+            return MODE_ORDER.index(mode)
+        except ValueError:
+            return len(MODE_ORDER)
+
+    def base_dataset(name: str) -> str:
+        return name.removesuffix("_0-shot") if isinstance(name, str) else name
+
+    def safe(s: str) -> str:
+        return s.replace('/', '_').replace(' ', '_').replace(':', '_')
+
+    def _heatmap(pivot: pd.DataFrame, title: str, path: Path):
+        fig_w = max(4, len(pivot.columns) * 1.6)
+        fig_h = max(3, len(pivot) * 0.55)
+        plt.figure(figsize=(fig_w, fig_h))
+        sns.heatmap(pivot * 100, annot=True, fmt='.1f', cmap='RdYlGn',
+                    cbar_kws={'label': 'Score (%)', 'shrink': 0.6},
+                    vmin=0, vmax=100, linewidths=0.4,
+                    annot_kws={"size": 8})
+        plt.title(title, fontsize=11, fontweight='bold', pad=8)
+        plt.xlabel('Metric', fontsize=9)
+        plt.ylabel('')
+        plt.xticks(fontsize=8)
+        plt.yticks(fontsize=8, rotation=0)
+        plt.tight_layout()
+        plt.savefig(path, dpi=180, bbox_inches='tight')
+        plt.close()
+
+    df = df.copy()
+    df["_BaseDataset"] = df["Dataset"].apply(base_dataset)
+    has_mode = "Mode" in df.columns
+
+    if has_mode:
+        df["_Label"]    = df["Model"] + " — " + df["Mode"].fillna("")
+        df["_ModeRank"] = df["Mode"].apply(mode_rank)
+    else:
+        df["_Label"]    = df["Model"]
+        df["_ModeRank"] = 0
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Charts: one figure per base dataset, bars sorted descending per metric
+    # ─────────────────────────────────────────────────────────────────────────
+    for base_ds in sorted(df["_BaseDataset"].unique()):
+        group_df = df[df["_BaseDataset"] == base_ds].copy()
+        group_df = group_df.sort_values(["_ModeRank", "Model"]).reset_index(drop=True)
+
+        avail = [m for m in metric_columns
+                 if m in group_df.columns and not group_df[m].isna().all()]
+        if not avail:
+            continue
+
+        try:
+            n = len(avail)
+            n_bars = len(group_df)
+            bar_w  = max(0.5, min(0.8, 6 / n_bars))        # narrower bars when many entries
+            fig_w  = max(10, n_bars * 1.1)
+            fig_h  = 4.5 * n
+
+            fig, axes = plt.subplots(n, 1, figsize=(fig_w, fig_h))
+            if n == 1:
+                axes = [axes]
+
+            for ax, metric in zip(axes, avail):
+                plot_df = group_df[["_Label", metric]].dropna().copy()
+                plot_df[metric] = plot_df[metric] * 100
+                plot_df = plot_df.sort_values(metric, ascending=False).reset_index(drop=True)
+
+                cmap   = plt.cm.RdYlGn
+                norm   = plt.Normalize(vmin=plot_df[metric].min(), vmax=plot_df[metric].max())
+                colors = [cmap(norm(v)) for v in plot_df[metric]]
+
+                bars = ax.bar(plot_df["_Label"], plot_df[metric],
+                              color=colors, width=bar_w, edgecolor='white', linewidth=0.5)
+
+                # Value labels on top of bars
+                for bar, val in zip(bars, plot_df[metric]):
+                    ax.text(bar.get_x() + bar.get_width() / 2,
+                            bar.get_height() + 0.5,
+                            f'{val:.1f}', ha='center', va='bottom',
+                            fontsize=7.5, fontweight='bold')
+
+                ax.set_ylabel(f'{metric} (%)', fontsize=9)
+                ax.set_title(metric, fontsize=10, fontweight='bold')
+                ax.set_ylim(0, 108)
+                ax.set_xticks(range(len(plot_df)))
+                ax.set_xticklabels(plot_df["_Label"], rotation=40, ha='right', fontsize=8)
+                ax.tick_params(axis='y', labelsize=8)
+                ax.grid(axis='y', alpha=0.25, linestyle='--')
+                ax.spines['top'].set_visible(False)
+                ax.spines['right'].set_visible(False)
+
+            fig.suptitle(base_ds, fontsize=14, fontweight='bold')
+            plt.tight_layout(rect=[0, 0, 1, 0.97])
+            path = charts_dir / f"{output_name}_{safe(base_ds)}.png"
+            plt.savefig(path, dpi=180, bbox_inches='tight')
             plt.close()
-            print(f"    - Saved heatmap:       {heatmap_path}")
+            print(f"    - Saved chart:    {path}")
+        except Exception as e:
+            plt.close('all')
+            print(f"    - Failed chart for '{base_ds}': {e}")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Heatmaps: one per (base_dataset × mode), rows = Model, cols = metrics
+    # ─────────────────────────────────────────────────────────────────────────
+    group_cols = ["_BaseDataset", "Mode"] if has_mode else ["_BaseDataset"]
+    for key, grp in df.groupby(group_cols, sort=False):
+        base_ds, mode = (key[0], key[1]) if has_mode else (key, "")
+        avail = [m for m in metric_columns
+                 if m in grp.columns and not grp[m].isna().all()]
+        if not avail:
+            continue
+        try:
+            pivot = grp.set_index("Model")[avail].copy()
+            pivot = pivot.sort_index()
+            title = f"{base_ds} — {mode}" if mode else base_ds
+            path  = heatmaps_dir / f"{output_name}_heatmap_{safe(base_ds)}_{safe(mode)}.png"
+            _heatmap(pivot, title, path)
+            print(f"    - Saved heatmap:  {path}")
+        except Exception as e:
+            plt.close('all')
+            print(f"    - Failed heatmap for '{base_ds} / {mode}': {e}")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Global heatmap: rows = "Model — Mode", cols = "Dataset / metric"
+    # ─────────────────────────────────────────────────────────────────────────
+    try:
+        global_rows = []
+        for _, row in df.sort_values(["_BaseDataset", "_ModeRank", "Model"]).iterrows():
+            avail = [m for m in metric_columns if pd.notna(row.get(m))]
+            for m in avail:
+                global_rows.append({
+                    "row_label": row["_Label"],
+                    "col_label": f"{row['_BaseDataset']} / {m}",
+                    "value":     row[m],
+                })
+
+        if global_rows:
+            gdf   = pd.DataFrame(global_rows)
+            pivot = gdf.pivot_table(index="row_label", columns="col_label",
+                                    values="value", aggfunc="first")
+            # Preserve row order: mode rank then model
+            ordered_labels = (
+                df.sort_values(["_ModeRank", "Model"])["_Label"].drop_duplicates().tolist()
+            )
+            pivot = pivot.reindex([l for l in ordered_labels if l in pivot.index])
+
+            path = heatmaps_dir / f"{output_name}_heatmap_GLOBAL.png"
+            _heatmap(pivot, "All Datasets × All Modes", path)
+            print(f"    - Saved global heatmap: {path}")
     except Exception as e:
-        print(f"    - Failed to create heatmaps: {e}")
+        plt.close('all')
+        print(f"    - Failed global heatmap: {e}")
+
+    df.drop(columns=["_BaseDataset", "_Label", "_ModeRank"], errors="ignore", inplace=True)
 
 def generate_summary_report(df: pd.DataFrame, output_path: Path):
     """Generate a text summary report of key findings."""
@@ -669,6 +781,10 @@ def save_outputs(results: List[Dict], output_dir: str, output_name: str,
         generate_summary_report(df, output_dir / f"{output_name}_summary.txt")
     
     if output_charts:
+        charts_dir   = output_dir / "charts"
+        heatmaps_dir = output_dir / "heatmaps"
+        charts_dir.mkdir(parents=True, exist_ok=True)
+        heatmaps_dir.mkdir(parents=True, exist_ok=True)
         save_visualizations(df, output_dir, output_name)
     
     print("\n[SUCCESS] All outputs generated successfully!\n")

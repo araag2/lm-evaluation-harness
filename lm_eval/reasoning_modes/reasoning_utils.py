@@ -2,6 +2,7 @@ import collections
 import copy
 import importlib
 import argparse
+import re
 
 from typing import Dict, List, Optional, Tuple, Any
 from datasets import Dataset, DatasetDict
@@ -68,6 +69,59 @@ def extract_reasoning_text_from_dicts(sample: dict) -> List[str]:
         return [resp[0] for resp in sample["resps"]]
     raise ValueError(f"Could not extract reasoning text from sample: {sample}")
 
+# Trailing answer lines that any model might append at the end of the chain.
+# Strips "Answer: ...", "Final Answer: ...", "Verified Answer: ..." regardless
+# of what follows the colon, so this works across all tasks and label sets.
+_ANSWER_TAIL_RE = re.compile(
+    r"\n?(?:Answer|Final\s+Answer|Verified\s+Answer)\s*:[^\n]*\s*$",
+    re.IGNORECASE,
+)
+# Junk tokens/fragments to remove from anywhere in the chain.
+# Each pattern is stripped via re.sub rather than used to discard the whole chain.
+_JUNK_STRIP_RE = re.compile(
+    r"<\|[^|]+\|>"          # special tokens: <|im_end|>, <|END|>, etc.
+    r"|```(?:\w*)?"          # code-fence markers (``` or ```python etc.)
+    r"|Do not write anything[^\n]*"  # prompt-echo fragment
+    ,
+    re.IGNORECASE,
+)
+_MIN_CHAIN_LENGTH = 30
+
+def clean_reasoning_chain(chain: str) -> str:
+    """Clean a raw reasoning chain before injection into the answering dataset.
+
+    Handles the following failure modes:
+
+    1. **No reasoning generated**: the model output the answer directly or echoed
+       part of the prompt.  Returns ``""``.
+
+    2. **Trailing answer stubs**: strips lines like ``Answer: X`` or
+       ``Final Answer: X`` that some models append after the reasoning, regardless
+       of the label vocabulary used by the task.
+
+    3. **Inline junk tokens**: removes special tokens (``<|...|>``), code-fence
+       markers (`` ``` ``), and prompt-echo fragments (``Do not write anything...``)
+       from anywhere in the chain rather than discarding the whole chain.
+
+    4. **Effectively empty after cleaning**: if fewer than 30 characters remain
+       after all stripping, returns ``""``.
+    """
+    chain = chain.strip()
+    if not chain:
+        return ""
+
+    # --- Strip trailing answer lines ---
+    chain = _ANSWER_TAIL_RE.sub("", chain).strip()
+
+    # --- Strip junk tokens/fragments throughout the chain ---
+    chain = _JUNK_STRIP_RE.sub("", chain).strip()
+
+    # After all cleaning, treat very short results as empty (model produced no reasoning).
+    if len(chain) < _MIN_CHAIN_LENGTH:
+        return ""
+
+    return chain
+
 def inject_reasoning_into_dataset(
     base_dataset: List[dict],
     reasoning_samples: List,
@@ -76,18 +130,43 @@ def inject_reasoning_into_dataset(
     """
     Inject reasoning texts into a copy of base_dataset.
 
-    HuggingFace Dataset objects are immutable/copy-on-write, so `.select()` is
-    sufficient — no deepcopy needed (which would be very slow on large datasets).
-    with_indices=True guarantees position-based alignment between the dataset
-    rows and the reasoning_samples list.
+    When ``reasoning_samples`` contains lm-eval sample dicts (each with a
+    ``doc_id`` field), the list is sorted by ``doc_id`` before injection so
+    that position *i* in the sorted list always corresponds to dataset row *i*.
+    This is necessary because ``evaluator.simple_evaluate`` does not guarantee
+    that samples are returned in the same order as the input dataset.
+
+    When the samples are raw lm-eval dicts (with ``arguments``), the prompt
+    that produced each generation is also injected as ``{reasoning_field}_Prompt``
+    so it can be inspected in the output JSON.
     """
     test_set = dataset_list_to_dataset_dict(base_dataset, "test")["test"]
-    aligned = test_set.select(range(len(reasoning_samples)))
 
     reasoning_texts = reasoning_samples
+    prompts: Optional[List[str]] = None
+
     if reasoning_texts and isinstance(reasoning_texts[0], dict):
+        # Sort by doc_id to align with dataset row order (0, 1, 2, ...)
+        reasoning_texts = sorted(reasoning_texts, key=lambda s: s["doc_id"])
+        # Capture prompts from arguments[0][0] when available
+        prompts = [
+            s["arguments"][0][0]
+            if "arguments" in s and s["arguments"]
+            else ""
+            for s in reasoning_texts
+        ]
         reasoning_texts = [extract_reasoning_text_from_dicts(sample)[0] for sample in reasoning_texts]
 
+    # Clean every chain: extract think-block content, strip answer echoes, drop junk.
+    reasoning_texts = [clean_reasoning_chain(t) for t in reasoning_texts]
+
+    aligned = test_set.select(range(len(reasoning_texts)))
+
+    if prompts is not None:
+        return aligned.map(
+            lambda x, i: {**x, reasoning_field: reasoning_texts[i], f"{reasoning_field}_Prompt": prompts[i]},
+            with_indices=True,
+        )
     return aligned.map(
         lambda x, i: {**x, reasoning_field: reasoning_texts[i]},
         with_indices=True,
@@ -97,13 +176,26 @@ def inject_reasoning_into_dataset(
 # Task Patching
 # -------------------------
 
-def build_patched_task(answering_task_name:str, dataset_with_reasoning: List[dict], doc_to_text_func) -> Any:
+def build_patched_task(
+    answering_task_name: str,
+    dataset_with_reasoning: List[dict],
+    doc_to_text_func,
+    alias: Optional[str] = None,
+) -> Any:
+    """Build a patched lm-eval task with a replaced dataset and doc_to_text.
+
+    ``alias`` renames the task in the evaluator results dict.  Pass a unique
+    string when multiple patched tasks share the same base task name so that
+    ``simple_evaluate`` does not overwrite earlier results with later ones.
+    """
     original_task = tasks.get_task_dict([answering_task_name])[answering_task_name]
 
     patched = copy.deepcopy(original_task)
     patched.dataset = dataset_list_to_dataset_dict(dataset_with_reasoning)
     patched.doc_to_text = doc_to_text_func
     patched.config.test_split = "test"
+    if alias is not None:
+        patched.config.task = alias
 
     return patched
 
@@ -195,7 +287,7 @@ def run_answering_for_dataset(
         tasks=[patched_task],
         batch_size=args.batch_size,
         limit=args.limit,
-        log_samples=args.log_samples,
+        log_samples=True,   # always needed — chain injection and prediction extraction require samples
         random_seed=args.seed,
     )
 
@@ -208,6 +300,7 @@ def run_answering_for_datasets(
     tasks_and_datasets: List[Tuple[str, Any]],
     doc_to_text_module,  # str (shared) or List[str] (one per task)
     doc_to_text_func_name: str = "doc_to_text_answer_selection",
+    task_aliases: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
     Run answering for *multiple* datasets under a single model load.
@@ -215,23 +308,27 @@ def run_answering_for_datasets(
     ``tasks_and_datasets`` is a list of ``(task_name, dataset_with_reasoning)`` pairs.
     ``doc_to_text_module`` can be a single module path (string, shared by all tasks)
     or a list of per-task module paths.
+    ``task_aliases`` is an optional list of unique name overrides for each task;
+    use this when multiple tasks share the same base task name so that
+    ``simple_evaluate`` does not collapse their results into a single key.
 
     All patched tasks are evaluated in one ``simple_evaluate`` call so the model is
     loaded only once, regardless of how many datasets are passed.
 
     Returns the raw ``simple_evaluate`` result dict whose ``"samples"`` key is keyed
-    by task name — same structure as ``run_answering_for_dataset``.
+    by task name (or alias if provided).
     """
     modules = (
         doc_to_text_module
         if isinstance(doc_to_text_module, list)
         else [doc_to_text_module] * len(tasks_and_datasets)
     )
+    aliases = task_aliases if task_aliases is not None else [None] * len(tasks_and_datasets)
 
     patched_tasks = []
-    for (task_name, dataset_with_reasoning), module in zip(tasks_and_datasets, modules):
+    for (task_name, dataset_with_reasoning), module, alias in zip(tasks_and_datasets, modules, aliases):
         doc_to_text_func = getattr(importlib.import_module(module), doc_to_text_func_name)
-        patched_tasks.append(build_patched_task(task_name, dataset_with_reasoning, doc_to_text_func))
+        patched_tasks.append(build_patched_task(task_name, dataset_with_reasoning, doc_to_text_func, alias=alias))
 
     print(
         f"[Answering] model={answering_model}  tasks={[t for t, _ in tasks_and_datasets]}  "
@@ -245,7 +342,7 @@ def run_answering_for_datasets(
         tasks=patched_tasks,
         batch_size=args.batch_size,
         limit=args.limit,
-        log_samples=args.log_samples,
+        log_samples=True,   # always needed — chain injection and prediction extraction require samples
         random_seed=args.seed,
     )
 
@@ -277,12 +374,23 @@ def extract_predictions_from_samples(
         pred_probs = [prob[0][0] for prob in sample["resps"]]
         pred_idx = pred_probs.index(max(pred_probs))
 
+        # Extract the full answering prompt from arguments[0][0] when available.
+        # For loglikelihood requests, args = (context, continuation) — args[0] is the prompt.
+        answering_prompt: Optional[str] = None
+        if "arguments" in sample and sample["arguments"]:
+            try:
+                answering_prompt = sample["arguments"][0][0]
+            except (IndexError, TypeError):
+                pass
+
         if doc_id not in result:
             result[doc_id] = {
                 "doc": copy.deepcopy(sample["doc"]),
                 "preds": [] if accumulate else None,
                 "pred_probs": [] if accumulate else None,
             }
+            if answering_prompt is not None:
+                result[doc_id]["answering_prompt"] = answering_prompt
 
         if accumulate:
             result[doc_id]["pred_probs"].append(pred_probs)

@@ -1,0 +1,21 @@
+group: TREC_Prec_Med_CoT_SC
+task:
+  - TREC_Prec_Med_2017_CoT_SC
+  - TREC_Prec_Med_2018_CoT_SC
+  - TREC_Prec_Med_2019_CoT_SC
+aggregate_metric_list:
+  - aggregation: mean
+    metric: acc
+  - aggregation: mean
+    metric: P@5
+  - aggregation: mean
+    metric: P@10
+  - aggregation: mean
+    metric: P@15
+  - aggregation: mean
+    metric: R-Prec
+tag:
+  - chain-of-thought
+  - self-consistency
+metadata:
+  version: 1.0

@@ -23,7 +23,7 @@ def mode_multi_turn_CoT(args: argparse.Namespace):
     answering_model = args.answering_models[0]
 
     # --- Reasoning step: ALL tasks in ONE model load ---
-    all_reasoning_outputs = run_reasoning(args)[reasoning_model]  # {task: [samples]}
+    all_reasoning_outputs = run_reasoning(args)[reasoning_model] 
 
     # Build per-task metadata and (task_name, dataset) pairs for batch answering
     tasks_and_datasets = []
@@ -36,7 +36,7 @@ def mode_multi_turn_CoT(args: argparse.Namespace):
         doc_to_text_module = f"lm_eval.tasks.{task_base_name}.utils"
 
         reasoning_outputs      = all_reasoning_outputs[reasoning_task]
-        base_dataset           = load_base_dataset_from_task(reasoning_task.replace(":", "_"))
+        base_dataset           = load_base_dataset_from_task(answering_task_spec.replace(":", "_"))
         dataset_with_reasoning = inject_reasoning_into_dataset(base_dataset, reasoning_outputs)
 
         tasks_and_datasets.append((full_task_name, dataset_with_reasoning))

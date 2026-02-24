@@ -135,4 +135,4 @@ def pareto_front_mask(metric_matrix: List[List[float]]) -> List[bool]:
 
 def entropy(probs: List[float]) -> float:
     """Shannon entropy (nats) of a probability distribution."""
-    return -sum(p * math.log(p + 1e-12) for p in probs)
+    return -sum(p * math.log(max(p, 0) + 1e-12) for p in probs)

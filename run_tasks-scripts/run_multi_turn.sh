@@ -108,6 +108,16 @@ while [[ $# -gt 0 ]]; do
                 TREC) TASK_PAIRS=("${TREC_TASK_PAIRS[@]}") ;;
                 SMALL) TASK_PAIRS=("${SMALL_TASK_PAIRS[@]}") ;;
                 ALL) TASK_PAIRS=("${ALL_TASK_PAIRS[@]}") ;;
+                QA_SC) TASK_PAIRS=("${QA_SC_TASK_PAIRS[@]}") ;;
+                NLI_SC) TASK_PAIRS=("${NLI_SC_TASK_PAIRS[@]}") ;;
+                IE_SC) TASK_PAIRS=("${IE_SC_TASK_PAIRS[@]}") ;;
+                ES_SC) TASK_PAIRS=("${ES_SC_TASK_PAIRS[@]}") ;;
+                RANKING_SC) TASK_PAIRS=("${RANKING_SC_TASK_PAIRS[@]}") ;;
+                TRIALBENCH_SC) TASK_PAIRS=("${TRIALBENCH_SC_TASK_PAIRS[@]}") ;;
+                TRIALPANORAMA_SC) TASK_PAIRS=("${TRIALPANORAMA_SC_TASK_PAIRS[@]}") ;;
+                TREC_SC) TASK_PAIRS=("${TREC_SC_TASK_PAIRS[@]}") ;;
+                SMALL_SC) TASK_PAIRS=("${SMALL_SC_TASK_PAIRS[@]}") ;;
+                ALL_SC) TASK_PAIRS=("${ALL_SC_TASK_PAIRS[@]}") ;;
                 *) 
                     # Custom pair format: "task1:CoT|task1:0-shot"
                     TASK_PAIRS+=("$2")
@@ -174,6 +184,8 @@ Model Selection:
 
 Task Selection:
   --task-pairs GROUP               Task pair group (QA, NLI, IE, ES, RANKING, TRIALBENCH, TRIALPANORAMA, TREC, SMALL, ALL)
+                                   SC variants (use CoT_SC reasoning tasks): QA_SC, NLI_SC, IE_SC, ES_SC,
+                                   RANKING_SC, TRIALBENCH_SC, TRIALPANORAMA_SC, TREC_SC, SMALL_SC, ALL_SC
                                    Or custom pair: "task:CoT|task:0-shot"
 
 Evaluation Options:
@@ -289,9 +301,13 @@ START_TIME=$(date +%s)
 
 # Main execution loop
 if [ "$MODE" = "cross-consistency" ]; then
-    # Cross-consistency: one call per task pair with ALL models passed together
-    REASONING_MODELS_STR=$(IFS=','; echo "${REASONING_MODELS[*]}")
-    ANSWERING_MODELS_STR=$(IFS=','; echo "${ANSWERING_MODELS[*]}")
+    # Cross-consistency: one call per task pair with ALL models passed together.
+    # Join with a space — each element is then a separate argparse token.
+    # (Comma-joining is wrong: model_args strings already contain commas internally.)
+    REASONING_MODELS_STR=$(printf '%s ' "${REASONING_MODELS[@]}")
+    ANSWERING_MODELS_STR=$(printf '%s ' "${ANSWERING_MODELS[@]}")
+    REASONING_MODELS_STR="${REASONING_MODELS_STR% }"
+    ANSWERING_MODELS_STR="${ANSWERING_MODELS_STR% }"
 
     for TASK_PAIR in "${TASK_PAIRS[@]}"; do
         CURRENT_RUN=$((CURRENT_RUN + 1))
@@ -302,9 +318,8 @@ if [ "$MODE" = "cross-consistency" ]; then
 
         show_progress "$CURRENT_RUN" "$TOTAL_RUNS" "${REASONING_TASK} -> ${ANSWERING_TASK}"
 
-        # Build output path (no model subdir — all models run together)
-        TASK_NAME="${ANSWERING_TASK%%:*}"
-        OUTPUT_PATH="${OUTPUT_BASE}/${MODE}/${TASK_NAME}"
+        # __main__.py appends {task}/{model} automatically — just pass the mode root
+        OUTPUT_PATH="${OUTPUT_BASE}/${MODE}"
         mkdir -p "$OUTPUT_PATH"
 
         if run_multi_turn_evaluation "$PROVIDER" "$MODE" \

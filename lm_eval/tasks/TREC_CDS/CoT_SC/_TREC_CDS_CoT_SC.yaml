@@ -1,0 +1,10 @@
+group: TREC_CDS_CoT_SC
+task:
+  - TREC_CDS_2014_CoT_SC
+  - TREC_CDS_2015_CoT_SC
+  - TREC_CDS_2016_CoT_SC
+tag:
+  - chain-of-thought
+  - self-consistency
+metadata:
+  version: 1.0

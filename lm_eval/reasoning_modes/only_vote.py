@@ -1,5 +1,4 @@
 import json
-import os
 
 from lm_eval.reasoning_modes.reasoning_utils import *
 from lm_eval.reasoning_modes.voting.voting_modes import run_voting_modes
@@ -44,10 +43,6 @@ def mode_only_vote(args: argparse.Namespace) -> Dict:
         answering_task=answering_task,
         doc_to_text_module=doc_to_text_module,
     )
-
-    model_slug = answering_model.split("=")[1].split(",")[0].replace("/", "_")
-    reasoning_task_slug = doc_info.get("reasoning_task", "unknown").replace(":", "_")
-    args.output_path = os.path.join(args.output_path, reasoning_task_slug, f"{model_slug}/")
 
     return {
         "mode":            doc_info.get("mode",            "unknown"),

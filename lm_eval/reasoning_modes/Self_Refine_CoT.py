@@ -136,7 +136,7 @@ def mode_self_refine_CoT(args: argparse.Namespace) -> Dict:
             doc_to_text_func_name="doc_to_text_self_refine_feedback",
         )
         for s in active_states:
-            feedback_samples = feedback_raw["samples"][s["reasoning_full_task"]]
+            feedback_samples = sorted(feedback_raw["samples"][s["reasoning_full_task"]], key=lambda x: x["doc_id"])
             feedback_texts   = [_clean_feedback(sample["resps"][0][0]) for sample in feedback_samples]
             for sample, text in zip(feedback_samples, feedback_texts):
                 s["feedback_history"].setdefault(sample["doc_id"], []).append(text)
@@ -156,7 +156,7 @@ def mode_self_refine_CoT(args: argparse.Namespace) -> Dict:
             doc_to_text_func_name="doc_to_text_self_refine_refine",
         )
         for s in active_states:
-            refined_samples = refined_raw["samples"][s["reasoning_full_task"]]
+            refined_samples = sorted(refined_raw["samples"][s["reasoning_full_task"]], key=lambda x: x["doc_id"])
             refined_texts   = [sample["resps"][0][0] for sample in refined_samples]
             for sample, text in zip(refined_samples, refined_texts):
                 s["chain_history"].setdefault(sample["doc_id"], []).append(text)

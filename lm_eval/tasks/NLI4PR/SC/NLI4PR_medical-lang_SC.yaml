@@ -1,5 +1,0 @@
-task: NLI4PR_medical-lang_SC
-include: _default_NLI4PR_SC.yaml
-dataset_name: processed-medical
-metadata:
-  version: 1.0

@@ -191,8 +191,8 @@ run_multi_turn_evaluation() {
     python -m lm_eval.reasoning_modes \
         --provider $provider \
         --mode $mode \
-        --reasoning_models \"$reasoning_model\" \
-        --answering_models \"$answering_model\" \
+        --reasoning_models $reasoning_model \
+        --answering_models $answering_model \
         --reasoning_tasks $reasoning_task \
         --answering_tasks $answering_task \
         --output_path \"$output_path\" \

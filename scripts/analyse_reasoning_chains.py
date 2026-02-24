@@ -204,6 +204,9 @@ def load_samples_from_file(path: str) -> List[Dict[str, Any]]:
         pred_label = str(sample.get("pred_label", ""))
         is_correct = int(gt_label == pred_label) if (gt_label and pred_label) else None
 
+        if not chain or not chain.strip():
+            continue
+
         row: Dict[str, Any] = {
             "file":        path,
             "mode":        mode,

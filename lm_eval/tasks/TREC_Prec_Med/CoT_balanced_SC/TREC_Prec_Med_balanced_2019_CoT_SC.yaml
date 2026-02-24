@@ -1,0 +1,6 @@
+task: TREC_Prec_Med_balanced_2019_CoT_SC
+dataset_path: araag2/TREC_Precision-Medicine
+dataset_name: 2019_processed
+include: _balanced_TREC_Prec_Med_CoT_SC.yaml
+metadata:
+  version: 1.0

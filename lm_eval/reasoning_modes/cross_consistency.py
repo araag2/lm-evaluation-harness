@@ -3,7 +3,7 @@ import argparse
 import json
 from lm_eval import tasks
 from lm_eval.reasoning_modes.reasoning_utils import *
-from lm_eval.reasoning_modes.voting.voting_modes import simple_voting_modes
+from lm_eval.reasoning_modes.voting.voting_modes import simple_voting_modes, run_voting_modes
 
 
 def mode_cross_consistency(args: argparse.Namespace) -> Dict:
@@ -34,7 +34,10 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
             "answering_models": args.answering_models,
             "reasoning_task": args.reasoning_tasks[0],
             "answering_task": answering_task,
-            "results": simple_voting_modes(flat_preds, doc_to_choice, task_def),
+            "results": run_voting_modes(
+                args, flat_preds, doc_to_choice, task_def,
+                self_model=args.reasoning_models[0] if args.reasoning_models else None,
+            ),
             "samples": predictions_per_input_doc
         }
 
@@ -85,15 +88,22 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
             (reasoning_full_task_name, per_model_reasoning_dataset[reasoning_model])
             for reasoning_model in args.reasoning_models
         ]
+        # Each reasoning-model dataset gets a unique alias so simple_evaluate
+        # doesn't overwrite earlier results with later ones (same base task name).
+        aliases = [
+            f"{reasoning_full_task_name}__verify__{i}"
+            for i in range(len(args.reasoning_models))
+        ]
         raw_output = run_answering_for_datasets(
             args=args,
             answering_model=verifier_model,
             tasks_and_datasets=tasks_and_datasets,
             doc_to_text_module=reasoning_module,
             doc_to_text_func_name="doc_to_text_verify_reasoning",
+            task_aliases=aliases,
         )
-        for reasoning_model in args.reasoning_models:
-            verification_samples = raw_output["samples"][reasoning_full_task_name]
+        for i, reasoning_model in enumerate(args.reasoning_models):
+            verification_samples = raw_output["samples"][aliases[i]]
             per_model_reasoning_verification_outputs[reasoning_model][verifier_model] = inject_reasoning_into_dataset(
                 per_model_reasoning_dataset[reasoning_model],
                 verification_samples,
@@ -115,10 +125,17 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
 
     predictions_per_input_doc: Dict[int, Dict] = {}
 
-    for reasoning_model in args.reasoning_models:
+    for outer_i, reasoning_model in enumerate(args.reasoning_models):
         tasks_and_datasets = [
             (answering_task_full_task_name, per_model_reasoning_verification_outputs[reasoning_model][verifier_model])
             for verifier_model in args.answering_models
+        ]
+        # Unique alias per (reasoning_model_idx, verifier_model_idx) pair — prevents
+        # simple_evaluate from overwriting earlier results when multiple reasoning models
+        # share the same base task name.
+        aliases = [
+            f"{answering_task_full_task_name}__answer__{outer_i}__{i}"
+            for i in range(len(args.answering_models))
         ]
         raw_output = run_answering_for_datasets(
             args=args,
@@ -126,32 +143,34 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
             tasks_and_datasets=tasks_and_datasets,
             doc_to_text_module=answering_module,
             doc_to_text_func_name="doc_to_text_answer_selection_after_verify_reasoning",
+            task_aliases=aliases,
         )
 
-        for sample in raw_output["samples"][answering_task_full_task_name]:
-            doc_id = sample["doc_id"]
+        for i, verifier_model in enumerate(args.answering_models):
+            for sample in raw_output["samples"][aliases[i]]:
+                doc_id = sample["doc_id"]
 
-            if doc_id not in predictions_per_input_doc:
-                predictions_per_input_doc[doc_id] = {
-                    "doc": copy.deepcopy(sample["doc"]),
-                    "preds": {},
-                }
-                predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"] = []
-                predictions_per_input_doc[doc_id]["doc"]["Verified_Reasoning_Chains"] = []
+                if doc_id not in predictions_per_input_doc:
+                    predictions_per_input_doc[doc_id] = {
+                        "doc": copy.deepcopy(sample["doc"]),
+                        "preds": {},
+                    }
+                    predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"] = []
+                    predictions_per_input_doc[doc_id]["doc"]["Verified_Reasoning_Chains"] = []
 
-            predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(
-                sample["doc"]["Reasoning_Chain"]
-            )
-            predictions_per_input_doc[doc_id]["doc"]["Verified_Reasoning_Chains"].append(
-                sample["doc"]["Verified_Reasoning_Chain"]
-            )
+                predictions_per_input_doc[doc_id]["doc"]["Reasoning_Chains"].append(
+                    sample["doc"]["Reasoning_Chain"]
+                )
+                predictions_per_input_doc[doc_id]["doc"]["Verified_Reasoning_Chains"].append(
+                    sample["doc"]["Verified_Reasoning_Chain"]
+                )
 
-            pred_probs = [prob[0][0] for prob in sample["resps"]]
-            pred_idx   = pred_probs.index(max(pred_probs))
-            pred_label = doc_to_choice[pred_idx]
-            predictions_per_input_doc[doc_id]["preds"].setdefault(reasoning_model, []).append(
-                (pred_idx, pred_probs, pred_label)
-            )
+                pred_probs = [prob[0][0] for prob in sample["resps"]]
+                pred_idx   = pred_probs.index(max(pred_probs))
+                pred_label = doc_to_choice[pred_idx]
+                predictions_per_input_doc[doc_id]["preds"].setdefault(reasoning_model, []).append(
+                    (pred_idx, pred_probs, pred_label)
+                )
 
     # ------------------------------------------------------------------
     # Step 4: Aggregate metrics across all MxM predictions.
@@ -167,7 +186,10 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
         "answering_models": args.answering_models,
         "reasoning_task": reasoning_task,
         "answering_task": answering_task,
-        "results": simple_voting_modes(flat_preds, doc_to_choice, task_def),
+        "results": run_voting_modes(
+            args, flat_preds, doc_to_choice, task_def,
+            self_model=args.reasoning_models[0] if args.reasoning_models else None,
+        ),
         "samples": predictions_per_input_doc
     }
 

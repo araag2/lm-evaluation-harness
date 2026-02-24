@@ -1,0 +1,19 @@
+group: TREC_CT_balanced_CoT_SC
+task:
+  - TREC_CT_balanced_2021_CoT_SC
+  - TREC_CT_balanced_2022_CoT_SC
+  - TREC_CT_balanced_2023_CoT_SC
+aggregate_metric_list:
+  - aggregation: mean
+    metric: acc
+  - aggregation: mean
+    metric: nDCG@10
+  - aggregation: mean
+    metric: P@10
+  - aggregation: mean
+    metric: RecRank
+tag:
+  - chain-of-thought
+  - self-consistency
+metadata:
+  version: 1.0
