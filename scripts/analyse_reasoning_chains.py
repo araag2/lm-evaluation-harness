@@ -45,13 +45,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy.stats as stats
 import textstat
 
+matplotlib.use("Agg")
 warnings.filterwarnings("ignore")
 
 # ---------------------------------------------------------------------------
@@ -202,7 +202,15 @@ def load_samples_from_file(path: str) -> List[Dict[str, Any]]:
         chain      = doc.get("Reasoning_Chain", "") or ""
         gt_label   = str(doc.get("Label", ""))
         pred_label = str(sample.get("pred_label", ""))
-        is_correct = int(gt_label == pred_label) if (gt_label and pred_label) else None
+
+        # Some tasks (e.g. NLI4PR) store doc["Label"] as an integer index ("0"/"1")
+        # while pred_label is the text form ("Contradiction"/"Entailment").
+        # In that case compare against sample["preds"] (also an integer index).
+        if gt_label.isdigit():
+            preds_idx  = sample.get("preds")
+            is_correct = int(str(preds_idx) == gt_label) if preds_idx is not None else None
+        else:
+            is_correct = int(gt_label == pred_label) if (gt_label and pred_label) else None
 
         if not chain or not chain.strip():
             continue
@@ -479,23 +487,24 @@ def main():
         epilog=__doc__,
     )
     parser.add_argument("--input_folders", nargs="+", required=True,
-                        help="Top-level folders to search recursively for JSON result files.")
-    parser.add_argument("--output_dir",  required=True,
-                        help="Directory to write outputs into.")
+                       help="One or more folders to search recursively for JSON result files")
+    parser.add_argument("--output_dir", required=True,
+                       help="Directory to save outputs")
     parser.add_argument("--output_name", required=True,
-                        help="Base filename prefix for all outputs (no extension).")
+                       help="Base name for output files (no extension)")
     parser.add_argument("--file_filter", default=None,
-                        help="Only process JSON files whose name contains this string.")
+                       help="Only process JSON files whose name contains this string")
     parser.add_argument("--provider", default="vllm",
-                        help="lm_eval model provider (default: vllm).")
+                       help="lm_eval model provider used for perplexity scoring (default: vllm)")
     parser.add_argument("--model_args", default=None,
-                        help="Model args string passed to lm_eval, e.g. "
-                             "'pretrained=unsloth/Qwen3-8B,max_length=15000,"
-                             "gpu_memory_utilization=0.8,dtype=float16'. "
-                             "If omitted, log-likelihood / perplexity are skipped.")
+                       help="Model args string passed to lm_eval, e.g. "
+                            "'pretrained=unsloth/Qwen3-8B,max_length=15000,"
+                            "gpu_memory_utilization=0.8,dtype=float16'. "
+                            "If omitted, log-likelihood / perplexity scoring is skipped")
     parser.add_argument("--no-perplexity", action="store_true",
-                        help="Skip log-likelihood / perplexity scoring even if "
-                             "--model_args is provided.")
+                       help="Skip log-likelihood / perplexity scoring even if --model_args is provided")
+    parser.add_argument("--no-summary", action="store_true",
+                       help="Skip plain-text summary report")
     args = parser.parse_args()
 
     print("\n" + "=" * 80)
@@ -565,7 +574,8 @@ def main():
     save_correlation_plot(df, out / f"{n}_correlation_plot.png")
 
     # Summary
-    save_summary(df, corr_df, out / f"{n}_summary.txt")
+    if not args.no_summary:
+        save_summary(df, corr_df, out / f"{n}_summary.txt")
 
     print("\n" + "=" * 80)
     print(f"✅  Done. Results in {out}/")

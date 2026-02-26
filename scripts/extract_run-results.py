@@ -463,27 +463,66 @@ def save_markdown(df: pd.DataFrame, path: Path):
 
 
 def save_latex(df, path):
-    df = df.drop(columns=["Model Args", "Path"], errors="ignore")
-    
-    # Multiply all numeric (float/int) columns by 100
-    numeric_cols = df.select_dtypes(include=["float", "int"]).columns
+    # ── Drop metadata / rank columns that mustn't appear in the table ────────
+    rank_cols = [c for c in df.columns if c.endswith("_rank")]
+    df = df.drop(
+        columns=["Model Args", "Path", "Timestamp", "Mode"] + rank_cols,
+        errors="ignore",
+    )
+
+    # Multiply only true metric columns (float/int) by 100 → percentages
+    numeric_cols = list(df.select_dtypes(include=["float", "int"]).columns)
     df[numeric_cols] = df[numeric_cols] * 100
 
-    # Create LaTeX table with Datasets in Columns, with metrics as sub-columns, and Models as rows, with Voting_Method as sub-rows if exists
-    if "Voting_Method" in df.columns:
-        df = df.pivot_table(index=["Model", "Voting_Method"], columns="Dataset", aggfunc='first')
-        df.columns = ['_'.join(col).strip() for col in df.columns.values]
-        df = df.reset_index()
+    has_voting = "Voting_Method" in df.columns
+
+    def _pivot_and_format(sub: pd.DataFrame, index_cols: list) -> str:
+        """Pivot sub-df and return a LaTeX tabular string."""
+        # Remove index cols from the pivot value columns
+        value_cols = [c for c in sub.columns if c not in index_cols + ["Dataset"]]
+        piv = sub.pivot_table(
+            index=index_cols,
+            columns="Dataset",
+            values=value_cols,
+            aggfunc="first",
+        )
+        # Flatten MultiIndex columns: metric_Dataset
+        piv.columns = [f"{metric}_{ds}" for metric, ds in piv.columns]
+        piv = piv.reset_index()
+        return piv.to_latex(index=False, float_format="%.2f", escape=False, na_rep="---")
+
+    blocks: list[str] = []
+
+    if has_voting:
+        # ── Table 1: aggregated / voting results ──────────────────────────────
+        # Rows without Voting_Method are non-voting runs; split them out.
+        voting_df    = df[df["Voting_Method"].notna()].copy()
+        no_voting_df = df[df["Voting_Method"].isna()].drop(columns=["Voting_Method"], errors="ignore").copy()
+
+        if not voting_df.empty:
+            # Include Mode in the index so the same (Model, Voting_Method) pair
+            # from different pipelines (CoT-SC vs cross-consistency) stays distinct.
+            index_cols = []
+            for c in ["Model", "Mode", "Voting_Method"]:
+                if c in voting_df.columns:
+                    index_cols.append(c)
+            blocks.append("% --- Voting / aggregation results ---\n")
+            blocks.append(_pivot_and_format(voting_df, index_cols))
+
+        if not no_voting_df.empty:
+            index_cols = [c for c in ["Model"] if c in no_voting_df.columns]
+            blocks.append("\n% --- Single-pass results (no voting) ---\n")
+            blocks.append(_pivot_and_format(no_voting_df, index_cols))
+
     else:
-        df = df.pivot_table(index="Model", columns="Dataset", aggfunc='first')
-        df.columns = ['_'.join(col).strip() for col in df.columns.values]
-        df = df.reset_index()
+        # No Voting_Method column at all — single table indexed by Model
+        index_cols = [c for c in ["Model"] if c in df.columns]
+        blocks.append(_pivot_and_format(df, index_cols))
 
-    latex_code = df.to_latex(index=False, float_format="%.2f", escape=False)
-
+    latex_output = "\n".join(blocks)
 
     with open(path, "w") as f:
-        f.write(latex_code)
+        f.write(latex_output)
     print(f"    - Saved LaTeX to:   {path}")
 
 
@@ -797,27 +836,30 @@ def main():
 Example usage:
   python extract_run-results.py --input_folders ./outputs/exp1 ./outputs/exp2 \\
                                 --output_dir ./results --output_name my_benchmark
-  
-  python extract_run-results.py --input_folders ./outputs --output_dir ./results \\
-                                --output_name filtered --file_filter "Qwen"
+
+  python extract_run-results.py --input_folders ./outputs \\
+                                --output_dir ./results --output_name filtered \\
+                                --file_filter "Qwen"
         """
     )
 
-    parser.add_argument("--output_dir", required=True, 
+    parser.add_argument("--input_folders", nargs="+", required=True,
+                       help="One or more folders to search recursively for JSON result files")
+    parser.add_argument("--output_dir", required=True,
                        help="Directory to save outputs")
-    parser.add_argument("--output_name", required=True, 
+    parser.add_argument("--output_name", required=True,
                        help="Base name for output files (no extension)")
-    parser.add_argument("--input_folders", nargs="+", required=True, 
-                       help="List of folders to search for results")
-    parser.add_argument("--file_filter", default=None, 
-                       help="Only process JSON files containing this string in the name")
-    parser.add_argument("--no-csv", action="store_true", 
+    parser.add_argument("--file_filter", default=None,
+                       help="Only process JSON files whose name contains this string")
+    parser.add_argument("--no-csv", action="store_true",
                        help="Skip CSV output")
-    parser.add_argument("--no-markdown", action="store_true", 
+    parser.add_argument("--no-markdown", action="store_true",
                        help="Skip Markdown output")
-    parser.add_argument("--no-latex", action="store_true", 
+    parser.add_argument("--no-latex", action="store_true",
                        help="Skip LaTeX output")
-    parser.add_argument("--no-charts", action="store_true", 
+    parser.add_argument("--no-summary", action="store_true",
+                       help="Skip plain-text summary report")
+    parser.add_argument("--no-charts", action="store_true",
                        help="Skip chart generation")
 
     args = parser.parse_args()
@@ -838,13 +880,14 @@ Example usage:
         return
     
     save_outputs(
-        results, 
-        args.output_dir, 
+        results,
+        args.output_dir,
         args.output_name,
         output_csv=not args.no_csv,
         output_md=not args.no_markdown,
         output_latex=not args.no_latex,
-        output_charts=not args.no_charts
+        output_summary=not args.no_summary,
+        output_charts=not args.no_charts,
     )
     
     print("="*80)
