@@ -35,11 +35,22 @@ pip install -e .
 
 ## Basic Usage
 
-### User Guide
+### Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [CLI Reference](./docs/interface.md) | Command-line arguments and subcommands |
+| [Configuration Guide](./docs/config_files.md) | YAML config file format and examples |
+| [Python API](./docs/python-api.md) | Programmatic usage with `simple_evaluate()` |
+| [Task Guide](./lm_eval/tasks/README.md) | Available tasks and task configuration |
+
+Use `lm-eval -h` to see available options, or `lm-eval run -h` for evaluation options.
 
 A user guide detailing the full list of supported arguments is provided [here](./docs/original_tutorials/interface.md), and on the terminal by calling `lm_eval -h`. Alternatively, you can use `lm-eval` instead of `lm_eval`.
 
-A list of supported tasks (or groupings of tasks) can be viewed with `lm-eval --tasks list`. Task descriptions and links to corresponding subfolders are provided [here](./lm_eval/tasks/README.md).
+```bash
+lm-eval ls tasks
+```
 
 ### Run Task Scripts
 
