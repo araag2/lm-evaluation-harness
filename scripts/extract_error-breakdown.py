@@ -7,7 +7,7 @@ import seaborn as sns
 from datetime import datetime
 from pathlib import Path
 from collections import Counter, defaultdict
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -15,36 +15,53 @@ def safe_open_w(path: str) -> object:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     return open(path, 'w', encoding='utf8')
 
+def _extract_label_and_correctness(sample: dict, use: str):
+    """Return (true_label_str, pred_label_str, is_wrong: bool) for one sample.
+
+    Handles two label conventions:
+    - Text labels  (most tasks): doc["Label"] == pred_label space → compare directly.
+    - Integer index labels (e.g. NLI4PR): doc["Label"] is "0"/"1" while pred_label
+      is the text form. In this case correctness is determined by comparing
+      doc["Label"] against sample["preds"] (also an integer index).
+
+    Returns None if the sample has no Label field.
+    """
+    doc = sample.get("doc", {})
+    raw_label = doc.get("Label")
+    if raw_label is None:
+        return None  # task doesn't use a "Label" field — skip
+
+    true_label = str(raw_label).strip()
+
+    pred_label = sample.get("pred_label") or sample.get(use) or sample.get("target", "")
+    pred_label = pred_label.strip() if isinstance(pred_label, str) else str(pred_label)
+
+    if true_label.isdigit():
+        # Integer-index convention: compare preds (index) against true_label (index)
+        preds_idx = sample.get("preds")
+        is_wrong = (str(preds_idx) != true_label) if preds_idx is not None else True
+    else:
+        is_wrong = (true_label != pred_label)
+
+    return true_label, pred_label, is_wrong
+
+
 def analyze_label_errors(samples, use="majority"):
     total = Counter()
     mistakes = Counter()
     misclassified_as = defaultdict(Counter)
 
-    if isinstance(samples, dict):
-        for sample_id, sample in samples.items():
-            true_label = sample["doc"]["Label"].strip()
-            # Try different fields for prediction
-            pred_label = sample.get("pred_label") or sample.get(use) or sample.get("target", "")
-            if pred_label:
-                pred_label = pred_label.strip() if isinstance(pred_label, str) else str(pred_label)
+    iter_samples = samples.values() if isinstance(samples, dict) else samples
+    for sample in iter_samples:
+        result = _extract_label_and_correctness(sample, use)
+        if result is None:
+            continue
+        true_label, pred_label, is_wrong = result
 
-            total[true_label] += 1
-            if true_label != pred_label:
-                mistakes[true_label] += 1
-                misclassified_as[true_label][pred_label] += 1
-
-    elif isinstance(samples, list):
-        for sample in samples:
-            true_label = sample["doc"]["Label"].strip()
-            # Try different fields for prediction
-            pred_label = sample.get("pred_label") or sample.get(use) or sample.get("target", "")
-            if pred_label:
-                pred_label = pred_label.strip() if isinstance(pred_label, str) else str(pred_label)
-
-            total[true_label] += 1
-            if true_label != pred_label:
-                mistakes[true_label] += 1
-                misclassified_as[true_label][pred_label] += 1
+        total[true_label] += 1
+        if is_wrong:
+            mistakes[true_label] += 1
+            misclassified_as[true_label][pred_label] += 1
 
     label_order = sorted(total.keys())
 
@@ -79,25 +96,41 @@ def analyze_label_errors(samples, use="majority"):
         "misclassifications": misclass_summary
     }
 
-def process_folder(input_folder, use="majority"):
+def process_folder(
+    input_folders: List[str],
+    use: str = "majority",
+    file_filter: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Recursively scan all JSON files in one or more folders.
+
+    Args:
+        input_folders: Paths to scan recursively for JSON result files.
+        use:           Prediction key to look up in each sample (e.g. "majority").
+        file_filter:   If set, only process files whose name contains this string.
+
+    Returns:
+        Dict mapping absolute file path → error/misclassification analysis.
     """
-    Recursively scan all JSON files in a folder and subfolders,
-    process them, and return results as a dict keyed by file path.
-    """
-    results_by_file = {}
-    for file_path in Path(input_folder).rglob("*.json"):
-        try:
-            with open(file_path, "r", encoding="utf8") as f:
-                data = json.load(f)
-            if "samples" in data:
-                if len(data["samples"]) != 1:
-                    results_by_file[str(file_path)] = analyze_label_errors(data["samples"], use=use)
-                else:
-                    # go one level deeper if only one sample (common in multi-turn CoT)
-                    single_model = next(iter(data["samples"].keys()))
-                    results_by_file[str(file_path)] = analyze_label_errors(data["samples"][single_model], use=use)
-        except Exception as e:
-            print(f"[Warning] Failed to process {file_path}: {e}")
+    results_by_file: Dict[str, Any] = {}
+    for folder in input_folders:
+        if not os.path.exists(folder):
+            print(f"[WARNING] Folder not found: {folder}")
+            continue
+        for file_path in Path(folder).rglob("*.json"):
+            if file_filter and file_filter not in file_path.name:
+                continue
+            try:
+                with open(file_path, "r", encoding="utf8") as f:
+                    data = json.load(f)
+                if "samples" in data:
+                    if len(data["samples"]) != 1:
+                        results_by_file[str(file_path)] = analyze_label_errors(data["samples"], use=use)
+                    else:
+                        # go one level deeper if only one sample per key (common in multi-turn CoT)
+                        single_model = next(iter(data["samples"].keys()))
+                        results_by_file[str(file_path)] = analyze_label_errors(data["samples"][single_model], use=use)
+            except Exception as e:
+                print(f"[Warning] Failed to process {file_path}: {e}")
     return results_by_file
 
 
@@ -388,31 +421,36 @@ def generate_summary_report(results_by_file: Dict, output_path: Path):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Extract error breakdown from evaluation results.",
+        description="Extract per-label error breakdown from lm-harness evaluation results.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example usage:
-  python extract_error-breakdown.py --input_folder ./outputs \\
+  python extract_error-breakdown.py --input_folders ./outputs \\
                                     --output_dir ./analysis --output_name errors
-  
-  python extract_error-breakdown.py --input_folder ./outputs \\
-                                    --use majority --no-charts
+
+  python extract_error-breakdown.py --input_folders ./outputs/multi-turn_CoT ./outputs/cross-consistency \\
+                                    --output_dir ./analysis --output_name errors \\
+                                    --pred_key majority --file_filter "MedNLI"
         """
     )
-    
-    parser.add_argument("--input_folder", required=True, 
-                       help="Folder containing JSON result files")
-    parser.add_argument("--output_dir", required=True, 
+
+    parser.add_argument("--input_folders", nargs="+", required=True,
+                       help="One or more folders to search recursively for JSON result files")
+    parser.add_argument("--output_dir", required=True,
                        help="Directory to save outputs")
-    parser.add_argument("--output_name", required=True, 
+    parser.add_argument("--output_name", required=True,
                        help="Base name for output files (no extension)")
-    parser.add_argument("--use", default="majority", 
-                       help="Prediction key to use (default=majority)")
-    parser.add_argument("--no-csv", action="store_true", 
+    parser.add_argument("--pred_key", default="majority",
+                       help="Prediction key to look up in each sample (default: majority)")
+    parser.add_argument("--file_filter", default=None,
+                       help="Only process JSON files whose name contains this string")
+    parser.add_argument("--no-csv", action="store_true",
                        help="Skip CSV output")
-    parser.add_argument("--no-markdown", action="store_true", 
+    parser.add_argument("--no-markdown", action="store_true",
                        help="Skip Markdown output")
-    parser.add_argument("--no-charts", action="store_true", 
+    parser.add_argument("--no-summary", action="store_true",
+                       help="Skip plain-text summary report")
+    parser.add_argument("--no-charts", action="store_true",
                        help="Skip chart generation")
 
     args = parser.parse_args()
@@ -420,27 +458,29 @@ Example usage:
     print("\n" + "="*80)
     print("ERROR BREAKDOWN EXTRACTION SCRIPT")
     print("="*80)
-    print(f"\nInput folder:  {args.input_folder}")
+    print(f"\nInput folders: {', '.join(args.input_folders)}")
     print(f"Output:        {args.output_dir}/{args.output_name}.*")
-    print(f"Prediction:    {args.use}")
+    print(f"Pred key:      {args.pred_key}")
+    if args.file_filter:
+        print(f"Filter:        {args.file_filter}")
     print("\n" + "-"*80 + "\n")
 
     # Process files
-    print(f"[INFO] Collecting results from: {args.input_folder}")
-    results_by_file = process_folder(args.input_folder, use=args.use)
-    
+    print(f"[INFO] Collecting results from: {', '.join(args.input_folders)}")
+    results_by_file = process_folder(args.input_folders, use=args.pred_key, file_filter=args.file_filter)
+
     if not results_by_file:
-        print("[ERROR] No valid results found! Check your input folder.")
+        print("[ERROR] No valid results found! Check your input folders.")
         return
 
     print(f"[INFO] Processed {len(results_by_file)} files\n")
-    
+
     # Create output directory
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     print("[INFO] Generating outputs...\n")
-    
+
     # Save JSON (always) - enhance with dataset and model information
     json_output = {}
     for file_path, result in results_by_file.items():
@@ -452,28 +492,29 @@ Example usage:
             "file_path": file_path,
             **result  # unpacks "errors" and "misclassifications"
         }
-    
+
     json_path = output_dir / f"{args.output_name}.json"
     with safe_open_w(str(json_path)) as f:
         json.dump(json_output, f, indent=4)
     print(f"    - Saved JSON to:     {json_path}")
-    
+
     # Save CSV
     if not args.no_csv:
         df = results_to_dataframe(results_by_file)
         save_csv(df, output_dir / f"{args.output_name}.csv")
-    
+
     # Save Markdown
     if not args.no_markdown:
         save_markdown(results_by_file, output_dir / f"{args.output_name}.md")
-    
+
     # Save summary report
-    generate_summary_report(results_by_file, output_dir / f"{args.output_name}_summary.txt")
-    
+    if not args.no_summary:
+        generate_summary_report(results_by_file, output_dir / f"{args.output_name}_summary.txt")
+
     # Save visualizations
     if not args.no_charts:
         save_visualizations(results_by_file, output_dir, args.output_name)
-    
+
     print("\n[SUCCESS] All outputs generated successfully!\n")
     print("="*80)
     print(f"✅ Error breakdown extracted successfully to {args.output_dir}/")
