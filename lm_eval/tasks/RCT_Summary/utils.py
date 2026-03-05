@@ -2,7 +2,9 @@ baseline_prompt="You are a medical reviewer tasked with generating conclusion se
 
 reasoning_prompt="You are a medical reviewer tasked with generating conclusion sections based on scientifical biomedical articles.\n\nTitle: {{Title}}\n\nAbstract: {{Abstract}}\n\nBased on the Title and Abstract of this medical article, generate the Conclusion Section. Only output the newly generated section. Be as accurate as possible.\nAnswer: "
 
-relevant_keys = ["Title", "Abstract"]
+answer_selection_prompt="You are a medical reviewer tasked with generating conclusion sections based on scientifical biomedical articles.\n\nTitle: {{Title}}\n\nAbstract: {{Abstract}}\n\nDraft Conclusion: {{Reasoning_Chain}}\n\nGiven the Title, Abstract and the Draft Conclusion above, generate a refined and accurate Conclusion Section. Only output the newly generated section.\nAnswer: "
+
+relevant_keys = ["Title", "Abstract", "Reasoning_Chain"]
 
 def doc_to_text(doc, prompt=baseline_prompt):
     res = prompt
@@ -13,3 +15,6 @@ def doc_to_text(doc, prompt=baseline_prompt):
 
 def doc_to_text_reasoning(doc):
     return doc_to_text(doc, reasoning_prompt)
+
+def doc_to_text_answer_selection(doc):
+    return doc_to_text(doc, answer_selection_prompt)

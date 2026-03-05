@@ -44,6 +44,13 @@ try:
     import ray
     from vllm import LLM, SamplingParams, TokensPrompt
     from vllm.lora.request import LoRARequest
+except ImportError:
+    pass
+
+try:
+    # Moved since vllm-project/vllm#29793
+    from vllm.tokenizers import get_tokenizer  # type: ignore
+except ModuleNotFoundError:
     from vllm.transformers_utils.tokenizer import get_tokenizer
 
 try:
@@ -218,6 +225,8 @@ class VLLM(TemplateLM):
                 "Found 'gemma' in model name, a BOS token will be used as Gemma series models underperform without it."
             )
 
+        self.add_bos_token = add_bos_token
+
         from transformers import AutoConfig
 
         self._config = AutoConfig.from_pretrained(
@@ -239,7 +248,6 @@ class VLLM(TemplateLM):
         self.enable_thinking = self.chat_template_args.pop(
             "enable_thinking", enable_thinking
         )
-        self.add_bos_token = add_bos_token
 
         if parse_version(version("vllm")) >= parse_version("0.8.3"):
             kwargs_resolve_hf_chat_template = {

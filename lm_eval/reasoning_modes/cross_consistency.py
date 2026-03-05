@@ -23,7 +23,7 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
         predictions_per_input_doc = doc_info["samples"]
         answering_task = doc_info.get("answering_task", args.answering_tasks[0])
         full_task_name = answering_task.replace(":", "_")
-        task_def = tasks.get_task_dict([full_task_name])[full_task_name]
+        task_def = get_task(full_task_name)
         doc_to_choice = task_def.config.doc_to_choice
         flat_preds = flatten_cross_consistency_preds(predictions_per_input_doc)
 
@@ -111,7 +111,7 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
             )
 
     # Resolve label list once — needed in both Step 3 and Step 4.
-    task_def      = tasks.get_task_dict([answering_task_full_task_name])[answering_task_full_task_name]
+    task_def      = get_task(answering_task_full_task_name)
     doc_to_choice = task_def.config.doc_to_choice
 
     # ------------------------------------------------------------------

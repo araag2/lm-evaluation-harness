@@ -25,7 +25,7 @@ def mode_only_vote(args: argparse.Namespace) -> Dict:
         f"docs={len(predictions_per_input_doc)}"
     )
 
-    task_def      = tasks.get_task_dict([answering_task])[answering_task]
+    task_def      = get_task(answering_task)
     doc_to_choice = task_def.config.doc_to_choice
 
     doc_to_text_module = (

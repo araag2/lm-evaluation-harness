@@ -46,9 +46,13 @@ def parse_task_spec(task_spec: str) -> Tuple[str, str]:
     else:
         raise ValueError(f"Invalid task spec: {task_spec}")
 
+def get_task(task_name: str):
+    """Load a single task object by name using the current TaskManager API."""
+    return tasks.TaskManager().load([task_name])["tasks"][task_name]
+
 def load_base_dataset_from_task(task_name: str) -> DatasetDict:
     """Load the base dataset for a given task name."""
-    task_def = tasks.get_task_dict([task_name])[task_name]
+    task_def = get_task(task_name)
     return dataset_list_to_dataset_dict(list(task_def.dataset[task_def.config.test_split]), split_name="test")
 
 # -------------------------
@@ -188,7 +192,7 @@ def build_patched_task(
     string when multiple patched tasks share the same base task name so that
     ``simple_evaluate`` does not overwrite earlier results with later ones.
     """
-    original_task = tasks.get_task_dict([answering_task_name])[answering_task_name]
+    original_task = get_task(answering_task_name)
 
     patched = copy.deepcopy(original_task)
     patched.dataset = dataset_list_to_dataset_dict(dataset_with_reasoning)

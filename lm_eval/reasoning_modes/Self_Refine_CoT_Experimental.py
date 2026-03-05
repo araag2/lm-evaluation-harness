@@ -279,7 +279,7 @@ def mode_self_refine_CoT_experimental(args: argparse.Namespace) -> list:
     # ------------------------------------------------------------------
     output_list = []
     for s in task_states:
-        task_def      = tasks.get_task_dict([s["answering_full_task"]])[s["answering_full_task"]]
+        task_def      = get_task(s["answering_full_task"])
         doc_to_choice = task_def.config.doc_to_choice
 
         for ckpt in sorted(CHECKPOINT_ITERS):

@@ -1,8 +1,8 @@
 group: TREC_Prec_Med_CoT
 task:
-  - TREC_Prec-Med_2017_CoT
-  - TREC_Prec-Med_2018_CoT
-  - TREC_Prec-Med_2019_CoT
+  - TREC_Prec_Med_2017_CoT
+  - TREC_Prec_Med_2018_CoT
+  - TREC_Prec_Med_2019_CoT
 aggregate_metric_list:
   - aggregation: mean
     metric: acc

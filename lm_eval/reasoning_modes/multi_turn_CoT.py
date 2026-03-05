@@ -53,7 +53,7 @@ def mode_multi_turn_CoT(args: argparse.Namespace):
 
     results_list = []
     for reasoning_task, answering_task_spec, full_task_name in task_meta:
-        task_def      = tasks.get_task_dict([full_task_name])[full_task_name]
+        task_def      = get_task(full_task_name)
         doc_to_choice = task_def.config.doc_to_choice
 
         predictions_per_input_doc = extract_predictions_from_samples(

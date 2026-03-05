@@ -229,7 +229,7 @@ def mode_self_refine_CoT(args: argparse.Namespace) -> Dict:
     results_list = []
     for s in task_states:
         raw = final_results[s["answering_full_task"]]
-        task_def      = tasks.get_task_dict([s["answering_full_task"]])[s["answering_full_task"]]
+        task_def      = get_task(s["answering_full_task"])
         doc_to_choice = task_def.config.doc_to_choice
 
         predictions_per_input_doc = extract_predictions_from_samples(

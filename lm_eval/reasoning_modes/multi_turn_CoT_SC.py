@@ -30,7 +30,7 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace):
         doc_to_text_module = f"lm_eval.tasks.{task_base_name}.utils"
         reasoning_outputs  = sorted(all_reasoning_outputs[reasoning_task], key=lambda s: s["doc_id"])
         chains_per_doc     = extract_multiple_reasoning_chains_per_document(reasoning_outputs)
-        task_def           = tasks.get_task_dict([full_task_name])[full_task_name]
+        task_def           = get_task(full_task_name)
         base_dataset       = load_base_dataset_from_task(answering_task_spec.replace(":", "_"))
         task_meta.append({
             "reasoning_task":    reasoning_task,

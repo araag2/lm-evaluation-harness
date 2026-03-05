@@ -1,8 +1,8 @@
-group: TREC_Prec-Med_0-shot
+group: TREC_Prec_Med_0-shot
 task:
-  - TREC_Prec-Med_2017_0-shot
-  - TREC_Prec-Med_2018_0-shot
-  - TREC_Prec-Med_2019_0-shot
+  - TREC_Prec_Med_2017_0-shot
+  - TREC_Prec_Med_2018_0-shot
+  - TREC_Prec_Med_2019_0-shot
 aggregate_metric_list:
   - aggregation: mean
     metric: acc
