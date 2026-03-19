@@ -29,12 +29,14 @@ TASK_PAIRS=()
 OUTPUT_BASE="./outputs"
 CUDA_DEVICES="0"
 BATCH_SIZE="auto"
+TASK_PAIRS_PER_RUN=""
 SEED="0"
 LIMIT=""
 DRY_RUN=false
 USE_TIMESTAMP=false
 SAME_MODEL=true  # Use same model for reasoning and answering by default
 SKIP_EXISTING=false
+OOM_BACKOFF=true
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -137,6 +139,10 @@ while [[ $# -gt 0 ]]; do
             BATCH_SIZE="$2"
             shift 2
             ;;
+        --task-pairs-per-run)
+            TASK_PAIRS_PER_RUN="$2"
+            shift 2
+            ;;
         --seed)
             SEED="$2"
             shift 2
@@ -151,6 +157,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --skip-existing)
             SKIP_EXISTING=true
+            shift
+            ;;
+        --oom-backoff)
+            OOM_BACKOFF=true
             shift
             ;;
         --dry-run)
@@ -192,11 +202,13 @@ Evaluation Options:
   --output PATH                    Base output directory (default: ./outputs)
   --gpu ID                         CUDA device ID (default: 0)
   --batch-size SIZE                Batch size (default: auto)
+    --task-pairs-per-run N           Number of task pairs per reasoning_modes call (default: all task pairs)
   --seed SEED                      Random seed (default: 0)
   --limit NUM                      Limit number of samples per task
 
 Other Options:
   --timestamp                      Add timestamp to output paths
+    --oom-backoff                    On OOM, retry failed task-pair chunks as single-pair runs
   --dry-run                        Show what would run without executing
   --config FILE                    Load configuration from file
   --help, -h                       Show this help message
@@ -239,16 +251,29 @@ if [ ${#TASK_PAIRS[@]} -eq 0 ]; then
     exit 1
 fi
 
+if [ -n "$TASK_PAIRS_PER_RUN" ]; then
+    if ! [[ "$TASK_PAIRS_PER_RUN" =~ ^[0-9]+$ ]] || [ "$TASK_PAIRS_PER_RUN" -le 0 ]; then
+        log_error "--task-pairs-per-run must be a positive integer"
+        exit 1
+    fi
+fi
+
 # Check GPU availability
 check_gpu "$CUDA_DEVICES"
 
 # Calculate total runs
+PAIR_CHUNK_SIZE=${TASK_PAIRS_PER_RUN:-${#TASK_PAIRS[@]}}
+PAIR_CHUNKS=$(( (${#TASK_PAIRS[@]} + PAIR_CHUNK_SIZE - 1) / PAIR_CHUNK_SIZE ))
 if [ "$MODE" = "cross-consistency" ]; then
     TOTAL_RUNS=${#TASK_PAIRS[@]}
 else
-    # One Python call per model — all task pairs are batched inside
-    TOTAL_RUNS=${#REASONING_MODELS[@]}
-    log_info "Task-pair batching enabled: ${#TASK_PAIRS[@]} task pairs will be evaluated per model in a single model load."
+    # One or more Python calls per model depending on TASK_PAIRS_PER_RUN
+    TOTAL_RUNS=$((${#REASONING_MODELS[@]} * PAIR_CHUNKS))
+    if [ "$PAIR_CHUNK_SIZE" -lt "${#TASK_PAIRS[@]}" ]; then
+        log_info "Task-pair chunking enabled: ${#TASK_PAIRS[@]} task pairs will run in ${PAIR_CHUNKS} chunk(s) of up to ${PAIR_CHUNK_SIZE} pair(s) per model."
+    else
+        log_info "Task-pair batching enabled: ${#TASK_PAIRS[@]} task pairs will be evaluated per model in a single model load."
+    fi
 fi
 CURRENT_RUN=0
 SUCCESSFUL_RUNS=0
@@ -280,13 +305,19 @@ done
 echo "Output Base:        $OUTPUT_BASE"
 echo "GPU:                $CUDA_DEVICES"
 echo "Batch Size:         $BATCH_SIZE"
+echo "Task Pairs/Run:     ${TASK_PAIRS_PER_RUN:-all}"
+echo "OOM Backoff:        $OOM_BACKOFF"
 echo "Seed:               $SEED"
 if [ -n "$LIMIT" ]; then
     echo "Limit:              $LIMIT"
 else
     echo "Limit:              None"
 fi
-echo "Total Runs:         $TOTAL_RUNS  (batched: ${#TASK_PAIRS[@]} task pairs per run)"
+if [ "$MODE" = "cross-consistency" ]; then
+    echo "Total Runs:         $TOTAL_RUNS  (one task pair per run in cross-consistency mode)"
+else
+    echo "Total Runs:         $TOTAL_RUNS  (${PAIR_CHUNKS} chunk(s) per model, up to ${PAIR_CHUNK_SIZE} task pairs each)"
+fi
 echo "Dry Run:            $DRY_RUN"
 print_separator
 
@@ -327,63 +358,101 @@ if [ "$MODE" = "cross-consistency" ]; then
                                     "$REASONING_TASK" "$ANSWERING_TASK" \
                                     "$OUTPUT_PATH" "$BATCH_SIZE" "$SEED" "$CUDA_DEVICES" "$LIMIT"; then
             SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
-            SUCCESSFUL_RUN_LIST+=("${REASONING_TASK} -> ${ANSWERING_TASK}")
+            SUCCESSFUL_RUN_LIST+=("1 pair: ${REASONING_TASK} -> ${ANSWERING_TASK}")
         else
             FAILED_RUNS=$((FAILED_RUNS + 1))
-            FAILED_RUN_LIST+=("${REASONING_TASK} -> ${ANSWERING_TASK}")
+            FAILED_RUN_LIST+=("1 pair: ${REASONING_TASK} -> ${ANSWERING_TASK}")
             log_warning "Continuing with next evaluation..."
         fi
 
         echo ""
     done
 else
-    # CoT / CoT-SC / self-refine: one Python call per model, ALL task pairs batched
+    # CoT / CoT-SC / self-refine: one or more Python calls per model, task pairs chunked
     for i in "${!REASONING_MODELS[@]}"; do
         REASONING_MODEL="${REASONING_MODELS[$i]}"
         ANSWERING_MODEL="${ANSWERING_MODELS[$i]}"
 
         REASONING_MODEL_NAME=$(get_model_name "$REASONING_MODEL")
 
-        CURRENT_RUN=$((CURRENT_RUN + 1))
-        show_progress "$CURRENT_RUN" "$TOTAL_RUNS" "${#TASK_PAIRS[@]} task pairs with ${REASONING_MODEL_NAME}"
+        for ((PAIR_OFFSET=0; PAIR_OFFSET<${#TASK_PAIRS[@]}; PAIR_OFFSET+=PAIR_CHUNK_SIZE)); do
+            TASK_PAIR_CHUNK=("${TASK_PAIRS[@]:PAIR_OFFSET:PAIR_CHUNK_SIZE}")
+            CURRENT_RUN=$((CURRENT_RUN + 1))
+            show_progress "$CURRENT_RUN" "$TOTAL_RUNS" "${#TASK_PAIR_CHUNK[@]} task pairs with ${REASONING_MODEL_NAME}"
 
-        # Build space-separated task lists — argparse nargs='+' expects separate tokens
-        REASONING_TASKS_STR=""
-        ANSWERING_TASKS_STR=""
-        for TASK_PAIR in "${TASK_PAIRS[@]}"; do
-            REASONING_TASK="${TASK_PAIR%%|*}"
-            ANSWERING_TASK="${TASK_PAIR##*|}"
-            REASONING_TASKS_STR="${REASONING_TASKS_STR}${REASONING_TASK} "
-            ANSWERING_TASKS_STR="${ANSWERING_TASKS_STR}${ANSWERING_TASK} "
-        done
-        REASONING_TASKS_STR="${REASONING_TASKS_STR% }"
-        ANSWERING_TASKS_STR="${ANSWERING_TASKS_STR% }"
+            # Build space-separated task lists — argparse nargs='+' expects separate tokens
+            REASONING_TASKS_STR=""
+            ANSWERING_TASKS_STR=""
+            for TASK_PAIR in "${TASK_PAIR_CHUNK[@]}"; do
+                REASONING_TASK="${TASK_PAIR%%|*}"
+                ANSWERING_TASK="${TASK_PAIR##*|}"
+                REASONING_TASKS_STR="${REASONING_TASKS_STR}${REASONING_TASK} "
+                ANSWERING_TASKS_STR="${ANSWERING_TASKS_STR}${ANSWERING_TASK} "
+            done
+            REASONING_TASKS_STR="${REASONING_TASKS_STR% }"
+            ANSWERING_TASKS_STR="${ANSWERING_TASKS_STR% }"
 
-        # Output base: pass the mode-level dir; __main__.py appends {task}/{model}
-        OUTPUT_PATH="${OUTPUT_BASE}/${MODE}"
-        mkdir -p "$OUTPUT_PATH"
+            # Output base: pass the mode-level dir; __main__.py appends {task}/{model}
+            OUTPUT_PATH="${OUTPUT_BASE}/${MODE}"
+            mkdir -p "$OUTPUT_PATH"
 
-        if [ "$SKIP_EXISTING" = true ] && has_existing_results "${OUTPUT_PATH}/${REASONING_MODEL_NAME}"; then
-            log_info "Skipping (results exist): ${MODE} / ${REASONING_MODEL_NAME}"
-            SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
-            SUCCESSFUL_RUN_LIST+=("[SKIPPED] ${#TASK_PAIRS[@]} task pairs with ${REASONING_MODEL_NAME}")
+            if [ "$SKIP_EXISTING" = true ] && [ "$PAIR_CHUNKS" -eq 1 ] && has_existing_results "${OUTPUT_PATH}/${REASONING_MODEL_NAME}"; then
+                log_info "Skipping (results exist): ${MODE} / ${REASONING_MODEL_NAME}"
+                SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
+                SUCCESSFUL_RUN_LIST+=("[SKIPPED] ${#TASK_PAIR_CHUNK[@]} pairs [${REASONING_MODEL_NAME}]: ${REASONING_TASKS_STR} -> ${ANSWERING_TASKS_STR}")
+                echo ""
+                continue
+            fi
+
+            if run_multi_turn_evaluation "$PROVIDER" "$MODE" \
+                                        "$REASONING_MODEL" "$ANSWERING_MODEL" \
+                                        "$REASONING_TASKS_STR" "$ANSWERING_TASKS_STR" \
+                                        "$OUTPUT_PATH" "$BATCH_SIZE" "$SEED" "$CUDA_DEVICES" "$LIMIT"; then
+                SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
+                SUCCESSFUL_RUN_LIST+=("${#TASK_PAIR_CHUNK[@]} pairs [${REASONING_MODEL_NAME}]: ${REASONING_TASKS_STR} -> ${ANSWERING_TASKS_STR}")
+            else
+                status=$?
+                chunk_ok=false
+
+                if [ "$OOM_BACKOFF" = true ] && [ $status -eq 99 ]; then
+                    log_warning "OOM detected for chunk (${#TASK_PAIR_CHUNK[@]} task pairs). Retrying per task pair."
+                    chunk_ok=true
+                    for TASK_PAIR in "${TASK_PAIR_CHUNK[@]}"; do
+                        REASONING_TASK_SINGLE="${TASK_PAIR%%|*}"
+                        ANSWERING_TASK_SINGLE="${TASK_PAIR##*|}"
+                        retry_bs="$BATCH_SIZE"
+                        if ! run_multi_turn_evaluation "$PROVIDER" "$MODE" \
+                                                    "$REASONING_MODEL" "$ANSWERING_MODEL" \
+                                                    "$REASONING_TASK_SINGLE" "$ANSWERING_TASK_SINGLE" \
+                                                    "$OUTPUT_PATH" "$retry_bs" "$SEED" "$CUDA_DEVICES" "$LIMIT"; then
+                            pair_status=$?
+                            if [ $pair_status -eq 99 ] && [ "$retry_bs" != "1" ]; then
+                                log_warning "OOM persists for ${TASK_PAIR}; retrying with batch_size=1"
+                                if ! run_multi_turn_evaluation "$PROVIDER" "$MODE" \
+                                                            "$REASONING_MODEL" "$ANSWERING_MODEL" \
+                                                            "$REASONING_TASK_SINGLE" "$ANSWERING_TASK_SINGLE" \
+                                                            "$OUTPUT_PATH" "1" "$SEED" "$CUDA_DEVICES" "$LIMIT"; then
+                                    chunk_ok=false
+                                fi
+                            else
+                                chunk_ok=false
+                            fi
+                        fi
+                    done
+                fi
+
+                if [ "$chunk_ok" = true ]; then
+                    SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
+                    SUCCESSFUL_RUN_LIST+=("[OOM-backoff] ${#TASK_PAIR_CHUNK[@]} pairs [${REASONING_MODEL_NAME}]: ${REASONING_TASKS_STR} -> ${ANSWERING_TASKS_STR}")
+                else
+                    FAILED_RUNS=$((FAILED_RUNS + 1))
+                    FAILED_RUN_LIST+=("${#TASK_PAIR_CHUNK[@]} pairs [${REASONING_MODEL_NAME}]: ${REASONING_TASKS_STR} -> ${ANSWERING_TASKS_STR}")
+                    log_warning "Continuing with next evaluation..."
+                fi
+            fi
+
             echo ""
-            continue
-        fi
-
-        if run_multi_turn_evaluation "$PROVIDER" "$MODE" \
-                                    "$REASONING_MODEL" "$ANSWERING_MODEL" \
-                                    "$REASONING_TASKS_STR" "$ANSWERING_TASKS_STR" \
-                                    "$OUTPUT_PATH" "$BATCH_SIZE" "$SEED" "$CUDA_DEVICES" "$LIMIT"; then
-            SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
-            SUCCESSFUL_RUN_LIST+=("${#TASK_PAIRS[@]} task pairs with ${REASONING_MODEL_NAME}")
-        else
-            FAILED_RUNS=$((FAILED_RUNS + 1))
-            FAILED_RUN_LIST+=("${#TASK_PAIRS[@]} task pairs with ${REASONING_MODEL_NAME}")
-            log_warning "Continuing with next evaluation..."
-        fi
-
-        echo ""
+        done
     done
 fi
 

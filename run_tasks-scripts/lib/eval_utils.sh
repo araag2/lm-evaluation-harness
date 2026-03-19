@@ -20,11 +20,11 @@ log_success() {
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    echo -e "${RED}[ERROR]${NC} $1" >&2
 }
 
 log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    echo -e "${YELLOW}[WARNING]${NC} $1" >&2
 }
 
 # Print separator
@@ -117,8 +117,24 @@ run_single_evaluation() {
         pkill -g "$_pgid" -f "EngineCore" 2>/dev/null || true
         pkill -g "$_pgid" -f "vllm" 2>/dev/null || true
     fi
-    
-    eval "$cmd"
+
+    local _tmp_stdout _tmp_stderr
+    _tmp_stdout=$(mktemp)
+    _tmp_stderr=$(mktemp)
+
+    eval "$cmd" 2>"$_tmp_stderr" | tee "$_tmp_stdout"
+    local _status=${PIPESTATUS[0]}
+
+    # Stream captured stderr to actual stderr (appears in .err)
+    cat "$_tmp_stderr" >&2
+
+    if [ $_status -ne 0 ] && grep -Eiq "(cuda out of memory|outofmemoryerror|out of memory|torch\.OutOfMemoryError)" "$_tmp_stdout" "$_tmp_stderr"; then
+        rm -f "$_tmp_stdout" "$_tmp_stderr"
+        return 99
+    fi
+
+    rm -f "$_tmp_stdout" "$_tmp_stderr"
+    return $_status
 }
 
 # Run batch single-turn evaluation — all tasks in ONE lm_eval call so the model
@@ -165,7 +181,23 @@ run_batch_evaluation() {
         pkill -g "$_pgid" -f "vllm" 2>/dev/null || true
     fi
 
-    eval "$cmd"
+    local _tmp_stdout _tmp_stderr
+    _tmp_stdout=$(mktemp)
+    _tmp_stderr=$(mktemp)
+
+    eval "$cmd" 2>"$_tmp_stderr" | tee "$_tmp_stdout"
+    local _status=${PIPESTATUS[0]}
+
+    # Stream captured stderr to actual stderr (appears in .err)
+    cat "$_tmp_stderr" >&2
+
+    if [ $_status -ne 0 ] && grep -Eiq "(cuda out of memory|outofmemoryerror|out of memory|torch\.OutOfMemoryError)" "$_tmp_stdout" "$_tmp_stderr"; then
+        rm -f "$_tmp_stdout" "$_tmp_stderr"
+        return 99
+    fi
+
+    rm -f "$_tmp_stdout" "$_tmp_stderr"
+    return $_status
 }
 
 # Run multi-turn evaluation
@@ -216,9 +248,23 @@ run_multi_turn_evaluation() {
         pkill -g "$_pgid" -f "vllm" 2>/dev/null || true
     fi
     
-    eval "$cmd"
-    
-    local status=$?
+    local _tmp_stdout _tmp_stderr
+    _tmp_stdout=$(mktemp)
+    _tmp_stderr=$(mktemp)
+
+    eval "$cmd" 2>"$_tmp_stderr" | tee "$_tmp_stdout"
+    local status=${PIPESTATUS[0]}
+
+    # Stream captured stderr to actual stderr (appears in .err)
+    cat "$_tmp_stderr" >&2
+
+    if [ $status -ne 0 ] && grep -Eiq "(cuda out of memory|outofmemoryerror|out of memory|torch\.OutOfMemoryError)" "$_tmp_stdout" "$_tmp_stderr"; then
+        rm -f "$_tmp_stdout" "$_tmp_stderr"
+        log_error "Failed: ${reasoning_task} -> ${answering_task} - detected OOM"
+        return 99
+    fi
+
+    rm -f "$_tmp_stdout" "$_tmp_stderr"
     if [ $status -eq 0 ]; then
         log_success "Completed: ${reasoning_task} -> ${answering_task}"
         return 0

@@ -56,6 +56,10 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
     answering_task_full_task_name = answering_task.replace(":", "_")
     reasoning_module = f"lm_eval.tasks.{parse_task_spec(reasoning_task)[0]}.utils"
     answering_module = f"lm_eval.tasks.{parse_task_spec(answering_task)[0]}.utils"
+    reasoning_task_def = get_task(reasoning_full_task_name)
+    answering_task_def = get_task(answering_task_full_task_name)
+    reasoning_doc_to_text_func_name = getattr(reasoning_task_def.config.doc_to_text, "__name__", "doc_to_text_reasoning")
+    answering_doc_to_text_func_name = getattr(answering_task_def.config.doc_to_text, "__name__", "doc_to_text_answer_selection")
 
     # ------------------------------------------------------------------
     # Step 1: Generate one reasoning chain per model per doc.
@@ -100,6 +104,7 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
             tasks_and_datasets=tasks_and_datasets,
             doc_to_text_module=reasoning_module,
             doc_to_text_func_name="doc_to_text_verify_reasoning",
+            doc_to_text_reference_name=reasoning_doc_to_text_func_name,
             task_aliases=aliases,
         )
         for i, reasoning_model in enumerate(args.reasoning_models):
@@ -143,6 +148,7 @@ def mode_cross_consistency(args: argparse.Namespace) -> Dict:
             tasks_and_datasets=tasks_and_datasets,
             doc_to_text_module=answering_module,
             doc_to_text_func_name="doc_to_text_answer_selection_after_verify_reasoning",
+            doc_to_text_reference_name=answering_doc_to_text_func_name,
             task_aliases=aliases,
         )
 

@@ -19,6 +19,88 @@ T = TypeVar("T")
 
 eval_logger = logging.getLogger(__name__)
 
+
+def _binary_label(value):
+    """Coerce labels/predictions into 0/1 for binary aggregations.
+
+    Handles ints/floats, numeric strings, and common textual labels such as
+    included/excluded and yes/no.
+    """
+    if isinstance(value, bool):
+        return int(value)
+
+    if isinstance(value, (int, float)):
+        return 1 if value > 0 else 0
+
+    if isinstance(value, str):
+        v = value.strip().lower()
+        if v in {"1", "true", "yes", "y", "included", "include", "positive", "pos", "entailment", "entailed"}:
+            return 1
+        if v in {"0", "false", "no", "n", "excluded", "exclude", "negative", "neg", "contradiction", "contradicted"}:
+            return 0
+        try:
+            return 1 if float(v) > 0 else 0
+        except ValueError:
+            return 0
+
+    return 0
+
+
+def _normalize_class_label(value):
+    """Normalize labels to a stable representation for class counting/scoring."""
+    if isinstance(value, bool):
+        return int(value)
+
+    if isinstance(value, int):
+        return value
+
+    if isinstance(value, float):
+        return int(value) if float(value).is_integer() else value
+
+    if isinstance(value, str):
+        v = value.strip().lower()
+        if not v:
+            return v
+
+        # Try numeric labels encoded as strings first.
+        try:
+            return int(v)
+        except ValueError:
+            pass
+
+        try:
+            f = float(v)
+            return int(f) if f.is_integer() else f
+        except ValueError:
+            return v
+
+    return str(value).strip().lower()
+
+
+def _prepare_classification_labels(items):
+    """Return normalized labels plus task type flag for classification metrics.
+
+    Returns:
+        (golds, preds, is_multiclass)
+    """
+    unzipped_list = list(zip(*items))
+    golds_raw = list(unzipped_list[0])
+    preds_raw = list(unzipped_list[1])
+
+    golds_norm = [_normalize_class_label(g) for g in golds_raw]
+    preds_norm = [_normalize_class_label(p) for p in preds_raw]
+
+    n_classes = len(set(golds_norm) | set(preds_norm))
+    is_multiclass = n_classes > 2
+
+    if is_multiclass:
+        return golds_norm, preds_norm, True
+
+    # Binary path keeps legacy behavior (explicit positive-vs-negative collapse).
+    return ([_binary_label(g) for g in golds_norm],
+            [_binary_label(p) for p in preds_norm],
+            False)
+
 ### New Metrics Defined for my benchmark of lm-evaluation-harness ###
 #-----------------------------------------------------------------------#
 def items_to_query_id_dict(items, pos_label_index):
@@ -75,8 +157,8 @@ def score_per_query_id(items, score_function_fn, cutoff_fn = None):
             sorted_items = sorted_items[:cutoff_fn(sorted_items)]
         
         # In TREC, 1 (maybe) or 2 (yes) are consolidated the positive labels
-        y_true = [1 if gold > 0 else 0 for _, gold, _, _ in sorted_items] 
-        y_pred = [1 if pred > 0 else 0 for _, _, pred, _ in sorted_items]
+        y_true = [_binary_label(gold) for _, gold, _, _ in sorted_items]
+        y_pred = [_binary_label(pred) for _, _, pred, _ in sorted_items]
         
         scores.append(score_function_fn(y_true, y_pred, zero_division=0))
 
@@ -166,7 +248,7 @@ def R_prec_score(items):
     """
     from sklearn.metrics import precision_score
     def cutoff_fn(docs):
-        return sum(1 for _, gold, *_ in docs if gold > 0)
+        return sum(1 for _, gold, *_ in docs if _binary_label(gold) > 0)
     return score_per_query_id(items, score_function_fn=precision_score, cutoff_fn=cutoff_fn)
 
 @register_metric(
@@ -182,10 +264,10 @@ def R_prec_fn(items):  # This is a passthrough function
 @register_aggregation("Precision")
 def Precision_score(items):
     from sklearn.metrics import precision_score
-    unzipped_list = list(zip(*items))
-    golds = [1 if g > 0 else 0 for g in unzipped_list[0]]
-    preds = [1 if p > 0 else 0 for p in unzipped_list[1]]
+    golds, preds, is_multiclass = _prepare_classification_labels(items)
 
+    if is_multiclass:
+        return precision_score(golds, preds, average="macro", zero_division=0)
     return precision_score(golds, preds, zero_division=0)
 
 @register_metric(
@@ -200,10 +282,10 @@ def Precision_fn(items):  # This is a passthrough function
 @register_aggregation("Recall")
 def Recall_score(items):
     from sklearn.metrics import recall_score
-    unzipped_list = list(zip(*items))
-    golds = [1 if g > 0 else 0 for g in unzipped_list[0]]
-    preds = [1 if p > 0 else 0 for p in unzipped_list[1]]
+    golds, preds, is_multiclass = _prepare_classification_labels(items)
 
+    if is_multiclass:
+        return recall_score(golds, preds, average="macro", zero_division=0)
     return recall_score(golds, preds, zero_division=0)
 
 @register_metric(
@@ -226,7 +308,7 @@ def MAP_score(items):
         # Sort by descending model confidence score
         sorted_items = sorted(docs, key=lambda x: x[1], reverse=True)
 
-        y_true = [1 if gold > 0 else 0 for _, gold, _, _ in sorted_items] 
+        y_true = [_binary_label(gold) for _, gold, _, _ in sorted_items]
         y_score = [score for _, _, _, score in sorted_items]
 
         ap = average_precision_score(y_true, y_score)
@@ -566,11 +648,10 @@ def bits_per_byte(items):
 @register_aggregation("f1")
 def f1_score(items):
     from sklearn.metrics import f1_score
-    
-    unzipped_list = list(zip(*items))
-    golds = [1 if g > 0 else 0 for g in unzipped_list[0]]
-    preds = [1 if p > 0 else 0 for p in unzipped_list[1]]
+    golds, preds, is_multiclass = _prepare_classification_labels(items)
 
+    if is_multiclass:
+        return f1_score(golds, preds, average="macro", zero_division=0)
     return f1_score(golds, preds, zero_division=0)
 
 

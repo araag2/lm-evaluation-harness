@@ -269,6 +269,7 @@ def run_answering_for_dataset(
     dataset_with_reasoning: List[dict],
     doc_to_text_module: str,
     doc_to_text_func_name: str = "doc_to_text_answer_selection",
+    doc_to_text_reference_name: Optional[str] = None,
 ) -> dict:
     """
     Patch the task with the reasoning-augmented dataset and run answering evaluation.
@@ -282,7 +283,9 @@ def run_answering_for_dataset(
         + (f"  limit={args.limit}" if args.limit is not None else "")
     )
 
-    doc_to_text_func = getattr(importlib.import_module(doc_to_text_module), doc_to_text_func_name)
+    module_obj = importlib.import_module(doc_to_text_module)
+    resolved_func_name = _apply_stem_to_target_func_name(doc_to_text_reference_name, doc_to_text_func_name)
+    doc_to_text_func = getattr(module_obj, resolved_func_name)
     patched_task     = build_patched_task(answering_task_name, dataset_with_reasoning, doc_to_text_func)
 
     results = evaluator.simple_evaluate(
@@ -303,7 +306,8 @@ def run_answering_for_datasets(
     answering_model: str,
     tasks_and_datasets: List[Tuple[str, Any]],
     doc_to_text_module,  # str (shared) or List[str] (one per task)
-    doc_to_text_func_name: str = "doc_to_text_answer_selection",
+    doc_to_text_func_name="doc_to_text_answer_selection",  # str (shared) or List[str] (one per task)
+    doc_to_text_reference_name=None,  # Optional str/list used only for stem extraction
     task_aliases: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
@@ -327,11 +331,23 @@ def run_answering_for_datasets(
         if isinstance(doc_to_text_module, list)
         else [doc_to_text_module] * len(tasks_and_datasets)
     )
+    func_names = (
+        doc_to_text_func_name
+        if isinstance(doc_to_text_func_name, list)
+        else [doc_to_text_func_name] * len(tasks_and_datasets)
+    )
+    ref_names = (
+        doc_to_text_reference_name
+        if isinstance(doc_to_text_reference_name, list)
+        else [doc_to_text_reference_name] * len(tasks_and_datasets)
+    )
     aliases = task_aliases if task_aliases is not None else [None] * len(tasks_and_datasets)
 
     patched_tasks = []
-    for (task_name, dataset_with_reasoning), module, alias in zip(tasks_and_datasets, modules, aliases):
-        doc_to_text_func = getattr(importlib.import_module(module), doc_to_text_func_name)
+    for (task_name, dataset_with_reasoning), module, func_name, ref_name, alias in zip(tasks_and_datasets, modules, func_names, ref_names, aliases):
+        module_obj = importlib.import_module(module)
+        resolved_func_name = _apply_stem_to_target_func_name(ref_name, func_name)
+        doc_to_text_func = getattr(module_obj, resolved_func_name)
         patched_tasks.append(build_patched_task(task_name, dataset_with_reasoning, doc_to_text_func, alias=alias))
 
     print(
@@ -351,32 +367,102 @@ def run_answering_for_datasets(
     )
 
 
+def _apply_stem_to_target_func_name(reference_func_name: Optional[str], target_func_name: str) -> str:
+    """Apply stem from reference function name to target function name.
+
+    Logic:
+    - If reference starts with "doc", return target unchanged.
+    - Otherwise, if reference is ``<stem>_doc_to_text...``, return
+      ``<stem>_<target>``.
+    - If reference is missing/unexpected, return target unchanged.
+    """
+    if not reference_func_name or reference_func_name.startswith("doc"):
+        return target_func_name
+
+    marker = "_doc_to_text"
+    if marker in reference_func_name:
+        stem = reference_func_name.split(marker, 1)[0]
+        return f"{stem}_{target_func_name}"
+
+    return target_func_name
+
+
 # -------------------------
 # Prediction Extraction
 # -------------------------
 
 def extract_predictions_from_samples(
     samples: List[dict],
-    doc_to_choice: List[str],
+    doc_to_choice: Optional[List[str]],
     existing: Dict = None
 ) -> Dict:
     """
     Convert raw lm-eval samples into the canonical predictions_per_input_doc format.
 
     If `existing` is None (single-chain modes): returns a fresh dict with scalar
-    `preds` (int), flat `pred_probs` (list of floats), and `pred_label` (str).
+    `preds` (int for choice tasks, None for generate tasks), flat `pred_probs`
+    (list of floats for choice tasks), and `pred_label` (choice label or
+    generated text).
 
     If `existing` is provided (SC / multi-chain accumulation): appends each
     chain's pred/pred_probs as lists into the existing dict. The caller is
     responsible for any mode-specific extra fields (e.g. Reasoning_Chains).
     """
+    def _extract_choice_prediction(sample_obj: dict) -> Tuple[Optional[int], Optional[List[float]]]:
+        """Extract (pred_idx, pred_probs) for multiple-choice/loglikelihood samples.
+
+        Returns (None, None) when the sample shape is not choice-style.
+        """
+        resps = sample_obj.get("resps")
+        if not isinstance(resps, list) or not resps:
+            return None, None
+
+        pred_probs: List[float] = []
+        for req_resp in resps:
+            try:
+                raw_score = req_resp[0][0]
+            except (IndexError, TypeError):
+                return None, None
+
+            try:
+                pred_probs.append(float(raw_score))
+            except (TypeError, ValueError):
+                return None, None
+
+        if not pred_probs:
+            return None, None
+        pred_idx = pred_probs.index(max(pred_probs))
+        return pred_idx, pred_probs
+
+    def _extract_generated_text(sample_obj: dict) -> str:
+        """Extract first generated response text for generate_until samples."""
+        filtered = sample_obj.get("filtered_resps")
+        if isinstance(filtered, list) and filtered:
+            if isinstance(filtered[0], str):
+                return filtered[0]
+
+        resps = sample_obj.get("resps")
+        if isinstance(resps, list) and resps:
+            first_req = resps[0]
+            if isinstance(first_req, list) and first_req:
+                first_resp = first_req[0]
+                if isinstance(first_resp, str):
+                    return first_resp
+                if isinstance(first_resp, (list, tuple)) and first_resp and isinstance(first_resp[0], str):
+                    return first_resp[0]
+        return ""
+
     accumulate = existing is not None
     result = existing if accumulate else {}
+    has_choices = isinstance(doc_to_choice, (list, tuple)) and len(doc_to_choice) > 0
 
     for sample in samples:
         doc_id = sample["doc_id"]
-        pred_probs = [prob[0][0] for prob in sample["resps"]]
-        pred_idx = pred_probs.index(max(pred_probs))
+        pred_idx: Optional[int] = None
+        pred_probs: Optional[List[float]] = None
+        if has_choices:
+            pred_idx, pred_probs = _extract_choice_prediction(sample)
+        generated_text = _extract_generated_text(sample)
 
         # Extract the full answering prompt from arguments[0][0] when available.
         # For loglikelihood requests, args = (context, continuation) — args[0] is the prompt.
@@ -397,11 +483,19 @@ def extract_predictions_from_samples(
                 result[doc_id]["answering_prompt"] = answering_prompt
 
         if accumulate:
-            result[doc_id]["pred_probs"].append(pred_probs)
-            result[doc_id]["preds"].append(pred_idx)
+            if pred_idx is not None and pred_probs is not None:
+                result[doc_id]["pred_probs"].append(pred_probs)
+                result[doc_id]["preds"].append(pred_idx)
+            else:
+                result[doc_id]["pred_probs"].append([])
+                result[doc_id]["preds"].append(None)
+                result[doc_id].setdefault("pred_texts", []).append(generated_text)
         else:
-            result[doc_id]["pred_probs"] = pred_probs
+            result[doc_id]["pred_probs"] = pred_probs if pred_probs is not None else []
             result[doc_id]["preds"] = pred_idx
-            result[doc_id]["pred_label"] = doc_to_choice[pred_idx]
+            if pred_idx is not None and has_choices and pred_idx < len(doc_to_choice):
+                result[doc_id]["pred_label"] = doc_to_choice[pred_idx]
+            else:
+                result[doc_id]["pred_label"] = generated_text
 
     return result

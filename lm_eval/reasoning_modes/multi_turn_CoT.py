@@ -28,12 +28,16 @@ def mode_multi_turn_CoT(args: argparse.Namespace):
     # Build per-task metadata and (task_name, dataset) pairs for batch answering
     tasks_and_datasets = []
     doc_to_text_modules = []
+    reasoning_doc_to_text_func_names = []
     task_meta = []
 
     for reasoning_task, answering_task_spec in zip(args.reasoning_tasks, args.answering_tasks):
         task_base_name, _ = parse_task_spec(answering_task_spec)
+        reasoning_task_name = reasoning_task.replace(":", "_")
         full_task_name    = answering_task_spec.replace(":", "_")
         doc_to_text_module = f"lm_eval.tasks.{task_base_name}.utils"
+        reasoning_task_def = get_task(reasoning_task_name)
+        reasoning_doc_to_text_func_name = getattr(reasoning_task_def.config.doc_to_text, "__name__", "doc_to_text_reasoning")
 
         reasoning_outputs      = all_reasoning_outputs[reasoning_task]
         base_dataset           = load_base_dataset_from_task(answering_task_spec.replace(":", "_"))
@@ -41,6 +45,7 @@ def mode_multi_turn_CoT(args: argparse.Namespace):
 
         tasks_and_datasets.append((full_task_name, dataset_with_reasoning))
         doc_to_text_modules.append(doc_to_text_module)
+        reasoning_doc_to_text_func_names.append(reasoning_doc_to_text_func_name)
         task_meta.append((reasoning_task, answering_task_spec, full_task_name))
 
     # --- Answering step: ALL tasks in ONE model load ---
@@ -49,6 +54,8 @@ def mode_multi_turn_CoT(args: argparse.Namespace):
         answering_model=answering_model,
         tasks_and_datasets=tasks_and_datasets,
         doc_to_text_module=doc_to_text_modules,
+        doc_to_text_func_name="doc_to_text_answer_selection",
+        doc_to_text_reference_name=reasoning_doc_to_text_func_names,
     )
 
     results_list = []

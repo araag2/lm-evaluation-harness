@@ -28,12 +28,14 @@ MODES=("0-shot")
 OUTPUT_BASE="./outputs/unified_runner"
 CUDA_DEVICES="0"
 BATCH_SIZE="auto"
+TASKS_PER_RUN=""
 SEED="0"
 LIMIT=""
 DRY_RUN=false
 USE_TIMESTAMP=false
 VERBOSE=false
 SKIP_EXISTING=false
+OOM_BACKOFF=true
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -92,6 +94,10 @@ while [[ $# -gt 0 ]]; do
             BATCH_SIZE="$2"
             shift 2
             ;;
+        --tasks-per-run)
+            TASKS_PER_RUN="$2"
+            shift 2
+            ;;
         --seed)
             SEED="$2"
             shift 2
@@ -106,6 +112,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --skip-existing)
             SKIP_EXISTING=true
+            shift
+            ;;
+        --oom-backoff)
+            OOM_BACKOFF=true
             shift
             ;;
         --dry-run)
@@ -144,11 +154,13 @@ Evaluation Options:
   --output PATH                    Base output directory (default: ./outputs/unified_runner)
   --gpu ID                         CUDA device ID (default: 0)
   --batch-size SIZE                Batch size (default: auto)
+    --tasks-per-run N                Number of tasks per lm_eval call (default: all tasks)
   --seed SEED                      Random seed (default: 0)
   --limit NUM                      Limit number of samples per task
 
 Other Options:
   --timestamp                      Add timestamp to output paths
+    --oom-backoff                    On OOM, retry failed task chunks as single-task runs
   --dry-run                        Show what would run without executing
   --verbose                        Show detailed information
   --config FILE                    Load configuration from file
@@ -197,12 +209,25 @@ if [ ${#TASKS[@]} -eq 0 ]; then
     exit 1
 fi
 
+if [ -n "$TASKS_PER_RUN" ]; then
+    if ! [[ "$TASKS_PER_RUN" =~ ^[0-9]+$ ]] || [ "$TASKS_PER_RUN" -le 0 ]; then
+        log_error "--tasks-per-run must be a positive integer"
+        exit 1
+    fi
+fi
+
 # Check GPU availability
 check_gpu "$CUDA_DEVICES"
 
-# One lm_eval call per (model, mode) — all tasks batched inside
-TOTAL_RUNS=$((${#MODELS[@]} * ${#MODES[@]}))
-log_info "Task batching enabled: ${#TASKS[@]} tasks will be evaluated per model+mode in a single model load."
+# One or more lm_eval calls per (model, mode), depending on TASKS_PER_RUN
+TASK_CHUNK_SIZE=${TASKS_PER_RUN:-${#TASKS[@]}}
+TASK_CHUNKS=$(( (${#TASKS[@]} + TASK_CHUNK_SIZE - 1) / TASK_CHUNK_SIZE ))
+TOTAL_RUNS=$((${#MODELS[@]} * ${#MODES[@]} * TASK_CHUNKS))
+if [ "$TASK_CHUNK_SIZE" -lt "${#TASKS[@]}" ]; then
+    log_info "Task chunking enabled: ${#TASKS[@]} tasks will run in ${TASK_CHUNKS} chunk(s) of up to ${TASK_CHUNK_SIZE} task(s) per model+mode."
+else
+    log_info "Task batching enabled: ${#TASKS[@]} tasks will be evaluated per model+mode in a single model load."
+fi
 CURRENT_RUN=0
 SUCCESSFUL_RUNS=0
 FAILED_RUNS=0
@@ -229,8 +254,10 @@ echo "Limit:           ${LIMIT:-None}"
 echo "Output Base:     $OUTPUT_BASE"
 echo "GPU:             $CUDA_DEVICES"
 echo "Batch Size:      $BATCH_SIZE"
+echo "Tasks/Run:       ${TASKS_PER_RUN:-all}"
+echo "OOM Backoff:     $OOM_BACKOFF"
 echo "Seed:            $SEED"
-echo "Total Runs:      $TOTAL_RUNS  (batched: ${#TASKS[@]} tasks per run)"
+echo "Total Runs:      $TOTAL_RUNS  (${TASK_CHUNKS} chunk(s) per model+mode, up to ${TASK_CHUNK_SIZE} tasks each)"
 echo "Dry Run:         $DRY_RUN"
 print_separator
 
@@ -257,44 +284,77 @@ fi
 # Record start time
 START_TIME=$(date +%s)
 
-# Main execution loop — one lm_eval call per (model, mode), all tasks batched
+# Main execution loop — each (model, mode) may run in multiple task chunks
 for MODEL_ARGS in "${MODELS[@]}"; do
     MODEL_NAME=$(get_model_name "$MODEL_ARGS")
 
     for MODE in "${MODES[@]}"; do
-        CURRENT_RUN=$((CURRENT_RUN + 1))
+        for ((TASK_OFFSET=0; TASK_OFFSET<${#TASKS[@]}; TASK_OFFSET+=TASK_CHUNK_SIZE)); do
+            TASK_CHUNK=("${TASKS[@]:TASK_OFFSET:TASK_CHUNK_SIZE}")
+            CURRENT_RUN=$((CURRENT_RUN + 1))
 
-        show_progress "$CURRENT_RUN" "$TOTAL_RUNS" "${#TASKS[@]} tasks (${MODE}) with ${MODEL_NAME}"
+            show_progress "$CURRENT_RUN" "$TOTAL_RUNS" "${#TASK_CHUNK[@]} tasks (${MODE}) with ${MODEL_NAME}"
 
-        # Build comma-separated task list for this mode
-        TASK_LIST=""
-        for TASK in "${TASKS[@]}"; do
-            TASK_LIST="${TASK_LIST:+${TASK_LIST},}${TASK}_${MODE}"
-        done
+            # Build comma-separated task list for this mode and chunk
+            TASK_LIST=""
+            for TASK in "${TASK_CHUNK[@]}"; do
+                TASK_LIST="${TASK_LIST:+${TASK_LIST},}${TASK}_${MODE}"
+            done
 
-        # Output base for this (mode, model); lm_eval creates per-task subdirs inside
-        OUTPUT_PATH="${OUTPUT_BASE}/single-turn/${MODE}/${MODEL_NAME}"
-        mkdir -p "$OUTPUT_PATH"
+            # Output base for this (mode, model); lm_eval creates per-task subdirs inside
+            OUTPUT_PATH="${OUTPUT_BASE}/single-turn/${MODE}/${MODEL_NAME}"
+            mkdir -p "$OUTPUT_PATH"
 
-        if [ "$SKIP_EXISTING" = true ] && has_existing_results "$OUTPUT_PATH"; then
-            log_info "Skipping (results exist): ${MODE} / ${MODEL_NAME}"
-            SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
-            SUCCESSFUL_RUN_LIST+=("[SKIPPED] ${#TASKS[@]} tasks (${MODE}) with ${MODEL_NAME}")
+            if [ "$SKIP_EXISTING" = true ] && [ "$TASK_CHUNKS" -eq 1 ] && has_existing_results "$OUTPUT_PATH"; then
+                log_info "Skipping (results exist): ${MODE} / ${MODEL_NAME}"
+                SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
+                SUCCESSFUL_RUN_LIST+=("[SKIPPED] ${#TASK_CHUNK[@]} tasks [${MODEL_NAME}] (${MODE}): ${TASK_LIST}")
+                echo ""
+                continue
+            fi
+
+            if run_batch_evaluation "$PROVIDER" "$MODEL_ARGS" "$TASK_LIST" "$OUTPUT_PATH" \
+                                    "$BATCH_SIZE" "$SEED" "$CUDA_DEVICES" "$LIMIT"; then
+                SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
+                SUCCESSFUL_RUN_LIST+=("${#TASK_CHUNK[@]} tasks [${MODEL_NAME}] (${MODE}): ${TASK_LIST}")
+            else
+                status=$?
+                chunk_ok=false
+
+                if [ "$OOM_BACKOFF" = true ] && [ $status -eq 99 ]; then
+                    log_warning "OOM detected for chunk (${#TASK_CHUNK[@]} tasks). Retrying per-task."
+                    chunk_ok=true
+                    for TASK in "${TASK_CHUNK[@]}"; do
+                        SINGLE_TASK_LIST="${TASK}_${MODE}"
+                        retry_bs="$BATCH_SIZE"
+                        if ! run_batch_evaluation "$PROVIDER" "$MODEL_ARGS" "$SINGLE_TASK_LIST" "$OUTPUT_PATH" \
+                                                 "$retry_bs" "$SEED" "$CUDA_DEVICES" "$LIMIT"; then
+                            single_status=$?
+                            if [ $single_status -eq 99 ] && [ "$retry_bs" != "1" ]; then
+                                log_warning "OOM persists for ${TASK}_${MODE}; retrying with batch_size=1"
+                                if ! run_batch_evaluation "$PROVIDER" "$MODEL_ARGS" "$SINGLE_TASK_LIST" "$OUTPUT_PATH" \
+                                                         "1" "$SEED" "$CUDA_DEVICES" "$LIMIT"; then
+                                    chunk_ok=false
+                                fi
+                            else
+                                chunk_ok=false
+                            fi
+                        fi
+                    done
+                fi
+
+                if [ "$chunk_ok" = true ]; then
+                    SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
+                    SUCCESSFUL_RUN_LIST+=("[OOM-backoff] ${#TASK_CHUNK[@]} tasks [${MODEL_NAME}] (${MODE}): ${TASK_LIST}")
+                else
+                    FAILED_RUNS=$((FAILED_RUNS + 1))
+                    FAILED_RUN_LIST+=("${#TASK_CHUNK[@]} tasks [${MODEL_NAME}] (${MODE}): ${TASK_LIST}")
+                    log_warning "Continuing with next evaluation..."
+                fi
+            fi
+
             echo ""
-            continue
-        fi
-
-        if run_batch_evaluation "$PROVIDER" "$MODEL_ARGS" "$TASK_LIST" "$OUTPUT_PATH" \
-                                "$BATCH_SIZE" "$SEED" "$CUDA_DEVICES" "$LIMIT"; then
-            SUCCESSFUL_RUNS=$((SUCCESSFUL_RUNS + 1))
-            SUCCESSFUL_RUN_LIST+=("${#TASKS[@]} tasks (${MODE}) with ${MODEL_NAME}")
-        else
-            FAILED_RUNS=$((FAILED_RUNS + 1))
-            FAILED_RUN_LIST+=("${#TASKS[@]} tasks (${MODE}) with ${MODEL_NAME}")
-            log_warning "Continuing with next evaluation..."
-        fi
-
-        echo ""
+        done
     done
 done
 

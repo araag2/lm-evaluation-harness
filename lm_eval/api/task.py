@@ -1658,10 +1658,6 @@ class ConfigurableTask(Task):
                                 result_score = result_score[metric]
                             scores.append(result_score)
                         result_score = 1.0 if any(scores) else 0.0
-                        if any(scores):
-                            result_score = 1.0
-                        else:
-                            result_score = 0.0
                 
                 elif metric == "acc":
 

@@ -108,6 +108,10 @@ def mode_self_refine_CoT_experimental(args: argparse.Namespace) -> list:
         reasoning_full_task    = reasoning_task.replace(":", "_")
         answering_full_task    = answering_task_spec.replace(":", "_")
         doc_to_text_module     = f"lm_eval.tasks.{task_base_name}.utils"
+        reasoning_task_def = get_task(reasoning_full_task)
+        answering_task_def = get_task(answering_full_task)
+        reasoning_doc_to_text_func_name = getattr(reasoning_task_def.config.doc_to_text, "__name__", "doc_to_text_reasoning")
+        answering_doc_to_text_func_name = getattr(answering_task_def.config.doc_to_text, "__name__", "doc_to_text_answer_selection")
 
         reasoning_outputs = all_reasoning_outputs[reasoning_task]
         base_dataset      = load_base_dataset_from_task(reasoning_full_task)
@@ -124,6 +128,8 @@ def mode_self_refine_CoT_experimental(args: argparse.Namespace) -> list:
             "reasoning_full_task":  reasoning_full_task,
             "answering_full_task":  answering_full_task,
             "doc_to_text_module":   doc_to_text_module,
+            "reasoning_doc_to_text_func_name": reasoning_doc_to_text_func_name,
+            "answering_doc_to_text_func_name": answering_doc_to_text_func_name,
             "base_dataset":         base_dataset,
             "current_dataset":      current_dataset,
             "chain_history":        chain_history,
@@ -162,6 +168,7 @@ def mode_self_refine_CoT_experimental(args: argparse.Namespace) -> list:
             ],
             doc_to_text_module=[s["doc_to_text_module"] for s in active_states],
             doc_to_text_func_name="doc_to_text_self_refine_feedback",
+            doc_to_text_reference_name=[s["reasoning_doc_to_text_func_name"] for s in active_states],
         )
         for s in active_states:
             feedback_samples = sorted(feedback_raw["samples"][s["reasoning_full_task"]], key=lambda x: x["doc_id"])
@@ -182,6 +189,7 @@ def mode_self_refine_CoT_experimental(args: argparse.Namespace) -> list:
             ],
             doc_to_text_module=[s["doc_to_text_module"] for s in active_states],
             doc_to_text_func_name="doc_to_text_self_refine_refine",
+            doc_to_text_reference_name=[s["reasoning_doc_to_text_func_name"] for s in active_states],
         )
         for s in active_states:
             refined_samples = sorted(refined_raw["samples"][s["reasoning_full_task"]], key=lambda x: x["doc_id"])
@@ -202,6 +210,7 @@ def mode_self_refine_CoT_experimental(args: argparse.Namespace) -> list:
                 (s["answering_full_task"], s["current_dataset"]) for s in active_states
             ],
             doc_to_text_module=[s["doc_to_text_module"] for s in active_states],
+            doc_to_text_reference_name=[s["answering_doc_to_text_func_name"] for s in active_states],
         )
 
         for s in active_states:
@@ -266,6 +275,7 @@ def mode_self_refine_CoT_experimental(args: argparse.Namespace) -> list:
             answering_model=answering_model,
             tasks_and_datasets=[(s["answering_full_task"], s["current_dataset"])],
             doc_to_text_module=s["doc_to_text_module"],
+            doc_to_text_reference_name=s["answering_doc_to_text_func_name"],
         )
         for ckpt in missing_ckpts:
             s["checkpoint_results"][ckpt] = {

@@ -877,4 +877,22 @@ class VLLM(TemplateLM):
         _gen_kwargs = normalize_gen_kwargs(
             gen_kwargs, default_max_gen_toks=default_max_gen_toks
         )
-        return kwargs
+
+        # Extract and process stop sequences
+        until = handle_stop_sequences(
+            _gen_kwargs.pop("until", None), eos=eos[0] if isinstance(eos, list) else eos
+        )
+
+        # Extract max_tokens
+        max_gen_toks = int(_gen_kwargs.pop("max_gen_toks", default_max_gen_toks))
+
+        # do_sample and temperature normalization is handled by `normalize_gen_kwargs` utility
+        _gen_kwargs.pop("do_sample", None)
+
+        # HF defaults
+        _gen_kwargs = {
+            "skip_special_tokens": False,
+            "spaces_between_special_tokens": False,
+        } | _gen_kwargs
+
+        return _gen_kwargs, until, max_gen_toks

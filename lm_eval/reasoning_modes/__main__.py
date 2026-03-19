@@ -125,7 +125,7 @@ def main():
                         help="Max tokens for feedback generation in Self-Refine (default: 1000).")
 
     # Output Args
-    parser.add_argument('--output_path', type=str, default="/cfs/home/u021010/PhD/active_dev/outputs/CoT-Debug/")
+    parser.add_argument('--output_path', type=str, default=None)
 
     args = parser.parse_args()
 

@@ -26,8 +26,11 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace):
     task_meta = []
     for reasoning_task, answering_task_spec in zip(args.reasoning_tasks, args.answering_tasks):
         task_base_name, _ = parse_task_spec(answering_task_spec)
+        reasoning_task_name = reasoning_task.replace(":", "_")
         full_task_name    = answering_task_spec.replace(":", "_")
         doc_to_text_module = f"lm_eval.tasks.{task_base_name}.utils"
+        reasoning_task_def = get_task(reasoning_task_name)
+        reasoning_doc_to_text_func_name = getattr(reasoning_task_def.config.doc_to_text, "__name__", "doc_to_text_reasoning")
         reasoning_outputs  = sorted(all_reasoning_outputs[reasoning_task], key=lambda s: s["doc_id"])
         chains_per_doc     = extract_multiple_reasoning_chains_per_document(reasoning_outputs)
         task_def           = get_task(full_task_name)
@@ -41,6 +44,7 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace):
             "doc_to_choice":     task_def.config.doc_to_choice,
             "base_dataset":      base_dataset,
             "chains_per_doc":    chains_per_doc,
+            "reasoning_doc_to_text_func_name": reasoning_doc_to_text_func_name,
             "predictions":       {},
         })
 
@@ -51,11 +55,13 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace):
     for chain_idx in range(n_chains):
         tasks_and_datasets = []
         modules = []
+        reference_names = []
         for meta in task_meta:
             chain_list = meta["chains_per_doc"][chain_idx]
             dataset    = inject_reasoning_into_dataset(meta["base_dataset"], chain_list)
             tasks_and_datasets.append((meta["full_task_name"], dataset))
             modules.append(meta["doc_to_text_module"])
+            reference_names.append(meta["reasoning_doc_to_text_func_name"])
 
         print(f"[SC chain {chain_idx + 1}/{n_chains}] answering {len(tasks_and_datasets)} tasks in one model load")
         raw_output = run_answering_for_datasets(
@@ -63,6 +69,7 @@ def mode_multi_turn_CoT_SC(args: argparse.Namespace):
             answering_model=answering_model,
             tasks_and_datasets=tasks_and_datasets,
             doc_to_text_module=modules,
+            doc_to_text_reference_name=reference_names,
         )
 
         for meta in task_meta:
