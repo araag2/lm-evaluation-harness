@@ -1,6 +1,7 @@
 import sys
 import logging
 import math
+import numbers
 import os
 import random
 import re
@@ -48,13 +49,18 @@ def _binary_label(value):
 
 def _normalize_class_label(value):
     """Normalize labels to a stable representation for class counting/scoring."""
+    # Normalize numpy scalar types (e.g., np.int64, np.float32, np.bool_)
+    # into native Python scalars so type comparisons remain consistent.
+    if isinstance(value, np.generic):
+        value = value.item()
+
     if isinstance(value, bool):
         return int(value)
 
-    if isinstance(value, int):
+    if isinstance(value, numbers.Integral):
         return value
 
-    if isinstance(value, float):
+    if isinstance(value, numbers.Real):
         return int(value) if float(value).is_integer() else value
 
     if isinstance(value, str):
@@ -92,6 +98,34 @@ def _prepare_classification_labels(items):
 
     n_classes = len(set(golds_norm) | set(preds_norm))
     is_multiclass = n_classes > 2
+
+    # Fail fast on ambiguous multiclass mixtures (e.g., 1 vs "entailment").
+    # Binary tasks are handled by _binary_label with explicit coercion rules.
+    if is_multiclass:
+        has_text = any(isinstance(x, str) for x in (golds_norm + preds_norm))
+        has_numeric = any(isinstance(x, (int, float)) for x in (golds_norm + preds_norm))
+        if has_text and has_numeric:
+            # Include compact examples to make debugging task-specific label
+            # normalization issues straightforward.
+            gold_examples_raw = list(dict.fromkeys(repr(g) for g in golds_raw))[:5]
+            pred_examples_raw = list(dict.fromkeys(repr(p) for p in preds_raw))[:5]
+            gold_examples_norm = list(dict.fromkeys(repr(g) for g in golds_norm))[:5]
+            pred_examples_norm = list(dict.fromkeys(repr(p) for p in preds_norm))[:5]
+            eval_logger.error(
+                "Ambiguous multiclass labels detected. "
+                "gold_raw=%s pred_raw=%s gold_norm=%s pred_norm=%s",
+                gold_examples_raw,
+                pred_examples_raw,
+                gold_examples_norm,
+                pred_examples_norm,
+            )
+            raise ValueError(
+                "Ambiguous multiclass labels: found mixed numeric and text labels "
+                "(e.g., 1 vs 'entailment'). Please normalize task labels/predictions "
+                "to one representation before metric aggregation. "
+                f"Examples -> gold_raw={gold_examples_raw}, pred_raw={pred_examples_raw}, "
+                f"gold_norm={gold_examples_norm}, pred_norm={pred_examples_norm}"
+            )
 
     if is_multiclass:
         return golds_norm, preds_norm, True
@@ -765,13 +799,58 @@ def acc_mutual_info_fn(items):  # This is a passthrough function
 
 #-----------------------------------------------------------------------#
 
+def _normalize_regression_pairs(items=None, references=None, predictions=None):
+    pairs = []
+
+    if references is not None or predictions is not None:
+        refs = references if references is not None else []
+        preds = predictions if predictions is not None else []
+
+        if not isinstance(refs, (list, tuple)):
+            refs = [refs]
+        if not isinstance(preds, (list, tuple)):
+            preds = [preds]
+
+        pairs = list(zip(refs, preds))
+
+    elif items is not None:
+        if isinstance(items, (list, tuple)):
+            if (
+                len(items) == 2
+                and not isinstance(items[0], (list, tuple))
+                and not isinstance(items[1], (list, tuple))
+            ):
+                pairs = [(items[0], items[1])]
+            else:
+                pairs = [
+                    (item[0], item[1])
+                    for item in items
+                    if isinstance(item, (list, tuple)) and len(item) >= 2
+                ]
+
+    return pairs
+
+
+def _valid_regression_errors(pairs, squared=False):
+    errors = []
+
+    for ref, pred in pairs:
+        ref_val = extract_numeric_value(ref)
+        pred_val = extract_numeric_value(pred)
+
+        if not np.isnan(ref_val) and not np.isnan(pred_val):
+            diff = pred_val - ref_val
+            errors.append(diff**2 if squared else abs(diff))
+
+    return errors
+
 @register_metric(
     metric="mean_absolute_error",
     higher_is_better=False,
     output_type="generate_until",
     aggregation="mean",
 )
-def mean_absolute_error_fn(items):
+def mean_absolute_error_fn(items=None, references=None, predictions=None, **kwargs):
     """
     Calculate Mean Absolute Error (MAE) for regression tasks.
     MAE measures the average magnitude of errors between predictions and actual values.
@@ -781,22 +860,13 @@ def mean_absolute_error_fn(items):
                pred is the predicted value (both may be strings or numeric)
                
     Returns:
-        List of absolute errors for each item (excluding invalid extractions)
+        Mean absolute error across valid extracted numeric pairs
     """
-    errors = []
-    refs = list(zip(*items))[0]
-    preds = list(zip(*items))[1]
-    
-    for ref, pred in zip(refs, preds):
-        ref_val = extract_numeric_value(ref)
-        pred_val = extract_numeric_value(pred)
-        
-        if not np.isnan(ref_val) and not np.isnan(pred_val):
-            errors.append(abs(pred_val - ref_val))
-        # Skip items where numeric extraction failed
-    
-    # Return 0 if no valid items, otherwise return the errors
-    return errors if errors else [0.0]
+    pairs = _normalize_regression_pairs(
+        items=items, references=references, predictions=predictions
+    )
+    errors = _valid_regression_errors(pairs, squared=False)
+    return float(np.mean(errors)) if errors else 0.0
 
 
 @register_metric(
@@ -805,7 +875,7 @@ def mean_absolute_error_fn(items):
     output_type="generate_until",
     aggregation="mean",
 )
-def mean_squared_error_fn(items):
+def mean_squared_error_fn(items=None, references=None, predictions=None, **kwargs):
     """
     Calculate Mean Squared Error (MSE) for regression tasks.
     MSE measures the average of squared errors between predictions and actual values.
@@ -815,22 +885,13 @@ def mean_squared_error_fn(items):
                pred is the predicted value (both may be strings or numeric)
                
     Returns:
-        List of squared errors for each item (excluding invalid extractions)
+        Mean squared error across valid extracted numeric pairs
     """
-    errors = []
-    refs = list(zip(*items))[0]
-    preds = list(zip(*items))[1]
-    
-    for ref, pred in zip(refs, preds):
-        ref_val = extract_numeric_value(ref)
-        pred_val = extract_numeric_value(pred)
-        
-        if not np.isnan(ref_val) and not np.isnan(pred_val):
-            errors.append((pred_val - ref_val) ** 2)
-        # Skip items where numeric extraction failed
-    
-    # Return 0 if no valid items, otherwise return the errors
-    return errors if errors else [0.0]
+    pairs = _normalize_regression_pairs(
+        items=items, references=references, predictions=predictions
+    )
+    errors = _valid_regression_errors(pairs, squared=True)
+    return float(np.mean(errors)) if errors else 0.0
 
 #-----------------------------------------------------------------------#
 
