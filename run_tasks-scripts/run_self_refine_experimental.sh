@@ -37,6 +37,10 @@ DRY_RUN=false
 SKIP_EXISTING=false
 NO_DEGRADATION=false           # --no-degradation disables stop_on_degradation
 FEEDBACK_MAX_TOKENS="1000"
+PROFILE="BALANCED_MEM"
+MAX_LENGTH_OVERRIDE=""
+GPU_MEM_UTIL_OVERRIDE=""
+SWAP_SPACE_OVERRIDE=""
 # ─────────────────────────────────────────────────────────────────────────────
 
 parse_args() {
@@ -81,6 +85,10 @@ parse_args() {
             --output)            OUTPUT_BASE="$2";          shift 2 ;;
             --gpu|--cuda)        CUDA_DEVICES="$2";         shift 2 ;;
             --batch-size)        BATCH_SIZE="$2";           shift 2 ;;
+            --profile)           PROFILE="$2";              shift 2 ;;
+            --max-length)        MAX_LENGTH_OVERRIDE="$2";  shift 2 ;;
+            --gpu-mem-util)      GPU_MEM_UTIL_OVERRIDE="$2"; shift 2 ;;
+            --swap-space)        SWAP_SPACE_OVERRIDE="$2";  shift 2 ;;
             --seed)              SEED="$2";                 shift 2 ;;
             --limit)             LIMIT="$2";                shift 2 ;;
             --feedback-max-tokens) FEEDBACK_MAX_TOKENS="$2"; shift 2 ;;
@@ -116,6 +124,10 @@ Evaluation Options:
   --output PATH                   Base output directory (default: ./outputs)
   --gpu ID                        CUDA device (default: 0)
   --batch-size SIZE               Batch size (default: auto)
+    --profile NAME                  Runtime profile: LOW_MEM, BALANCED_MEM, HIGH_MEM (default: BALANCED_MEM)
+    --max-length N                  Override model max_length in model_args
+    --gpu-mem-util F                Override model gpu_memory_utilization (0-1)
+    --swap-space GB                 Override model swap_space (GB)
   --seed SEED                     Random seed (default: 0)
   --limit NUM                     Limit samples per task (for quick tests)
 
@@ -229,7 +241,25 @@ parse_args "$@"
 [ ${#REASONING_MODELS[@]} -eq 0 ] && { log_error "No models found"; exit 1; }
 [ ${#TASK_PAIRS[@]}       -eq 0 ] && { log_error "No task pairs found"; exit 1; }
 
+case "$PROFILE" in
+    LOW_MEM|BALANCED_MEM|HIGH_MEM) ;;
+    *)
+        log_error "Unknown profile: $PROFILE (expected LOW_MEM, BALANCED_MEM, or HIGH_MEM)"
+        exit 1
+        ;;
+esac
+
 check_gpu "$CUDA_DEVICES"
+
+# Apply runtime model arg overrides (useful for OOM mitigation / speed tuning)
+for i in "${!REASONING_MODELS[@]}"; do
+    REASONING_MODELS[$i]="$(apply_model_profile "${REASONING_MODELS[$i]}" "$PROFILE")"
+    REASONING_MODELS[$i]="$(apply_model_arg_overrides "${REASONING_MODELS[$i]}" "$MAX_LENGTH_OVERRIDE" "$GPU_MEM_UTIL_OVERRIDE" "$SWAP_SPACE_OVERRIDE" "")"
+done
+for i in "${!ANSWERING_MODELS[@]}"; do
+    ANSWERING_MODELS[$i]="$(apply_model_profile "${ANSWERING_MODELS[$i]}" "$PROFILE")"
+    ANSWERING_MODELS[$i]="$(apply_model_arg_overrides "${ANSWERING_MODELS[$i]}" "$MAX_LENGTH_OVERRIDE" "$GPU_MEM_UTIL_OVERRIDE" "$SWAP_SPACE_OVERRIDE" "")"
+done
 
 TOTAL_RUNS=${#REASONING_MODELS[@]}
 CURRENT_RUN=0
@@ -254,6 +284,10 @@ for p in "${TASK_PAIRS[@]}"; do echo "  - $p"; done
 echo "Output Base:             $OUTPUT_BASE"
 echo "GPU:                     $CUDA_DEVICES"
 echo "Batch Size:              $BATCH_SIZE"
+echo "Profile:                 $PROFILE"
+echo "Max Length Ovrd:         ${MAX_LENGTH_OVERRIDE:-None}"
+echo "GPU Mem Util Ovrd:       ${GPU_MEM_UTIL_OVERRIDE:-None}"
+echo "Swap Space Ovrd:         ${SWAP_SPACE_OVERRIDE:-None}"
 echo "Seed:                    $SEED"
 [ -n "$LIMIT" ] && echo "Limit:                   $LIMIT" || echo "Limit:                   None"
 echo "Total Runs:              $TOTAL_RUNS  (${#TASK_PAIRS[@]} task pairs batched per model)"

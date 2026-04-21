@@ -176,6 +176,7 @@ Instead of typing full model arguments, use these presets:
 --output PATH                    # Base output directory
 --gpu ID                         # CUDA device ID (default: 0)
 --batch-size SIZE                # Batch size (default: auto)
+--profile NAME                   # Runtime profile: LOW_MEM, BALANCED_MEM, HIGH_MEM
 --tasks-per-run N                # Split tasks into chunks of N per lm_eval call
 --seed SEED                      # Random seed (default: 0)
 --limit NUM                      # Limit number of samples per task
@@ -198,6 +199,7 @@ Instead of typing full model arguments, use these presets:
 --output PATH                    # Base output directory
 --gpu ID                         # CUDA device ID
 --batch-size SIZE                # Batch size
+--profile NAME                   # Runtime profile: LOW_MEM, BALANCED_MEM, HIGH_MEM
 --task-pairs-per-run N           # Split task pairs into chunks of N per call
 --seed SEED                      # Random seed
 --timestamp                      # Add timestamp to output paths

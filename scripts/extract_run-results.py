@@ -1,6 +1,7 @@
 import os
 import json
 import argparse
+from numbers import Number
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -38,6 +39,27 @@ def extract_metrics(result_dict: Dict[str, Any], prefix: str = "") -> Dict[str, 
         metrics[f"{prefix}{metric_name}"] = v
     
     return metrics
+
+def is_flat_scalar_metrics_dict(results_dict: Dict[str, Any]) -> bool:
+    """Return True when summary results are a single flat metrics mapping.
+
+    Flat summaries map metric names directly to numeric scalars (e.g. rouge_l).
+    Nested summaries map task/voting names to dictionaries.
+    """
+    if not isinstance(results_dict, dict) or not results_dict:
+        return False
+
+    for value in results_dict.values():
+        if isinstance(value, dict):
+            return False
+        if isinstance(value, bool):
+            return False
+        if value is None:
+            continue
+        if not isinstance(value, Number):
+            return False
+
+    return True
 
 def collect_results_from_default_file(path: str) -> List[Dict[str, Any]]:
     """Extract results from standard lm-eval results file."""
@@ -112,7 +134,22 @@ def collect_results_from_summary_file(path: str) -> List[Dict[str, Any]]:
     raw_model = data.get("reasoning_model", "").split(",")[0][11:]
     model_name = raw_model.split("/")[-1] if "/" in raw_model else raw_model
 
-    if "acc" in data.get("results", {}).keys() or "acc,none" in data.get("results", {}).keys():
+    results_dict = dict(data.get("results", {}))
+
+    # Some summary files store placeholder values for these two fields.
+    # Replace with useful metadata during extraction.
+    if results_dict.get("name") == 0.0:
+        results_dict["name"] = reasoning_task or base_dataset or "N/A"
+    if results_dict.get("sample_len") == 0.0:
+        samples = data.get("samples", {})
+        if isinstance(samples, dict):
+            results_dict["sample_len"] = len(samples)
+        elif isinstance(samples, list):
+            results_dict["sample_len"] = len(samples)
+        else:
+            results_dict["sample_len"] = 0
+
+    if is_flat_scalar_metrics_dict(results_dict) or "acc" in results_dict.keys() or "acc,none" in results_dict.keys():
         model_args = data.get("config", {}).get("model_args", "N/A")
 
         result_entry = {
@@ -123,12 +160,12 @@ def collect_results_from_summary_file(path: str) -> List[Dict[str, Any]]:
             "Path": path
         }
 
-        result_entry.update(extract_metrics(data.get("results", {})))
+        result_entry.update(extract_metrics(results_dict))
         results.append(result_entry)
 
-    elif "majority" in data.get("results", {}).keys() or "rrf" in data.get("results", {}).keys() or "condorcet" in data.get("results", {}).keys() or "logits" in data.get("results", {}).keys() or "borda" in data.get("results", {}).keys():
+    elif "majority" in results_dict.keys() or "rrf" in results_dict.keys() or "condorcet" in results_dict.keys() or "logits" in results_dict.keys() or "borda" in results_dict.keys():
 
-        for voting_method, result_dict in data.get("results", {}).items():
+        for voting_method, result_dict in results_dict.items():
             model_args = data.get("config", {}).get("model_args", "N/A")
 
             result_entry = {
@@ -140,11 +177,14 @@ def collect_results_from_summary_file(path: str) -> List[Dict[str, Any]]:
                 "Path": path
             }
 
+            if not isinstance(result_dict, dict):
+                print(f"[WARNING] Unexpected non-dict voting result in {path}: {voting_method}")
+                continue
             result_entry.update(extract_metrics(result_dict))
             results.append(result_entry)
 
     else:
-        for task_name, result_dict in data.get("results", {}).items():
+        for task_name, result_dict in results_dict.items():
             model_args = data.get("config", {}).get("model_args", "N/A")
 
             result_entry = {
@@ -155,6 +195,9 @@ def collect_results_from_summary_file(path: str) -> List[Dict[str, Any]]:
                 "Path": path
             }
 
+            if not isinstance(result_dict, dict):
+                print(f"[WARNING] Unexpected non-dict task result in {path}: {task_name}")
+                continue
             result_entry.update(extract_metrics(result_dict))
             results.append(result_entry)
 

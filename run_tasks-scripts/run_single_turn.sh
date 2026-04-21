@@ -36,6 +36,10 @@ USE_TIMESTAMP=false
 VERBOSE=false
 SKIP_EXISTING=false
 OOM_BACKOFF=true
+PROFILE="BALANCED_MEM"
+MAX_LENGTH_OVERRIDE=""
+GPU_MEM_UTIL_OVERRIDE=""
+SWAP_SPACE_OVERRIDE=""
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -92,6 +96,22 @@ while [[ $# -gt 0 ]]; do
             ;;
         --batch-size)
             BATCH_SIZE="$2"
+            shift 2
+            ;;
+        --profile)
+            PROFILE="$2"
+            shift 2
+            ;;
+        --max-length)
+            MAX_LENGTH_OVERRIDE="$2"
+            shift 2
+            ;;
+        --gpu-mem-util)
+            GPU_MEM_UTIL_OVERRIDE="$2"
+            shift 2
+            ;;
+        --swap-space)
+            SWAP_SPACE_OVERRIDE="$2"
             shift 2
             ;;
         --tasks-per-run)
@@ -154,6 +174,10 @@ Evaluation Options:
   --output PATH                    Base output directory (default: ./outputs/unified_runner)
   --gpu ID                         CUDA device ID (default: 0)
   --batch-size SIZE                Batch size (default: auto)
+    --profile NAME                   Runtime profile: LOW_MEM, BALANCED_MEM, HIGH_MEM (default: BALANCED_MEM)
+    --max-length N                   Override model max_length in model_args
+    --gpu-mem-util F                 Override model gpu_memory_utilization (0-1)
+    --swap-space GB                  Override model swap_space (GB)
     --tasks-per-run N                Number of tasks per lm_eval call (default: all tasks)
   --seed SEED                      Random seed (default: 0)
   --limit NUM                      Limit number of samples per task
@@ -216,8 +240,22 @@ if [ -n "$TASKS_PER_RUN" ]; then
     fi
 fi
 
+case "$PROFILE" in
+    LOW_MEM|BALANCED_MEM|HIGH_MEM) ;;
+    *)
+        log_error "Unknown profile: $PROFILE (expected LOW_MEM, BALANCED_MEM, or HIGH_MEM)"
+        exit 1
+        ;;
+esac
+
 # Check GPU availability
 check_gpu "$CUDA_DEVICES"
+
+# Apply runtime model arg overrides (useful for OOM mitigation / speed tuning)
+for i in "${!MODELS[@]}"; do
+    MODELS[$i]="$(apply_model_profile "${MODELS[$i]}" "$PROFILE")"
+    MODELS[$i]="$(apply_model_arg_overrides "${MODELS[$i]}" "$MAX_LENGTH_OVERRIDE" "$GPU_MEM_UTIL_OVERRIDE" "$SWAP_SPACE_OVERRIDE" "")"
+done
 
 # One or more lm_eval calls per (model, mode), depending on TASKS_PER_RUN
 TASK_CHUNK_SIZE=${TASKS_PER_RUN:-${#TASKS[@]}}
@@ -254,6 +292,10 @@ echo "Limit:           ${LIMIT:-None}"
 echo "Output Base:     $OUTPUT_BASE"
 echo "GPU:             $CUDA_DEVICES"
 echo "Batch Size:      $BATCH_SIZE"
+echo "Profile:         $PROFILE"
+echo "Max Length Ovrd: ${MAX_LENGTH_OVERRIDE:-None}"
+echo "GPU Mem Util Ovrd: ${GPU_MEM_UTIL_OVERRIDE:-None}"
+echo "Swap Space Ovrd: ${SWAP_SPACE_OVERRIDE:-None}"
 echo "Tasks/Run:       ${TASKS_PER_RUN:-all}"
 echo "OOM Backoff:     $OOM_BACKOFF"
 echo "Seed:            $SEED"

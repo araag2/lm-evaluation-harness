@@ -355,12 +355,6 @@ create_output_dir() {
 get_model_args() {
     local preset="$1"
     
-    # Source config if not already loaded
-    if [ -z "$MODEL_QWEN3_4B" ]; then
-        local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-        source "${script_dir}/../config/models.conf"
-    fi
-    
     case "$preset" in
         qwen3-4b) echo "$MODEL_QWEN3_4B" ;;
         gemma-4b) echo "$MODEL_GEMMA_4B" ;;
@@ -372,6 +366,80 @@ get_model_args() {
         panacea-7b) echo "$MODEL_PANACEA_7B" ;;
         *) echo "$preset" ;;  # Return as-is if not a preset
     esac
+}
+
+# Set or append a key=value pair inside a comma-separated model_args string.
+set_or_append_model_arg() {
+    local model_args="$1"
+    local key="$2"
+    local value="$3"
+
+    if [ -z "$value" ]; then
+        echo "$model_args"
+        return 0
+    fi
+
+    if [[ "$model_args" == *"${key}="* ]]; then
+        echo "$model_args" | sed -E "s/(^|,)${key}=[^,]*/\\1${key}=${value}/"
+    else
+        echo "${model_args},${key}=${value}"
+    fi
+}
+
+# Apply runtime overrides to model_args without editing config presets.
+apply_model_arg_overrides() {
+    local model_args="$1"
+    local max_length_override="$2"
+    local gpu_mem_util_override="$3"
+    local swap_space_override="$4"
+    local dtype_override="$5"
+
+    local updated="$model_args"
+    updated="$(set_or_append_model_arg "$updated" "max_length" "$max_length_override")"
+    updated="$(set_or_append_model_arg "$updated" "gpu_memory_utilization" "$gpu_mem_util_override")"
+    updated="$(set_or_append_model_arg "$updated" "swap_space" "$swap_space_override")"
+    updated="$(set_or_append_model_arg "$updated" "dtype" "$dtype_override")"
+
+    echo "$updated"
+}
+
+# Apply a named runtime profile to model_args.
+apply_model_profile() {
+    local model_args="$1"
+    local profile="$2"
+
+    local max_length=""
+    local gpu_mem_util=""
+    local swap_space=""
+    local dtype=""
+
+    case "$profile" in
+        LOW_MEM)
+            max_length="$PROFILE_LOW_MEM_MAX_LENGTH"
+            gpu_mem_util="$PROFILE_LOW_MEM_GPU_MEM_UTIL"
+            swap_space="$PROFILE_LOW_MEM_SWAP_SPACE"
+            dtype="$PROFILE_LOW_MEM_DTYPE"
+            ;;
+        BALANCED_MEM)
+            max_length="$PROFILE_BALANCED_MEM_MAX_LENGTH"
+            gpu_mem_util="$PROFILE_BALANCED_MEM_GPU_MEM_UTIL"
+            swap_space="$PROFILE_BALANCED_MEM_SWAP_SPACE"
+            dtype="$PROFILE_BALANCED_MEM_DTYPE"
+            ;;
+        HIGH_MEM)
+            max_length="$PROFILE_HIGH_MEM_MAX_LENGTH"
+            gpu_mem_util="$PROFILE_HIGH_MEM_GPU_MEM_UTIL"
+            swap_space="$PROFILE_HIGH_MEM_SWAP_SPACE"
+            dtype="$PROFILE_HIGH_MEM_DTYPE"
+            ;;
+        *)
+            # Unknown profile: return unchanged and let caller decide whether to fail.
+            echo "$model_args"
+            return 0
+            ;;
+    esac
+
+    apply_model_arg_overrides "$model_args" "$max_length" "$gpu_mem_util" "$swap_space" "$dtype"
 }
 
 # Display summary statistics
