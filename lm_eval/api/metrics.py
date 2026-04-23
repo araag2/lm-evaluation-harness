@@ -1046,6 +1046,10 @@ def exact_match_hf_evaluate(
     ignore_punctuation=False,
     ignore_numbers=False,
 ):
+    # Remove leading and traling whitespace
+    predictions = np.array([x.strip().rstrip() for x in predictions])
+    references = np.array([x.strip().rstrip() for x in references])
+
     if regexes_to_ignore is not None:
         for s in regexes_to_ignore:
             predictions = np.array([re.sub(s, "", x) for x in predictions])
