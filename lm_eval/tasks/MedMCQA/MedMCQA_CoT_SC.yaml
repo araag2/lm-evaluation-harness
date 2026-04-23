@@ -32,7 +32,7 @@ filter_list:
   - name: "maj@11"
     filter:
     - function: "regex"
-      regex_pattern: "(?s:.*)([cC]ontradiction|[nN]eutral|[eE]ntailment)"
+      regex_pattern: "(?s:.*)(A|B|C|D)"
     - function: "take_first_k"
       k: 11
     - function: "majority_vote"

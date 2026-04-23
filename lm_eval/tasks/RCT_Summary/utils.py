@@ -1,13 +1,77 @@
 #baseline_prompt="You are a medical reviewer tasked with generating conclusion sections based on scientifical biomedical articles.\n\nTitle: {{Title}}\n\nAbstract: {{Abstract}}\n\nBased on the Title and Abstract of this medical article, generate the Conclusion Section. Only output the newly generated section.\nAnswer: "
 
-baseline_prompt="You are a medical reviewer tasked with generating conclusion sections based on scientific biomedical articles.\n\nTitle: {{Title}}\n\nAbstract: {{Abstract}}\n\nBased on the Title and Abstract, summarize the main finding about the intervention’s effect on the outcome.\n\nStrict requirements:\n- Output only a single, concise paragraph (1-3 sentences), similar in style and length to the examples below.\n- Focus only on the main result regarding the intervention’s effect.\n- Do NOT repeat information verbatim from the Abstract.\n- Do NOT include background, speculation, generic statements, markdown, or section headers.\n- Do NOT output anything except the new Conclusion Section.\n- Write in clear, complete sentences.\n\nAnswer: "
+baseline_prompt="""
+You are a medical reviewer tasked with writing a conclusion based on a scientific biomedical article.
+
+Title: {{Title}}
+
+Abstract: {{Abstract}}
+
+Write a single concise conclusion summarizing the main finding about the intervention’s effect on the outcome.
+
+STRICT OUTPUT RULES:
+- Output ONLY one paragraph (1–3 sentences).
+- Focus ONLY on the intervention’s effect on the outcome.
+- Do NOT include background, reasoning, speculation, or general statements.
+- Do NOT repeat phrases from the abstract or draft conclusion.
+- Do NOT include headings, labels, or extra text.
+
+OUTPUT FORMAT (must follow exactly):
+Answer: <conclusion> <END>
+
+Return only the line starting with "Answer:" and ending with "<END>".
+
+Answer: """
 
 #reasoning_prompt="You are a medical reviewer tasked with generating conclusion sections based on scientifical biomedical articles.\n\nTitle: {{Title}}\n\nAbstract: {{Abstract}}\n\nBased on the Title and Abstract of this medical article, generate the Conclusion Section. Only output the newly generated section. Be as accurate as possible.\nAnswer: "
 
-reasoning_prompt="You are a medical reviewer tasked with generating conclusion sections based on scientific biomedical articles.\n\nTitle: {{Title}}\n\nAbstract: {{Abstract}}\n\nBased on the Title and Abstract, summarize the main finding about the intervention’s effect on the outcome.\n\nStrict requirements:\n- Output only a single, concise paragraph (1-3 sentences), similar in style and length to the examples below.\n- Focus only on the main result regarding the intervention’s effect.\n- Do NOT repeat information verbatim from the Abstract.\n- Do NOT include background, speculation, generic statements, markdown, or section headers.\n- Do NOT output anything except the new Conclusion Section.\n- Write in clear, complete sentences.\n\nAnswer: "
+reasoning_prompt="""
+You are a medical reviewer tasked with writing a conclusion based on a scientific biomedical article.
+
+Title: {{Title}}
+
+Abstract: {{Abstract}}
+
+Draft Conclusion: {{Reasoning_Chain}}
+
+Write a single concise conclusion summarizing the main finding about the intervention’s effect on the outcome.
+
+STRICT OUTPUT RULES:
+- Focus ONLY on the intervention’s effect on the outcome.
+- Do NOT include background, reasoning, speculation, or general statements.
+- Do NOT repeat phrases from the abstract or draft conclusion.
+- Do NOT include headings, labels, or extra text.
+
+OUTPUT FORMAT (must follow exactly):
+Answer: <conclusion> <END>
+
+Explain your resoning for generating a given conclusion, and then return the line starting with "Answer:" and ending with "<END>". """
 
 #answer_selection_prompt="You are a medical reviewer tasked with generating conclusion sections based on scientifical biomedical articles.\n\nTitle: {{Title}}\n\nAbstract: {{Abstract}}\n\nDraft Conclusion: {{Reasoning_Chain}}\n\nGiven the Title, Abstract and the Draft Conclusion above, generate a refined and accurate Conclusion Section. Only output the newly generated section.\nAnswer: "
-answer_selection_prompt="You are a medical reviewer tasked with generating conclusion sections based on scientific biomedical articles.\n\nTitle: {{Title}}\n\nAbstract: {{Abstract}}\n\nDraft Conclusion: {{Reasoning_Chain}}\n\nGiven the Title, Abstract, and the Draft Conclusion above, summarize the main finding about the intervention’s effect on the outcome.\n\nStrict requirements:\n- Output only a single, concise paragraph (1-3 sentences), similar in style and length to the examples below.\n- Focus only on the main result regarding the intervention’s effect.\n- Do NOT repeat information verbatim from the Abstract or Draft Conclusion.\n- Do NOT include background, speculation, generic statements, markdown, or section headers.\n- Do NOT output anything except the new Conclusion Section.\n- Write in clear, complete sentences.\n\nAnswer: "
+answer_selection_prompt="""
+You are a medical reviewer tasked with writing a conclusion based on a scientific biomedical article.
+
+Title: {{Title}}
+
+Abstract: {{Abstract}}
+
+Draft Conclusion: {{Reasoning_Chain}}
+
+Write a single concise conclusion summarizing the main finding about the intervention’s effect on the outcome.
+
+STRICT OUTPUT RULES:
+- Output ONLY one paragraph (1–3 sentences).
+- Focus ONLY on the intervention’s effect on the outcome.
+- Do NOT include background, reasoning, speculation, or general statements.
+- Do NOT repeat phrases from the abstract or draft conclusion.
+- Do NOT include headings, labels, or extra text.
+
+OUTPUT FORMAT (must follow exactly):
+Answer: <conclusion> <END>
+
+Return only the line starting with "Answer:" and ending with "<END>".
+
+Answer: """
 
 relevant_keys = ["Title", "Abstract", "Reasoning_Chain"]
 

@@ -1018,6 +1018,100 @@ def partial_match_fn(references, predictions, **kwargs):
     return partial_numeric_match_from_texts(references, predictions)
 
 #-------------------------------------------------------#
+def normalize_span(s: str):
+    return " ".join(s.lower().strip().split())
+
+
+def span_prf_single(    
+    ref_texts: list[str],
+    pred_texts: list[str],
+) -> dict:
+    gold_spans = {
+        normalize_span(s)
+        for s in ref_texts.split("\n")
+        if s.strip()
+    }
+
+    pred_spans = {
+        normalize_span(s)
+        for s in pred_texts.split("\n")
+        if s.strip()
+    }
+
+    tp = len(gold_spans & pred_spans)
+    fp = len(pred_spans - gold_spans)
+    fn = len(gold_spans - pred_spans)
+
+    return tp, fp, fn
+
+@register_aggregation("span_precision")
+def span_precision_agg(items):
+    total_tp = total_fp = total_fn = 0
+
+    for ref, pred in items:
+        tp, fp, fn = span_prf_single(ref, pred)
+        total_tp += tp
+        total_fp += fp
+        total_fn += fn
+
+    return total_tp / (total_tp + total_fp) if (total_tp + total_fp) else 0.0
+
+@register_aggregation("span_recall")
+def span_recall_agg(items):
+    total_tp = total_fp = total_fn = 0
+
+    for ref, pred in items:
+        tp, fp, fn = span_prf_single(ref, pred)
+        total_tp += tp
+        total_fp += fp
+        total_fn += fn
+
+    return total_tp / (total_tp + total_fn) if (total_tp + total_fn) else 0.0
+
+@register_aggregation("span_f1")
+def span_f1_agg(items):
+    total_tp = total_fp = total_fn = 0
+
+    for ref, pred in items:
+        tp, fp, fn = span_prf_single(ref, pred)
+        total_tp += tp
+        total_fp += fp
+        total_fn += fn
+
+    precision = total_tp / (total_tp + total_fp) if (total_tp + total_fp) else 0.0
+    recall    = total_tp / (total_tp + total_fn) if (total_tp + total_fn) else 0.0
+
+    return (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
+
+@register_metric(
+    metric="span_precision",
+    higher_is_better=True,
+    output_type="generate_until",
+    aggregation="span_precision",
+)
+def span_precision_fn(items):
+    return items
+
+
+@register_metric(
+    metric="span_recall",
+    higher_is_better=True,
+    output_type="generate_until",
+    aggregation="span_recall",
+)
+def span_recall_fn(items):
+    return items
+
+
+@register_metric(
+    metric="span_f1",
+    higher_is_better=True,
+    output_type="generate_until",
+    aggregation="span_f1",
+)
+def span_f1_fn(items):
+    return items
+#-------------------------------------------------------#
 
 
 ### the code used in the `exact_match_hf_evaluate` function is ported from
@@ -1042,8 +1136,8 @@ def exact_match_hf_evaluate(
     predictions,
     references,
     regexes_to_ignore=None,
-    ignore_case=False,
-    ignore_punctuation=False,
+    ignore_case=True,
+    ignore_punctuation=True,
     ignore_numbers=False,
 ):
     # Remove leading and traling whitespace

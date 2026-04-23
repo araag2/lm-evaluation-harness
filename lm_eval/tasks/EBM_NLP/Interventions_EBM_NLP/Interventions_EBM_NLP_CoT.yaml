@@ -1,0 +1,46 @@
+task: Interventions_EBM_NLP_CoT
+ tag:
+   - chain-of-thought
+ dataset_path: araag2/EBM_NLP
+ dataset_name: processed
+ dataset_kwargs:
+   trust_remote_code: true
+ test_split: test
+ process_docs: !function utils.Interventions_process_docs
+ doc_to_text: !function utils.doc_to_text_reasoning
+ doc_to_target: "{{ Target }}"
+ output_type: generate_until
+ generation_kwargs:
+   until:
+     - "<END>"
+     - "<|im_end|>"
+     - "<|endoftext|>"
+     - "<|end_of_text|>"
+     - "<|eot_id|>"
+     - "<end_of_turn>"
+     - "<eos>"
+     - "</s>"
+   do_sample: false
+   max_gen_toks: 400
+   repetition_penalty: 1.1
+ metric_list:
+   - metric: span_precision
+     aggregation: span_precision
+     higher_is_better: true
+     ignore_case: true
+     ignore_punctuation: true
+     ignore_numbers: false
+   - metric: span_recall
+     aggregation: span_recall
+     higher_is_better: true
+     ignore_case: true
+     ignore_punctuation: true
+     ignore_numbers: false
+   - metric: span_f1
+     aggregation: span_f1
+     higher_is_better: true
+     ignore_case: true
+     ignore_punctuation: true
+     ignore_numbers: false
+ metadata:
+   version: 1.0

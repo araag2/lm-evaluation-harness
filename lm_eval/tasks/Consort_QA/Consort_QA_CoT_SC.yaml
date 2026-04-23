@@ -31,7 +31,7 @@ filter_list:
   - name: "maj@11"
     filter:
     - function: "regex"
-      regex_pattern: "(?s:.*)([Nn]o|[Mm]aybe|[Yy]es)"
+      regex_pattern: "(?s:.*)([Nn]o|[Yy]es)"
     - function: "take_first_k"
       k: 11
     - function: "majority_vote"

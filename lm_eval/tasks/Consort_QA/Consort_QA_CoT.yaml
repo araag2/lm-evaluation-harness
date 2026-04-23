@@ -29,8 +29,8 @@ filter_list:
   - name: "score_first"
     filter:
     - function: "regex"
-      regex_pattern: "(?s:.*)([Nn]o|[Mm]aybe|[Yy]es)"
-    - function: "take_first"
+      regex_pattern: "(?s:.*)([Nn]o|[Yy]es)"
+    - function: "take_last"
 metric_list:
   - metric: acc
     aggregation: mean

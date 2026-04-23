@@ -1,24 +1,72 @@
-baseline_prompt = "You are a medical expert specialized in biomedical question answering focused on research-level queries from PubMed articles. You task is given the context of a PubMed Article and a Question, answer the question based on the article.\n\nPubMed Article Information: \n\n{{Context}}\n\nQuestion: {{Question}}\n\nPlease provide your judgement in a single word (Yes, No or Maybe), answering the question based on the Pubmed Article Information.\nAnswer: "
+baseline_prompt = """
+You are a medical expert tasked with answering questions by using your medical knowledge and reasoning skills. Carefully read the **Context:** and the **Question:**, analyzing the information provided in the Context to determine the correct answer to the Question. 
 
-reasoning_prompt = "You are a medical expert specialized in biomedical question answering focused on research-level queries from PubMed articles. You task is given the context of a PubMed Article and a Question, answer the question based on the article.\n\nPubMed Article Information: \n\n{{Context}}\n\nQuestion: {{Question}}\n\nPlease provide your judgement in a single word (Yes, No or Maybe), answering the question based on the Pubmed Article Information. Let's think step by step, and at the very end write your answer in the form: \nAnswer: [Yes / No / Maybe] <END>"
+Determine the correct answer based on your medical expertise. Be as accurate as possible.
 
-answer_selection_prompt = "You are a medical expert specialized in biomedical question answering focused on research-level queries from PubMed articles. You task is given the context of a PubMed Article, a Question and a Reasoning Chain, answer the question based on the article and the reasoning chain.\n\nPubMed Article Information: \n\n{{Context}}\n\nQuestion: {{Question}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nGiven the PubMed Article Information, the Question and with special atention to the presented Reasoning Chain, provide your judgement in a single word (Yes, No or Maybe), answering the question based on the Pubmed Article Information.\nFinal Answer: "
+**Context:** {{Context}}
 
-verify_reasoning_prompt = "You are a medical expert specialized in biomedical question answering focused on research-level queries from PubMed articles. You task is given the context of a PubMed Article, a Question and a Reasoning Chain, verify the reasoning chain and answer the question based on the article and the reasoning chain.\n\nPubMed Article Information: \n\n{{Context}}\n\nQuestion: {{Question}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nPlease verify if the Reasoning Chain makes logical sense, and support the correct conclusion. Let's think step by step, and after explaining your verification reasoning, provide your answer in the form: \nVerified Answer: [Yes / No / Maybe] <END>"
+**Question:** {{Question}}
 
-answer_selection_after_verification_prompt = "You are a medical expert specialized in biomedical question answering focused on research-level queries from PubMed articles. You task is given the context of a PubMed Article, a Question, a Reasoning Chain and a Verification of the Reasoning Chain, answer the question based on the article, the reasoning chain and its verification.\n\nPubMed Article Information: \n\n{{Context}}\n\nQuestion: {{Question}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nVerification of the Reasoning Chain: {{Verified_Reasoning_Chain}}\n\nGiven the PubMed Article Information, the Question, the initial Reasoning Chain and the Verification of the Reasoning Chain, provide your judgement in a single word (Yes, No or Maybe), answering the question based on the Pubmed Article Information.\nFinal Answer: "
+Please provide your judgement in a single word (Yes or No), corresponding to the correct option that answers the Question based on the Context.
+Answer: """
 
-pos_answers = ["No", "Maybe", "Yes"]
+
+
+reasoning_prompt = """You are a medical expert tasked with answering questions by using your medical knowledge and reasoning skills. Carefully read the **Context:** and the **Question:**, analyzing the information provided in the Context to determine the correct answer to the Question. 
+
+Determine the correct answer based on your medical expertise. Be as accurate as possible.
+
+**Context:** {{Context}}
+
+**Question:** {{Question}}
+
+Let's think step by step, and at the very end write your answer in the form: \nAnswer: [Yes / No / Maybe] <END>"""
+
+answer_selection_prompt = """You are a medical expert tasked with answering questions by using your medical knowledge and reasoning skills. Carefully read the **Context:**, the **Question:**, and the **Reasoning Chain:**, analyzing the information provided in the Context to determine the correct answer to the Question. 
+
+**Context:** {{Context}}
+
+**Question:** {{Question}}
+
+**Reasoning Chain:** {{Reasoning_Chain}}
+
+Given the Context, the Question and with special atention to the presented Reasoning Chain, provide your judgement in a single word (Yes or No), answering the question based on the Context.
+
+Final Answer: """
+
+verify_reasoning_prompt = """You are a medical expert tasked with answering questions by using your medical knowledge and reasoning skills. Carefully read the **Context:**, the **Question:**, and the **Reasoning Chain:**, analyzing the information provided in the Context to determine the validity of the reasoning chain in relation to the Question and the Context.
+
+**Context:** {{Context}}
+
+**Question:** {{Question}}
+
+**Reasoning Chain:** {{Reasoning_Chain}}
+
+Please verify if the Reasoning Chain makes logical sense, and supports the correct conclusion.
+
+Let's think step by step, and after explaining your verification reasoning, provide your answer in the form: \nVerified Answer: [Yes / No] <END>"""
+
+answer_selection_after_verification_prompt = """You are a medical expert tasked with answering questions by using your medical knowledge and reasoning skills. Carefully read the **Context:**, the **Question:**, the **Reasoning Chain:**, and the **Verification of the Reasoning Chain:**, analyzing the information provided to determine the correct answer to the Question.
+
+**Context:** {{Context}}
+
+**Question:** {{Question}}
+
+**Reasoning Chain:** {{Reasoning_Chain}}
+
+**Verification of the Reasoning Chain:** {{Verified_Reasoning_Chain}}
+
+Given the Context, the Question, the initial Reasoning Chain and the Verification of the Reasoning Chain, provide your judgement in a single word (Yes or No), answering the question based on the Context.
+
+Answer: """
+
+pos_answers = ["No", "Yes"]
 
 def label_to_index(doc) -> int:
     return pos_answers.index(doc["Label"])
 
 def format_context(contexts):
     return "\n".join([f"- <{label}> : {context}" for label, context in contexts])
-
-self_refine_feedback_prompt = "You are a medical expert specialized in biomedical question answering reviewing a reasoning chain based on a PubMed article.\n\nPubMed Article Information: \n\n{{Context}}\n\nQuestion: {{Question}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nCritique this reasoning chain. Identify any logical gaps, unsupported conclusions, unclear steps, or factual inaccuracies.\n\nProvide at least 2-3 specific points of improvement.\nFeedback: "
-
-self_refine_refine_prompt = "You are a medical expert specialized in biomedical question answering tasked with improving a reasoning chain based on a PubMed article.\n\nPubMed Article Information: \n\n{{Context}}\n\nQuestion: {{Question}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nFeedback: {{Feedback}}\n\nGiven the feedback above, revise the reasoning chain to:\n1 - Fill logical gaps with evidence from the PubMed article.\n2 - Clarify unclear reasoning steps.\n3 - Ensure all conclusions are directly supported.\nLet's think step by step, and at the very end write your answer in the form: \nAnswer: [Yes / No / Maybe] <END>"
 
 relevant_keys = ["Context", "Question", "Reasoning_Chain", "Verified_Reasoning_Chain", "Feedback"]
 
@@ -40,9 +88,3 @@ def doc_to_text_verify_reasoning(doc):
 
 def doc_to_text_answer_selection_after_verify_reasoning(doc):
     return doc_to_text(doc, answer_selection_after_verification_prompt)
-
-def doc_to_text_self_refine_feedback(doc):
-    return doc_to_text(doc, self_refine_feedback_prompt)
-
-def doc_to_text_self_refine_refine(doc):
-    return doc_to_text(doc, self_refine_refine_prompt)

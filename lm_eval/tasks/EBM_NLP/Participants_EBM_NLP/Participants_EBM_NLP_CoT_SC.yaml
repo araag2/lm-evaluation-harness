@@ -1,14 +1,13 @@
-task: RCT_Summary_CoT_SC
+task: EBM_NLP_CoT_SC
 tag:
   - chain-of-thought
   - self-consistency
-dataset_path: araag2/RCT_Summary
+dataset_path: araag2/EBM_NLP
 dataset_name: processed
 dataset_kwargs:
   trust_remote_code: true
-training_split: train
-validation_split: dev
 test_split: test
+process_docs: !function utils.Participants_process_docs
 doc_to_text: !function utils.doc_to_text_reasoning
 doc_to_target: "{{ Target }}"
 output_type: generate_until
@@ -23,7 +22,7 @@ generation_kwargs:
     - "<eos>"
     - "</s>"
   do_sample: false
-  max_gen_toks: 220
+  max_gen_toks: 400
   repetition_penalty: 1.1
 repeats: 11
 filter_list:
@@ -33,8 +32,20 @@ filter_list:
       k: 11
     - function: "take_first"
 metric_list:
-  - metric: rouge_l
-    aggregation: rouge_l
+  - metric: span_precision
+    aggregation: span_precision
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+    ignore_numbers: false
+  - metric: span_recall
+    aggregation: span_recall
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+    ignore_numbers: false
+  - metric: span_f1
+    aggregation: span_f1
     higher_is_better: true
     ignore_case: true
     ignore_punctuation: true
