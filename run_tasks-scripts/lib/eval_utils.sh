@@ -393,12 +393,14 @@ apply_model_arg_overrides() {
     local gpu_mem_util_override="$3"
     local swap_space_override="$4"
     local dtype_override="$5"
+    local enable_prefix_caching_override="$6"
 
     local updated="$model_args"
     updated="$(set_or_append_model_arg "$updated" "max_length" "$max_length_override")"
     updated="$(set_or_append_model_arg "$updated" "gpu_memory_utilization" "$gpu_mem_util_override")"
     updated="$(set_or_append_model_arg "$updated" "swap_space" "$swap_space_override")"
     updated="$(set_or_append_model_arg "$updated" "dtype" "$dtype_override")"
+    updated="$(set_or_append_model_arg "$updated" "enable_prefix_caching" "$enable_prefix_caching_override")"
 
     echo "$updated"
 }
@@ -412,6 +414,7 @@ apply_model_profile() {
     local gpu_mem_util=""
     local swap_space=""
     local dtype=""
+    local enable_prefix_caching=""
 
     case "$profile" in
         LOW_MEM)
@@ -419,18 +422,21 @@ apply_model_profile() {
             gpu_mem_util="$PROFILE_LOW_MEM_GPU_MEM_UTIL"
             swap_space="$PROFILE_LOW_MEM_SWAP_SPACE"
             dtype="$PROFILE_LOW_MEM_DTYPE"
+            enable_prefix_caching="$PROFILE_LOW_MEM_ENABLE_PREFIX_CACHING"
             ;;
         BALANCED_MEM)
             max_length="$PROFILE_BALANCED_MEM_MAX_LENGTH"
             gpu_mem_util="$PROFILE_BALANCED_MEM_GPU_MEM_UTIL"
             swap_space="$PROFILE_BALANCED_MEM_SWAP_SPACE"
             dtype="$PROFILE_BALANCED_MEM_DTYPE"
+            enable_prefix_caching="$PROFILE_BALANCED_MEM_ENABLE_PREFIX_CACHING"
             ;;
         HIGH_MEM)
             max_length="$PROFILE_HIGH_MEM_MAX_LENGTH"
             gpu_mem_util="$PROFILE_HIGH_MEM_GPU_MEM_UTIL"
             swap_space="$PROFILE_HIGH_MEM_SWAP_SPACE"
             dtype="$PROFILE_HIGH_MEM_DTYPE"
+            enable_prefix_caching="$PROFILE_HIGH_MEM_ENABLE_PREFIX_CACHING"
             ;;
         *)
             # Unknown profile: return unchanged and let caller decide whether to fail.
@@ -439,7 +445,7 @@ apply_model_profile() {
             ;;
     esac
 
-    apply_model_arg_overrides "$model_args" "$max_length" "$gpu_mem_util" "$swap_space" "$dtype"
+    apply_model_arg_overrides "$model_args" "$max_length" "$gpu_mem_util" "$swap_space" "$dtype" "$enable_prefix_caching"
 }
 
 # Display summary statistics
