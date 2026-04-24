@@ -5,7 +5,7 @@ dataset_path: araag2/Consort_QA
 dataset_name: processed
 dataset_kwargs:
   trust_remote_code: true
-test_split: labeled
+test_split: test
 doc_to_text: !function utils.doc_to_text_reasoning
 doc_to_target: "{{ Label }}"
 doc_to_choice: ["No", "Yes"]

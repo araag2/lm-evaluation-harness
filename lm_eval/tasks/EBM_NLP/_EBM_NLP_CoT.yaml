@@ -1,0 +1,16 @@
+group: EBM_NLP_CoT
+tag:
+  - chain-of-thought
+task:
+  - Interventions_EBM_NLP_CoT
+  - Outcomes_EBM_NLP_CoT
+  - Participants_EBM_NLP_CoT
+aggregate_metric_list:
+  - aggregation: mean
+    metric: span_precision
+  - aggregation: mean
+    metric: span_recall
+  - aggregation: mean
+    metric: span_f1
+metadata:
+  version: 1.0

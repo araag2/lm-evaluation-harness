@@ -1,1 +1,0 @@
-- Need to split EBM-NLP examples into 3 categories: P | I | O. This is because the evaluation metric is span-based, and we want to evaluate the model's ability to identify each category separately. We can then aggregate the results to get an overall score for the model's performance on the task.

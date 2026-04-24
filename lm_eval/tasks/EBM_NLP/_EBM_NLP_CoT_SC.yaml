@@ -1,0 +1,17 @@
+group: EBM_NLP_CoT_SC
+tag:
+  - chain-of-thought
+  - self-consistency
+task:
+  - Interventions_EBM_NLP_CoT_SC
+  - Outcomes_EBM_NLP_CoT_SC
+  - Participants_EBM_NLP_CoT_SC
+aggregate_metric_list:
+  - aggregation: mean
+    metric: span_precision
+  - aggregation: mean
+    metric: span_recall
+  - aggregation: mean
+    metric: span_f1
+metadata:
+  version: 1.0

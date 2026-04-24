@@ -7,7 +7,7 @@ dataset_kwargs:
   trust_remote_code: true
 test_split: test
 process_docs: !function utils.Participants_process_docs
-doc_to_text: !function utils.doc_to_text
+doc_to_text: !function utils.Participants_doc_to_text
 doc_to_target: "{{ Target }}"
 output_type: generate_until
 generation_kwargs:
