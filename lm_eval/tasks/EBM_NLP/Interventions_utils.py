@@ -89,4 +89,4 @@ def Interventions_doc_to_text_answer_selection(doc):
     return Interventions_doc_to_text(doc, Interventions_answer_selection_prompt)
 
 def Interventions_process_docs(dataset):
-    return dataset.filter(lambda doc: doc["Category"] == "Interventions")
+    return dataset.filter(lambda doc: doc["Category"] == "interventions")

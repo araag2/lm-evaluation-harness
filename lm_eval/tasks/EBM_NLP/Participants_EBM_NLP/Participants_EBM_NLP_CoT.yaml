@@ -1,4 +1,4 @@
-task: EBM_NLP_CoT
+task: Participants_EBM_NLP_CoT
 tag:
   - chain-of-thought
 dataset_path: araag2/EBM_NLP

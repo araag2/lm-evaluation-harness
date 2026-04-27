@@ -65,16 +65,13 @@ pos_answers = ["No", "Yes"]
 def label_to_index(doc) -> int:
     return pos_answers.index(doc["Label"])
 
-def format_context(contexts):
-    return "\n".join([f"- <{label}> : {context}" for label, context in contexts])
-
 relevant_keys = ["Context", "Question", "Reasoning_Chain", "Verified_Reasoning_Chain", "Feedback"]
 
 def doc_to_text(doc, prompt = baseline_prompt):
     res = prompt
     for key in relevant_keys:
         if key in doc:
-            res = res.replace(f"{{{{{key}}}}}", doc[key] if key != "Context" else format_context(doc[key]))
+            res = res.replace(f"{{{{{key}}}}}", doc[key])
     return res
 
 def doc_to_text_reasoning(doc):

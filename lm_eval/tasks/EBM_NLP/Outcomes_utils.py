@@ -89,4 +89,4 @@ def Outcomes_doc_to_text_answer_selection(doc):
     return Outcomes_doc_to_text(doc, Outcomes_answer_selection_prompt)
 
 def Outcomes_process_docs(dataset):
-    return dataset.filter(lambda doc: doc["Category"] == "Outcomes")
+    return dataset.filter(lambda doc: doc["Category"] == "outcomes")

@@ -1,4 +1,4 @@
-task: EBM_NLP_0-shot
+task: Participants_EBM_NLP_0-shot
 tag:
   - 0-shot
 dataset_path: araag2/EBM_NLP

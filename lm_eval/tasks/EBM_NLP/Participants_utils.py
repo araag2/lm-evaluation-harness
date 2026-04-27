@@ -92,7 +92,7 @@ def Participants_doc_to_text_answer_selection(doc):
     return Participants_doc_to_text(doc, Participants_answer_selection_prompt)
 
 def Participants_process_docs(dataset):
-    return dataset.filter(lambda doc: doc["Category"] == "Participants")
+    return dataset.filter(lambda doc: doc["Category"] == "participants")
 
 
 Interventions_baseline_prompt="""You are an expert biomedical annotator for PICO span extraction.

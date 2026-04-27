@@ -171,6 +171,14 @@ def main():
                 json.dump(make_summary_output(result), f, indent=4, default=make_json_serializable)
             print(f"\n✅ Results written to {task_output_path}")
 
+    # Clean up PyTorch distributed process group if initialized
+    try:
+        import torch.distributed as dist
+        if dist.is_available() and dist.is_initialized():
+            dist.destroy_process_group()
+    except ImportError:
+        pass
+
 
 if __name__ == "__main__":
     main()

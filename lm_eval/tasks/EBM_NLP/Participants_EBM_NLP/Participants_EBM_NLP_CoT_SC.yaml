@@ -1,4 +1,4 @@
-task: EBM_NLP_CoT_SC
+task: Participants_EBM_NLP_CoT_SC
 tag:
   - chain-of-thought
   - self-consistency
