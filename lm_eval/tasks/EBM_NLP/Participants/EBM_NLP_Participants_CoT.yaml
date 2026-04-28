@@ -1,21 +1,20 @@
-task: Outcomes_EBM_NLP_CoT_SC
+task: EBM_NLP_Participants_CoT
 tag:
   - chain-of-thought
-  - self-consistency
 dataset_path: araag2/EBM_NLP
 dataset_name: processed
 dataset_kwargs:
   trust_remote_code: true
 test_split: test
-process_docs: !function utils.Outcomes_process_docs
-doc_to_text: !function utils.Outcomes_doc_to_text_reasoning
-doc_to_target: "{{ Target }}"
+process_docs: !function utils.Participants_process_docs
+doc_to_text: !function utils.Participants_doc_to_text_reasoning
+doc_to_target: "{{ Label }}"
 output_type: generate_until
 generation_kwargs:
   until:
     - "<END>"
     - "<|im_end|>"
-    - "<endoftext|>"
+    - "<|endoftext|>"
     - "<|end_of_text|>"
     - "<|eot_id|>"
     - "<end_of_turn>"
@@ -24,13 +23,6 @@ generation_kwargs:
   do_sample: false
   max_gen_toks: 400
   repetition_penalty: 1.1
-repeats: 11
-filter_list:
-  - name: "take_first@11"
-    filter:
-    - function: "take_first_k"
-      k: 11
-    - function: "take_first"
 metric_list:
   - metric: span_precision
     aggregation: span_precision

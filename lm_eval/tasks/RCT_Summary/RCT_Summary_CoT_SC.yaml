@@ -23,7 +23,7 @@ generation_kwargs:
     - "<eos>"
     - "</s>"
   do_sample: false
-  max_gen_toks: 220
+  max_gen_toks: 500
   repetition_penalty: 1.1
 repeats: 11
 filter_list:

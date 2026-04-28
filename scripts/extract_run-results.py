@@ -21,13 +21,15 @@ def normalize_metric_name(metric_name: str) -> str:
             metric_name = metric_name[:-len(suffix)]
     return metric_name.strip()
 
+SKIP_METRICS = {"name", "sample_len", "samples", "docs", "reasoning_outputs", "reasoning_chains"}
+
 def extract_metrics(result_dict: Dict[str, Any], prefix: str = "") -> Dict[str, Any]:
     """Extract metrics from result dictionary with normalization."""
     metrics = {}
 
     for k, v in result_dict.items():
         # Skip normalized versions and stderr
-        if 'norm' in k or 'stderr' in k:
+        if 'norm' in k or 'stderr' in k or k in SKIP_METRICS:
             continue
         
         # Normalize metric name
@@ -50,14 +52,14 @@ def is_flat_scalar_metrics_dict(results_dict: Dict[str, Any]) -> bool:
         return False
 
     for value in results_dict.values():
-        if isinstance(value, dict):
-            return False
-        if isinstance(value, bool):
+        if isinstance(value, dict) or isinstance(value, list) or isinstance(value, np.ndarray) or isinstance(value, tuple):
+            print(f"[DEBUG] Found nested value: {value}")
             return False
         if value is None:
             continue
-        if not isinstance(value, Number):
-            return False
+        #if not isinstance(value, Number):
+        #    print(f"[DEBUG] Found non-numeric value: {value}")
+        #    return False
 
     return True
 

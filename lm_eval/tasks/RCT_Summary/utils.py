@@ -15,6 +15,7 @@ STRICT OUTPUT RULES:
 - Do NOT include background, reasoning, speculation, or general statements.
 - Do NOT repeat phrases from the abstract or draft conclusion.
 - Do NOT include headings, labels, or extra text.
+- Do NOT output <think>, <reasoning>, <conclusion>, or similar meta-text, except the required "Answer: <conclusion> <END>" format.
 
 OUTPUT FORMAT (must follow exactly):
 Answer: <conclusion> <END>
@@ -31,8 +32,6 @@ You are a medical reviewer tasked with writing a conclusion based on a scientifi
 Title: {{Title}}
 
 Abstract: {{Abstract}}
-
-Draft Conclusion: {{Reasoning_Chain}}
 
 Write a single concise conclusion summarizing the main finding about the intervention’s effect on the outcome.
 
@@ -57,19 +56,18 @@ Abstract: {{Abstract}}
 
 Draft Conclusion: {{Reasoning_Chain}}
 
-Write a single concise conclusion summarizing the main finding about the intervention’s effect on the outcome.
+You may use a hidden internal scratchpad to reason, but it must never appear in the output.
 
 STRICT OUTPUT RULES:
 - Output ONLY one paragraph (1–3 sentences).
 - Focus ONLY on the intervention’s effect on the outcome.
 - Do NOT include background, reasoning, speculation, or general statements.
-- Do NOT repeat phrases from the abstract or draft conclusion.
 - Do NOT include headings, labels, or extra text.
+- Do NOT output <think>, <reasoning>, <conclusion>, or similar meta-text, except the required "Answer: <conclusion> <END>" format.
+- The output MUST begin with "Answer:" and contain no text before it.
 
 OUTPUT FORMAT (must follow exactly):
 Answer: <conclusion> <END>
-
-Return only the line starting with "Answer:" and ending with "<END>".
 
 Answer: """
 

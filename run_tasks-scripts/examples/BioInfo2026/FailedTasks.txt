@@ -1,0 +1,94 @@
+Failed Runs (0-shot_QA):
+  ✗ 1 tasks [unsloth_Qwen3-8B] (0-shot): TrialPanorama_Eligibility_Criteria_Design_0-shot
+  ✗ 1 tasks [unsloth_Qwen3-8B] (0-shot): TrialPanorama_Evidence_Summarization_0-shot
+  ✗ 1 tasks [meta-llama_Llama-3.1-8B-Instruct] (0-shot): TrialPanorama_Evidence_Summarization_0-shot
+  ✗ 1 tasks [deepseek-ai_DeepSeek-R1-0528-Qwen3-8B] (0-shot): TrialPanorama_Eligibility_Criteria_Design_0-shot
+  ✗ 1 tasks [deepseek-ai_DeepSeek-R1-0528-Qwen3-8B] (0-shot): TrialPanorama_Evidence_Summarization_0-shot
+  ✗ 1 tasks [google_gemma-7b] (0-shot): TrialPanorama_Eligibility_Criteria_Design_0-shot
+  ✗ 1 tasks [google_gemma-7b] (0-shot): TrialPanorama_Evidence_Summarization_0-shot
+  ✗ 1 tasks [UbiquantAI_Fleming-R1-7B] (0-shot): TrialPanorama_Eligibility_Criteria_Design_0-shot
+  ✗ 1 tasks [UbiquantAI_Fleming-R1-7B] (0-shot): TrialPanorama_Evidence_Summarization_0-shot
+  ✗ 1 tasks [google_gemma-4-E4B-it] (0-shot): TrialPanorama_Arm_Design_0-shot
+  ✗ 1 tasks [google_gemma-4-E4B-it] (0-shot): TrialPanorama_Eligibility_Criteria_Design_0-shot
+  ✗ 1 tasks [google_gemma-4-E4B-it] (0-shot): TrialPanorama_Evidence_Summarization_0-shot
+  ✗ 1 tasks [Qwen_Qwen3.5-9B] (0-shot): TrialPanorama_Eligibility_Criteria_Design_0-shot
+  ✗ 1 tasks [Qwen_Qwen3.5-9B] (0-shot): TrialPanorama_Evidence_Summarization_0-shot
+  ✗ 1 tasks [Intelligent-Internet_II-Medical-8B] (0-shot): TrialPanorama_Eligibility_Criteria_Design_0-shot
+  ✗ 1 tasks [Intelligent-Internet_II-Medical-8B] (0-shot): TrialPanorama_Evidence_Summarization_0-shot
+  ✗ 1 tasks [UCSC-VLAA_MedReason-8B] (0-shot): TrialPanorama_Eligibility_Criteria_Design_0-shot
+  ✗ 1 tasks [UCSC-VLAA_MedReason-8B] (0-shot): TrialPanorama_Evidence_Summarization_0-shot
+
+Failed Runs (0-shot_NLI):
+  ✗ 1 tasks [unsloth_Qwen3-8B] (0-shot): Evidence_Inference_v2_0-shot
+  ✗ 1 tasks [unsloth_Qwen3-8B] (0-shot): Trial_Meta_Analysis_type_0-shot
+  ✗ 1 tasks [unsloth_Qwen3-8B] (0-shot): TrialBench_patient_dropout_prediction_0-shot
+  ✗ 1 tasks [unsloth_Qwen3-8B] (0-shot): TrialBench_trial_approval_prediction_0-shot
+  ✗ 1 tasks [meta-llama_Llama-3.1-8B-Instruct] (0-shot): Evidence_Inference_v2_0-shot
+  ✗ 1 tasks [meta-llama_Llama-3.1-8B-Instruct] (0-shot): Trial_Meta_Analysis_type_0-shot
+  ✗ 1 tasks [meta-llama_Llama-3.1-8B-Instruct] (0-shot): TrialBench_patient_dropout_prediction_0-shot
+  ✗ 1 tasks [deepseek-ai_DeepSeek-R1-0528-Qwen3-8B] (0-shot): Evidence_Inference_v2_0-shot
+  ✗ 1 tasks [deepseek-ai_DeepSeek-R1-0528-Qwen3-8B] (0-shot): Trial_Meta_Analysis_type_0-shot
+  ✗ 1 tasks [deepseek-ai_DeepSeek-R1-0528-Qwen3-8B] (0-shot): TrialBench_patient_dropout_prediction_0-shot
+  ✗ 1 tasks [deepseek-ai_DeepSeek-R1-0528-Qwen3-8B] (0-shot): TrialBench_trial_approval_prediction_0-shot
+  ✗ 1 tasks [google_gemma-7b] (0-shot): Evidence_Inference_v2_0-shot
+  ✗ 1 tasks [google_gemma-7b] (0-shot): Trial_Meta_Analysis_type_0-shot
+  ✗ 1 tasks [google_gemma-7b] (0-shot): Trial_Meta_Analysis_continuous_0-shot
+  ✗ 1 tasks [google_gemma-7b] (0-shot): TrialBench_adverse_event_prediction_0-shot
+  ✗ 1 tasks [google_gemma-7b] (0-shot): TrialBench_mortality_rate_prediction_0-shot
+  ✗ 1 tasks [google_gemma-7b] (0-shot): TrialBench_patient_dropout_prediction_0-shot
+  ✗ 1 tasks [google_gemma-7b] (0-shot): TrialBench_trial_approval_prediction_0-shot
+  ✗ 1 tasks [google_gemma-7b] (0-shot): TrialBench_trial_failure_reason_identification_0-shot
+  ✗ 1 tasks [UbiquantAI_Fleming-R1-7B] (0-shot): Evidence_Inference_v2_0-shot
+  ✗ 1 tasks [UbiquantAI_Fleming-R1-7B] (0-shot): Trial_Meta_Analysis_type_0-shot
+  ✗ 1 tasks [UbiquantAI_Fleming-R1-7B] (0-shot): TrialBench_patient_dropout_prediction_0-shot
+  ✗ 1 tasks [UbiquantAI_Fleming-R1-7B] (0-shot): TrialBench_trial_approval_prediction_0-shot
+  ✗ 1 tasks [linjc16_Panacea-7B-Chat] (0-shot): Trial_Meta_Analysis_type_0-shot
+  ✗ 1 tasks [google_gemma-4-E4B-it] (0-shot): Evidence_Inference_v2_0-shot
+  ✗ 1 tasks [google_gemma-4-E4B-it] (0-shot): HINT_0-shot
+  ✗ 1 tasks [google_gemma-4-E4B-it] (0-shot): Trial_Meta_Analysis_type_0-shot
+  ✗ 1 tasks [google_gemma-4-E4B-it] (0-shot): TrialBench_adverse_event_prediction_0-shot
+  ✗ 1 tasks [google_gemma-4-E4B-it] (0-shot): TrialBench_mortality_rate_prediction_0-shot
+  ✗ 1 tasks [google_gemma-4-E4B-it] (0-shot): TrialBench_patient_dropout_prediction_0-shot
+  ✗ 1 tasks [google_gemma-4-E4B-it] (0-shot): TrialBench_trial_approval_prediction_0-shot
+  ✗ 1 tasks [google_gemma-4-E4B-it] (0-shot): TrialBench_trial_failure_reason_identification_0-shot
+  ✗ 1 tasks [Qwen_Qwen3.5-9B] (0-shot): Evidence_Inference_v2_0-shot
+  ✗ 1 tasks [Qwen_Qwen3.5-9B] (0-shot): Trial_Meta_Analysis_type_0-shot
+  ✗ 1 tasks [Qwen_Qwen3.5-9B] (0-shot): TrialBench_adverse_event_prediction_0-shot
+  ✗ 1 tasks [Qwen_Qwen3.5-9B] (0-shot): TrialBench_mortality_rate_prediction_0-shot
+  ✗ 1 tasks [Qwen_Qwen3.5-9B] (0-shot): TrialBench_patient_dropout_prediction_0-shot
+  ✗ 1 tasks [Qwen_Qwen3.5-9B] (0-shot): TrialBench_trial_approval_prediction_0-shot
+  ✗ 1 tasks [Qwen_Qwen3.5-9B] (0-shot): TrialBench_trial_failure_reason_identification_0-shot
+  ✗ 1 tasks [Intelligent-Internet_II-Medical-8B] (0-shot): Evidence_Inference_v2_0-shot
+  ✗ 1 tasks [Intelligent-Internet_II-Medical-8B] (0-shot): Trial_Meta_Analysis_type_0-shot
+  ✗ 1 tasks [Intelligent-Internet_II-Medical-8B] (0-shot): TrialBench_patient_dropout_prediction_0-shot
+  ✗ 1 tasks [Intelligent-Internet_II-Medical-8B] (0-shot): TrialBench_trial_approval_prediction_0-shot
+  ✗ 1 tasks [UCSC-VLAA_MedReason-8B] (0-shot): Evidence_Inference_v2_0-shot
+  ✗ 1 tasks [UCSC-VLAA_MedReason-8B] (0-shot): Trial_Meta_Analysis_type_0-shot
+  ✗ 1 tasks [UCSC-VLAA_MedReason-8B] (0-shot): TrialBench_patient_dropout_prediction_0-shot
+
+Failed Runs (CoT-QA):
+  ✗ 1 pairs [unsloth_Qwen3-8B]: TrialPanorama:Eligibility_Criteria_Design_CoT -> TrialPanorama:Eligibility_Criteria_Design_0-shot
+  ✗ 1 pairs [unsloth_Qwen3-8B]: TrialPanorama:Evidence_Summarization_CoT -> TrialPanorama:Evidence_Summarization_0-shot
+  ✗ 1 pairs [meta-llama_Llama-3.1-8B-Instruct]: TrialPanorama:Eligibility_Criteria_Design_CoT -> TrialPanorama:Eligibility_Criteria_Design_0-shot
+  ✗ 1 pairs [meta-llama_Llama-3.1-8B-Instruct]: TrialPanorama:Evidence_Summarization_CoT -> TrialPanorama:Evidence_Summarization_0-shot
+  ✗ 1 pairs [deepseek-ai_DeepSeek-R1-0528-Qwen3-8B]: TrialPanorama:Eligibility_Criteria_Design_CoT -> TrialPanorama:Eligibility_Criteria_Design_0-shot
+  ✗ 1 pairs [deepseek-ai_DeepSeek-R1-0528-Qwen3-8B]: TrialPanorama:Evidence_Summarization_CoT -> TrialPanorama:Evidence_Summarization_0-shot
+  ✗ 1 pairs [google_gemma-7b]: TrialPanorama:Arm_Design_CoT -> TrialPanorama:Arm_Design_0-shot
+  ✗ 1 pairs [google_gemma-7b]: TrialPanorama:Eligibility_Criteria_Design_CoT -> TrialPanorama:Eligibility_Criteria_Design_0-shot
+  ✗ 1 pairs [google_gemma-7b]: TrialPanorama:Endpoint_Design_CoT -> TrialPanorama:Endpoint_Design_0-shot
+  ✗ 1 pairs [google_gemma-7b]: TrialPanorama:Evidence_Summarization_CoT -> TrialPanorama:Evidence_Summarization_0-shot
+  ✗ 1 pairs [UbiquantAI_Fleming-R1-7B]: TrialPanorama:Eligibility_Criteria_Design_CoT -> TrialPanorama:Eligibility_Criteria_Design_0-shot
+  ✗ 1 pairs [UbiquantAI_Fleming-R1-7B]: TrialPanorama:Evidence_Summarization_CoT -> TrialPanorama:Evidence_Summarization_0-shot
+  ✗ 1 pairs [google_gemma-4-E4B-it]: TrialPanorama:Arm_Design_CoT -> TrialPanorama:Arm_Design_0-shot
+  ✗ 1 pairs [google_gemma-4-E4B-it]: TrialPanorama:Eligibility_Criteria_Design_CoT -> TrialPanorama:Eligibility_Criteria_Design_0-shot
+  ✗ 1 pairs [google_gemma-4-E4B-it]: TrialPanorama:Endpoint_Design_CoT -> TrialPanorama:Endpoint_Design_0-shot
+  ✗ 1 pairs [google_gemma-4-E4B-it]: TrialPanorama:Evidence_Summarization_CoT -> TrialPanorama:Evidence_Summarization_0-shot
+  ✗ 1 pairs [Qwen_Qwen3.5-9B]: TrialPanorama:Arm_Design_CoT -> TrialPanorama:Arm_Design_0-shot
+  ✗ 1 pairs [Qwen_Qwen3.5-9B]: TrialPanorama:Eligibility_Criteria_Design_CoT -> TrialPanorama:Eligibility_Criteria_Design_0-shot
+  ✗ 1 pairs [Qwen_Qwen3.5-9B]: TrialPanorama:Evidence_Summarization_CoT -> TrialPanorama:Evidence_Summarization_0-shot
+  ✗ 1 pairs [Intelligent-Internet_II-Medical-8B]: TrialPanorama:Eligibility_Criteria_Design_CoT -> TrialPanorama:Eligibility_Criteria_Design_0-shot
+  ✗ 1 pairs [Intelligent-Internet_II-Medical-8B]: TrialPanorama:Evidence_Summarization_CoT -> TrialPanorama:Evidence_Summarization_0-shot
+  ✗ 1 pairs [UCSC-VLAA_MedReason-8B]: TrialPanorama:Eligibility_Criteria_Design_CoT -> TrialPanorama:Eligibility_Criteria_Design_0-shot
+  ✗ 1 pairs [UCSC-VLAA_MedReason-8B]: TrialPanorama:Evidence_Summarization_CoT -> TrialPanorama:Evidence_Summarization_0-shot
+
+  

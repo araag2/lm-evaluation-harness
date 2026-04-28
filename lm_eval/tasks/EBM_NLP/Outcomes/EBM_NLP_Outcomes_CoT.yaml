@@ -1,14 +1,14 @@
-task: Outcomes_EBM_NLP_0-shot
+task: EBM_NLP_Outcomes_CoT
 tag:
-  - 0-shot
+  - chain-of-thought
 dataset_path: araag2/EBM_NLP
 dataset_name: processed
 dataset_kwargs:
   trust_remote_code: true
 test_split: test
 process_docs: !function utils.Outcomes_process_docs
-doc_to_text: !function utils.Outcomes_doc_to_text
-doc_to_target: "{{ Target }}"
+doc_to_text: !function utils.Outcomes_doc_to_text_reasoning
+doc_to_target: "{{ Label }}"
 output_type: generate_until
 generation_kwargs:
   until:
@@ -20,9 +20,8 @@ generation_kwargs:
     - "<end_of_turn>"
     - "<eos>"
     - "</s>"
-    - "\n\n"
   do_sample: false
-  max_gen_toks: 150
+  max_gen_toks: 400
   repetition_penalty: 1.1
 metric_list:
   - metric: span_precision

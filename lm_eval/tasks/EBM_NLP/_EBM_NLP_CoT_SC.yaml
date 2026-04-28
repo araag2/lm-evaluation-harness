@@ -3,9 +3,9 @@ tag:
   - chain-of-thought
   - self-consistency
 task:
-  - Interventions_EBM_NLP_CoT_SC
-  - Outcomes_EBM_NLP_CoT_SC
-  - Participants_EBM_NLP_CoT_SC
+  - EBM_NLP_Interventions_CoT_SC
+  - EBM_NLP_Outcomes_CoT_SC
+  - EBM_NLP_Participants_CoT_SC
 aggregate_metric_list:
   - aggregation: mean
     metric: span_precision

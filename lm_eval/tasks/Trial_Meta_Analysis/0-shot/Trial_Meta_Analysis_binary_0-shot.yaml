@@ -22,7 +22,7 @@ generation_kwargs:
     - "</s>"
     - "\n\n"
   do_sample: false
-  max_gen_toks: 70
+  max_gen_toks: 50
   repetition_penalty: 1.1
 metric_list:
   - metric: partial_match

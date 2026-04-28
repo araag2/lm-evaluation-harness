@@ -1,14 +1,15 @@
-task: Participants_EBM_NLP_0-shot
+task: EBM_NLP_Interventions_CoT_SC
 tag:
-  - 0-shot
+  - chain-of-thought
+  - self-consistency
 dataset_path: araag2/EBM_NLP
 dataset_name: processed
 dataset_kwargs:
   trust_remote_code: true
 test_split: test
-process_docs: !function utils.Participants_process_docs
-doc_to_text: !function utils.Participants_doc_to_text
-doc_to_target: "{{ Target }}"
+process_docs: !function utils.Interventions_process_docs
+doc_to_text: !function utils.Interventions_doc_to_text_reasoning
+doc_to_target: "{{ Label }}"
 output_type: generate_until
 generation_kwargs:
   until:
@@ -20,10 +21,16 @@ generation_kwargs:
     - "<end_of_turn>"
     - "<eos>"
     - "</s>"
-    - "\n\n"
   do_sample: false
-  max_gen_toks: 150
+  max_gen_toks: 400
   repetition_penalty: 1.1
+repeats: 11
+filter_list:
+  - name: "take_first@11"
+    filter:
+    - function: "take_first_k"
+      k: 11
+    - function: "take_first"
 metric_list:
   - metric: span_precision
     aggregation: span_precision

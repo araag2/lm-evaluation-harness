@@ -39,7 +39,7 @@ OOM_BACKOFF=true
 PROFILE="BALANCED_MEM"
 MAX_LENGTH_OVERRIDE=""
 GPU_MEM_UTIL_OVERRIDE=""
-SWAP_SPACE_OVERRIDE=""
+SWAP_SPACE_OVERRIDE="8"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do

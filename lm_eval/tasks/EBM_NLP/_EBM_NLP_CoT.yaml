@@ -2,9 +2,9 @@ group: EBM_NLP_CoT
 tag:
   - chain-of-thought
 task:
-  - Interventions_EBM_NLP_CoT
-  - Outcomes_EBM_NLP_CoT
-  - Participants_EBM_NLP_CoT
+  - EBM_NLP_Interventions_CoT
+  - EBM_NLP_Outcomes_CoT
+  - EBM_NLP_Participants_CoT
 aggregate_metric_list:
   - aggregation: mean
     metric: span_precision
