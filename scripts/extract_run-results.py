@@ -129,8 +129,9 @@ def collect_results_from_summary_file(path: str) -> List[Dict[str, Any]]:
 
     mode = data.get("mode", "N/A")
     reasoning_task = data.get("reasoning_task", "")
-    # Extract base dataset name (e.g. "MedNLI" from "MedNLI:CoT")
+    # Prefer the full reasoning task to keep subtasks distinct (e.g. "TrialPanorama:Arm_Design_CoT")
     base_dataset = reasoning_task.split(":")[0] if ":" in reasoning_task else reasoning_task
+    dataset_name = reasoning_task or base_dataset
 
     # Strip HuggingFace org prefix (e.g. "unsloth/Qwen3-8B" → "Qwen3-8B")
     raw_model = data.get("reasoning_model", "").split(",")[0][11:]
@@ -141,7 +142,7 @@ def collect_results_from_summary_file(path: str) -> List[Dict[str, Any]]:
     # Some summary files store placeholder values for these two fields.
     # Replace with useful metadata during extraction.
     if results_dict.get("name") == 0.0:
-        results_dict["name"] = reasoning_task or base_dataset or "N/A"
+        results_dict["name"] = dataset_name or "N/A"
     if results_dict.get("sample_len") == 0.0:
         samples = data.get("samples", {})
         if isinstance(samples, dict):
@@ -155,7 +156,7 @@ def collect_results_from_summary_file(path: str) -> List[Dict[str, Any]]:
         model_args = data.get("config", {}).get("model_args", "N/A")
 
         result_entry = {
-            "Dataset": base_dataset,
+            "Dataset": dataset_name,
             "Mode": mode,
             "Model": model_name,
             "Model Args": model_args,
@@ -171,7 +172,7 @@ def collect_results_from_summary_file(path: str) -> List[Dict[str, Any]]:
             model_args = data.get("config", {}).get("model_args", "N/A")
 
             result_entry = {
-                "Dataset": base_dataset,
+                "Dataset": dataset_name,
                 "Mode": mode,
                 "Voting_Method": voting_method,
                 "Model": model_name,
@@ -391,7 +392,7 @@ def save_markdown(df: pd.DataFrame, path: Path):
     df = df.drop(columns=["Model Args", "Model_Full", "Timestamp"], errors="ignore")
 
     # ── model sort order ─────────────────────────────────────────────────────
-    model_order = ["Fleming", "Panacea", "Qwen", "Llama", "deepseek", "DeepSeek", "Mistral", "Gemma"]
+    model_order = ["Qwen", "deepseek", "DeepSeek", "Mistral", "Llama", "Gemma", "gemma", "Fleming", "Panacea", "II-Medical", "MedReason" ]
 
     def get_model_priority(model_name: str) -> int:
         for i, key in enumerate(model_order):

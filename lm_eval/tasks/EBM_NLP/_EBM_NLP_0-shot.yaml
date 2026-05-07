@@ -4,7 +4,7 @@ tag:
 task:
   - EBM_NLP_Outcomes_0-shot
   - EBM_NLP_Interventions_0-shot
-  - Participants_EBM_NLP_0-shot
+  - EBM_NLP_Interventions_0-shot
 aggregate_metric_list:
   - aggregation: mean
     metric: span_precision

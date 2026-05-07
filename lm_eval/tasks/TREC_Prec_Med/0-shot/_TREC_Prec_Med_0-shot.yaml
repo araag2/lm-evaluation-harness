@@ -14,5 +14,7 @@ aggregate_metric_list:
     metric: P@15
   - aggregation: mean
     metric: R-Prec
+  - aggregation: mean
+    metric: nDCG
 metadata:
   version: 1.0

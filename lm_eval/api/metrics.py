@@ -25,7 +25,7 @@ def _binary_label(value):
     """Coerce labels/predictions into 0/1 for binary aggregations.
 
     Handles ints/floats, numeric strings, and common textual labels such as
-    included/excluded and yes/no.
+    included/excluded, yes/no, and relevance judgments.
     """
     if isinstance(value, bool):
         return int(value)
@@ -35,10 +35,11 @@ def _binary_label(value):
 
     if isinstance(value, str):
         v = value.strip().lower()
-        if v in {"1", "true", "yes", "y", "included", "include", "positive", "pos", "entailment", "entailed"}:
+        if v in {"1","true","yes","y","included","include","positive","pos","entailment","entailed","possibly relevant","definitely relevant"}:
             return 1
-        if v in {"0", "false", "no", "n", "excluded", "exclude", "negative", "neg", "contradiction", "contradicted"}:
+        if v in {"0","false","no","n","excluded","exclude","negative","neg","contradiction","contradicted","not relevant"}:
             return 0
+        print(f"[WARNING] Unrecognized binary label '{value}' (normalized: '{v}'), defaulting to 0", file=sys.stderr)
         try:
             return 1 if float(v) > 0 else 0
         except ValueError:
