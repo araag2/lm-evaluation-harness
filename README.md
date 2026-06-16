@@ -61,16 +61,18 @@ If you want to run a quick example, you can run the [example script](./run_tasks
 ```bash ./run_tasks-scripts/example.sh```
 
 Other available files in the `run_tasks-scripts` folder include:
+
     .
     ├── run_tasks_scripts/             # Base folder for all bash scripts to run experiments
-        ├── example.sh                 # Example script to run a quick evaluation
-        ├── extract_error_analysis.sh  # Script to extract error analysis from model outputs
-        ├── extract_run_results.sh     # Script to extract run results from model outputs
-        ├── run_cross-consistency.sh   # Script to run cross-consistency mode on multiple tasks
-        ├── run_multi_tasks.sh         # Script to run multiple tasks sequentially, in 0-shot and single-turn CoT settings
-        ├── run_multi-turn_CoT.sh      # Script to run multiple tasks sequentially, in multi-turn CoT settings
-        ├── run_multi-turn_SC-CoT.sh   # Script to run multiple tasks sequentially, in multi-turn Self-Consistency CoT settings
-        └── run_only_vote.sh           # Script to run only the voting step of Self-Consistency CoT
+        ├── config/                    # Config files that contain the available models and task groups
+        ├── examples/                  # Top level bash scripts to run groups of models / task combination
+        ├── lib/                       # Utils
+        ├── extract_errors.sh          # Extract error analysis from model outputs
+        ├── extract_results.sh         # Extract detailed run results from model outputs
+        ├── run_interactive            # Run model / task combinations from CLI
+        ├── run_multi-turn.sh          # Main script for multi-turn settings
+        ├── run_single-turn.sh         # Main script for single-turn settings
+        └── run_vote.sh                # Run only the voting step over pre-computed results
     └── ...
 
 ### Manually Run Hugging Face `transformers`
