@@ -101,29 +101,45 @@ lm_eval --model hf \
 | [MedNLI](lm_eval/tasks/MedNLI/)                                | **NLI** (ENC)                                       |
 | [MedQA](lm_eval/tasks/MedQA/)                                  | **MCQ**                                             |
 | [MedMCQA](lm_eval/tasks/MedMCQA/)                              | **MCQ**                                             |
+| [ConsortQA](lm_eval/tasks/Consort-QA/)                         | **NLI** (Yes | No)                                  |
 | [PubMedQA](lm_eval/tasks/PubMedQA/)                            | **NLI** (ENC)                                       |
 | [RCT Summary](lm_eval/tasks/RCT_Summary/)                      | **Summary** (Results Section)                       |
 | [Evidence Inference 2.0](lm_eval/tasks/Evidence_Inference_v2/) | **NLI** (ENC)                                       |
 | [NLI4PR](lm_eval/tasks/NLI4PR/)                                | **NLI** (ENC)                                       |
 | [HINT](lm_eval/tasks/HINT/)                                    | **NLI** (EC)                                        |
 | [Trial Meta Analysis](lm_eval/tasks/Trial_Meta_Analysis/)      | **NLI** (Outcome Type), **IE** (Extracting Results) |
+| [EBM-NLP](lm_eval/tasks/EBML_NLP/)                             | **IE** (Extracting PICO Spans)                      |
 | [TREC CDS Track](lm_eval/tasks/TREC_CDS/)                      | **NLI** (ENC), **Relevance Ranking**                |
 | [TREC Prec-Med Track](lm_eval/tasks/TREC_Prec_Med/)            | **NLI** (ENC), **Relevance Ranking**                |
 | [TREC CT Track](lm_eval/tasks/TREC_CT/)                        | **NLI** (ENC), **Relevance Ranking**                |
 | [SemEval NLI4CT](lm_eval/tasks/SemEval_NLI4CT/)                | **NLI** (EC)                                        |
+| [TrialBench](lm_eval/tasks/TrialBench/)                        | **NLI** (Yes | No, Label Classifciation)            |
+| [TrialPanorama](lm_eval/tasks/TrialPanorama/)                  | **MCQA**, **NLI** (Complete | Terminate)            |
 
 ### Models Benchmarked
 
 | Model  | Source |
 |--------|--------|
-| Fleming-R1-7B             |     [huggingface](https://huggingface.co/UbiquantAI/Fleming-R1-7B)              |
-| DeepSeek-R1-0528-Qwen3-8B |     [huggingface](https://huggingface.co/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B) |
-| Llama-3.1-8B-Instruct     |     [huggingface](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct)      |
 | Qwen3-8B                  |     [huggingface](https://huggingface.co/unsloth/Qwen3-8B)                      |
+| Llama-3.1-8B-Instruct     |     [huggingface](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct)      |
+| DeepSeek-R1-0528-Qwen3-8B |     [huggingface](https://huggingface.co/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B) |
+| gemma-4-E4B-it            |     [huggingface](https://huggingface.co/google/gemma-4-E4B-it)                 |
+| Fleming-R1-7B             |     [huggingface](https://huggingface.co/UbiquantAI/Fleming-R1-7B)              |
+| Panacea-7B-Chat           |     [huggingface](https://huggingface.co/linjc16/Panacea-7B-Chat)               |
+| II-Medical-8B             |     [huggingface](https://huggingface.co/Intelligent-Internet/II-Medical-8B)    |
+| MedReason-8B              |     [huggingface](https://huggingface.co/UCSC-VLAA/MedReason-8B)                |
 
 ### Results
 
 The results of evaluating various models on the OpenCTEval benchmark can be found in the [results folder](./outputs/). Detailed analysis and visualizations will be provided in upcoming publications.
+
+### Examples
+
+#### Question Answering (QA)
+#### Natural Language Inference (NLI)
+#### Summary
+#### Information Extraction (IE)
+#### Relevance Ranking
 
 ## Citation
 
