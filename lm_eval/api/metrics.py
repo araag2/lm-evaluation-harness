@@ -27,6 +27,11 @@ def _binary_label(value):
     Handles ints/floats, numeric strings, and common textual labels such as
     included/excluded, yes/no, and relevance judgments.
     """
+    # Normalize numpy scalar types (e.g., np.int64, np.float32, np.bool_)
+    # into native Python scalars so type comparisons remain consistent.
+    if isinstance(value, np.generic):
+        value = value.item()
+
     if isinstance(value, bool):
         return int(value)
 
@@ -184,6 +189,9 @@ def score_per_query_id(items, score_function_fn, cutoff_fn = None):
     # Assuming the last label in available choices is the positive label
     grouped = items_to_query_id_dict(items, pos_label_index=len(items[0][3]) - 1)  # <query_id, (doc, gold, pred, prob_norm[pos_label_index])>
     scores = []
+
+    #print(f"[DEBUG] Using function {score_function_fn.__name__} with cutoff {cutoff_fn.__name__ if cutoff_fn else 'None'}")
+    #print(f"[DEBUG] Total queries: {len(grouped)}, Total items: {len(items)}")
 
     for qid, docs in grouped.items():
         sorted_items = sorted(docs, key=lambda x: x[3], reverse=True)
@@ -768,7 +776,6 @@ def brier_score(items):
 def brier_score_fn(items):  # This is a passthrough function
     return items
 
-
 @register_metric(
     metric="acc",
     higher_is_better=True,
@@ -797,7 +804,6 @@ def acc_norm_fn(items):  # This is a passthrough function
 )
 def acc_mutual_info_fn(items):  # This is a passthrough function
     return items
-
 #-----------------------------------------------------------------------#
 
 def _normalize_regression_pairs(items=None, references=None, predictions=None):
@@ -1571,6 +1577,156 @@ def aggregate_subtask_metrics(metrics, sizes, weight_by_size=True):
     assert len(metrics) == len(sizes)
 
     return sum([metric * size for metric, size in zip(metrics, sizes)]) / sum(sizes)
+
+#-----------------------------------------------------------------------#
+def filter_by_id(items, predicate):
+    id_string = "query_id" if "query_id" in items[0] else "id"
+    return [item for item in items if predicate(item[0][id_string])]
+
+
+def _base_intervention_id(item_id: str) -> str:
+    return re.sub(r"_(?:paraphrase|contradiction)\d*$", "", item_id)
+
+
+def _item_identifier(item) -> str:
+    doc = item[0]
+    return doc.get("query_id", doc.get("id"))
+
+
+def _paired_intervention_scores(items, variant_suffix: str, score_fn):
+    originals = {}
+    variant_items = []
+
+    for item in items:
+        item_id = _item_identifier(item)
+        base_id = _base_intervention_id(item_id)
+
+        if base_id == item_id:
+            originals[base_id] = item
+        elif variant_suffix in item_id:
+            variant_items.append((base_id, item))
+
+    scores = []
+    for base_id, variant_item in variant_items:
+        original_item = originals.get(base_id)
+        if original_item is None:
+            continue
+        scores.append(score_fn(original_item, variant_item))
+
+    return mean(scores) if scores else 0.0
+
+@register_aggregation("acc_original")
+def acc_original_agg(items):
+    items = filter_by_id(items, lambda qid: "_paraphrase" not in qid)
+    golds = [item[1] for item in items]
+    preds = [item[2] for item in items]
+    return sum(g == p for g, p in zip(golds, preds)) / len(golds) if golds else 0.0
+
+@register_metric(
+    metric="acc_original",
+    higher_is_better=True,
+    output_type=["loglikelihood", "multiple_choice"],
+    aggregation="acc_original",
+)
+def acc_original_fn(items):  # This is a passthrough function
+    return items
+
+@register_aggregation("acc_paraphrase")
+def acc_paraphrase_agg(items):
+    items = filter_by_id(items, lambda qid: "_paraphrase" in qid)
+    golds = [item[1] for item in items]
+    preds = [item[2] for item in items]
+    return sum(g == p for g, p in zip(golds, preds)) / len(golds) if golds else 0.0
+
+@register_metric(
+    metric="acc_paraphrase",
+    higher_is_better=True,
+    output_type=["loglikelihood", "multiple_choice"],
+    aggregation="acc_paraphrase",
+)
+def acc_paraphrase_fn(items):  # This is a passthrough function
+    return items
+
+
+
+@register_aggregation("f1_original")
+def f1_original_agg(items):
+    from sklearn.metrics import f1_score
+    items = [item[1:] for item in filter_by_id(items, lambda qid: "_paraphrase" not in qid)]
+    golds, preds, is_multiclass = _prepare_classification_labels(items)
+
+    if is_multiclass:
+        return f1_score(golds, preds, average="macro", zero_division=0)
+    return f1_score(golds, preds, zero_division=0)
+
+@register_metric(
+    metric="f1_original",
+    higher_is_better=True,
+    output_type=["loglikelihood", "multiple_choice"],
+    aggregation="f1_original",
+)
+def f1_original_fn(items):  # This is a passthrough function
+    return items
+
+@register_aggregation("f1_paraphrase")
+def f1_paraphrase_agg(items):
+    from sklearn.metrics import f1_score
+    items = [item[1:] for item in filter_by_id(items, lambda qid: "_paraphrase" in qid)]
+    golds, preds, is_multiclass = _prepare_classification_labels(items)
+
+    if is_multiclass:
+        return f1_score(golds, preds, average="macro", zero_division=0)
+    return f1_score(golds, preds, zero_division=0)
+
+@register_metric(
+    metric="f1_paraphrase",
+    higher_is_better=True,
+    output_type=["loglikelihood", "multiple_choice"],
+    aggregation="f1_paraphrase",
+)
+def f1_paraphrase_fn(items):  # This is a passthrough function
+    return items
+
+
+@register_aggregation("faithfulness")
+def faithfulness_agg(items):
+    def _faithfulness_score(original_item, variant_item):
+        original_gold = original_item[1]
+        variant_pred = variant_item[2]
+        return 1 if variant_pred != original_gold else 0
+
+    return _paired_intervention_scores(items, "_contradiction", _faithfulness_score)
+
+
+@register_metric(
+    metric="faithfulness",
+    higher_is_better=True,
+    output_type=["loglikelihood", "multiple_choice"],
+    aggregation="faithfulness",
+)
+def faithfulness_fn(items):  # This is a passthrough function
+    return items
+
+
+@register_aggregation("consistency")
+def consistency_agg(items):
+    def _consistency_score(original_item, variant_item):
+        original_pred = original_item[2]
+        variant_pred = variant_item[2]
+        return 1 if variant_pred == original_pred else 0
+
+    return _paired_intervention_scores(items, "_paraphrase", _consistency_score)
+
+
+@register_metric(
+    metric="consistency",
+    higher_is_better=True,
+    output_type=["loglikelihood", "multiple_choice"],
+    aggregation="consistency",
+)
+def consistency_fn(items):  # This is a passthrough function
+    return items
+
 
 
 #from lm_eval.api.registry import METRIC_AGGREGATION_REGISTRY, AGGREGATION_REGISTRY, HIGHER_IS_BETTER_REGISTRY, METRIC_REGISTRY

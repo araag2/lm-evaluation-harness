@@ -1556,7 +1556,13 @@ class ConfigurableTask(Task):
 
             result_dict = {
                 **({"acc": acc} if "acc" in use_metric else {}),
+                **({"acc_original": (doc, gold, pred)} if "acc_original" in use_metric else {}),
+                **({"acc_paraphrase": (doc, gold, pred)} if "acc_paraphrase" in use_metric else {}),
                 **({"f1": (gold, pred)} if "f1" in use_metric else {}),
+                **({"f1_original": (doc, gold, pred)} if "f1_original" in use_metric else {}),
+                **({"f1_paraphrase": (doc, gold, pred)} if "f1_paraphrase" in use_metric else {}),
+                **({"faithfulness": (doc, gold, pred)} if "faithfulness" in use_metric else {}),
+                **({"consistency": (doc, gold, pred)} if "consistency" in use_metric else {}),
                 **({"Precision": (gold, pred)} if "Precision" in use_metric else {}),
                 **({"Recall": (gold, pred)} if "Recall" in use_metric else {}),
                 **({"mcc": (gold, pred)} if "mcc" in use_metric else {}),

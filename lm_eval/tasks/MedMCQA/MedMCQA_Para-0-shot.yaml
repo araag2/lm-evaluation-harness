@@ -1,0 +1,35 @@
+task: MedMCQA_Para-0-shot
+tag:
+  - 0-shot
+dataset_path: araag2/MedMCQA
+dataset_name: paraphrase
+dataset_kwargs:
+  trust_remote_code: true
+test_split: dev
+output_type: multiple_choice
+doc_to_text: !function utils.doc_to_text
+doc_to_target: "{{ Label }}"
+doc_to_choice: ["A", "B", "C", "D"]
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: acc_original
+    aggregation: acc_original
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: acc_paraphrase
+    aggregation: acc_paraphrase
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: consistency
+    aggregation: consistency
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+metadata:
+  version: 1.0

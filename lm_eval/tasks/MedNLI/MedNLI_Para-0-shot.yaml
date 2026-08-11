@@ -1,0 +1,50 @@
+task: MedNLI_Para-0-shot
+tag:
+  - 0-shot
+dataset_path: araag2/MedNLI
+dataset_name: paraphrase
+dataset_kwargs:
+  trust_remote_code: true
+test_split: test
+doc_to_text: !function utils.doc_to_text
+doc_to_target: "{{ Label }}"
+output_type: multiple_choice
+doc_to_choice: ["contradiction", "neutral", "entailment"]
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: acc_original
+    aggregation: acc_original
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: acc_paraphrase
+    aggregation: acc_paraphrase
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: f1
+    aggregation: f1
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: f1_original
+    aggregation: f1_original
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: f1_paraphrase
+    aggregation: f1_paraphrase
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+  - metric: consistency
+    aggregation: consistency
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+metadata:
+  version: 1.0
