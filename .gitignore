@@ -45,6 +45,7 @@ logs/
 # wandb experiment tracking
 wandb/
 examples/wandb/
+outputs/
 
 # PyInstaller
 *.spec
