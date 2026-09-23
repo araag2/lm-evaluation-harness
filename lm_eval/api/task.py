@@ -1563,6 +1563,7 @@ class ConfigurableTask(Task):
                 **({"f1_paraphrase": (doc, gold, pred)} if "f1_paraphrase" in use_metric else {}),
                 **({"faithfulness": (doc, gold, pred)} if "faithfulness" in use_metric else {}),
                 **({"consistency": (doc, gold, pred)} if "consistency" in use_metric else {}),
+                **({"augmentation_consistency": (doc, gold, pred)} if "augmentation_consistency" in use_metric else {}),
                 **({"Precision": (gold, pred)} if "Precision" in use_metric else {}),
                 **({"Recall": (gold, pred)} if "Recall" in use_metric else {}),
                 **({"mcc": (gold, pred)} if "mcc" in use_metric else {}),

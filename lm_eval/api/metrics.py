@@ -1580,17 +1580,18 @@ def aggregate_subtask_metrics(metrics, sizes, weight_by_size=True):
 
 #-----------------------------------------------------------------------#
 def filter_by_id(items, predicate):
-    id_string = "query_id" if "query_id" in items[0] else "id"
-    return [item for item in items if predicate(item[0][id_string])]
+    return [item for item in items if predicate(_item_identifier(item))]
 
 
 def _base_intervention_id(item_id: str) -> str:
-    return re.sub(r"_(?:paraphrase|contradiction)\d*$", "", item_id)
+    return re.sub(
+        r"_(?:paraphrase|contradiction)(?:\d+|_[A-Za-z0-9_-]+)?$", "", item_id
+    )
 
 
 def _item_identifier(item) -> str:
     doc = item[0]
-    return doc.get("query_id", doc.get("id"))
+    return str(doc.get("query_id", doc.get("id")))
 
 
 def _paired_intervention_scores(items, variant_suffix: str, score_fn):
@@ -1705,6 +1706,49 @@ def faithfulness_agg(items):
     aggregation="faithfulness",
 )
 def faithfulness_fn(items):  # This is a passthrough function
+    return items
+
+
+@register_aggregation("augmentation_consistency")
+def augmentation_consistency_agg(items):
+    """Pair preserving MCQA variants by source ID and stable option identity.
+
+    Label-changing/task-changing interventions are evaluated by accuracy, not
+    prediction invariance. This is pairwise consistency, not all-variants ReCon.
+    """
+    originals = {
+        str(item[0]["source_id"]): item
+        for item in items
+        if item[0].get("augmentation", {}).get("mode") == "original"
+    }
+
+    def selected_id(item):
+        ids = item[0].get("augmentation", {}).get("option_ids", [])
+        prediction = item[2]
+        if isinstance(prediction, numbers.Integral) and 0 <= prediction < len(ids):
+            return ids[prediction]
+        return None
+
+    scores = []
+    for item in items:
+        metadata = item[0].get("augmentation", {})
+        if metadata.get("effect") != "preserving" or metadata.get("consistency_eligible") is not True:
+            continue
+        original = originals.get(str(item[0].get("source_id")))
+        if original is None:
+            continue
+        original_selection = selected_id(original)
+        scores.append(int(original_selection is not None and original_selection == selected_id(item)))
+    return mean(scores) if scores else 0.0
+
+
+@register_metric(
+    metric="augmentation_consistency",
+    higher_is_better=True,
+    output_type=["multiple_choice"],
+    aggregation="augmentation_consistency",
+)
+def augmentation_consistency_fn(items):
     return items
 
 
