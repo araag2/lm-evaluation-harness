@@ -22,6 +22,7 @@ from lm_eval.api.registry import (
     register_filter,
     register_metric,
 )
+from tests.opencteval_metric_directions import OPENCTEVAL_METRIC_DIRECTIONS
 
 
 # Pins the direction of every built-in metric. `higher_is_better` is metadata
@@ -48,10 +49,8 @@ EXPECTED_METRIC_DIRECTIONS = {
     "perplexity": False,
     "ter": False,
     "word_perplexity": False,
+    **OPENCTEVAL_METRIC_DIRECTIONS,
 }
-
-from tests.opencteval_metric_directions import OPENCTEVAL_METRIC_DIRECTIONS
-EXPECTED_METRIC_DIRECTIONS.update(OPENCTEVAL_METRIC_DIRECTIONS)
 
 
 class TestRegistryBasics:

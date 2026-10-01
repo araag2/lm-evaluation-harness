@@ -37,14 +37,13 @@ pip install -e .
 
 ### Documentation
 
-For updating this fork, see the [upstream migration guide](docs/upstream_migration.md).
-
 | Guide | Description |
 |-------|-------------|
 | [CLI Reference](./docs/interface.md) | Command-line arguments and subcommands |
 | [Configuration Guide](./docs/config_files.md) | YAML config file format and examples |
 | [Python API](./docs/python-api.md) | Programmatic usage with `simple_evaluate()` |
 | [Task Guide](./lm_eval/tasks/README.md) | Available tasks and task configuration |
+| [OpenCTEval Development](./docs/opencteval.md) | Extensions, regression tests and upstream maintenance |
 
 Use `lm-eval -h` to see available options, or `lm-eval run -h` for evaluation options.
 

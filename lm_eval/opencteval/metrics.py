@@ -5,74 +5,74 @@ Legacy imports from lm_eval.api.metrics remain supported.
 """
 
 __all__ = [
-    "_binary_label",
-    "_normalize_class_label",
-    "_prepare_classification_labels",
-    "items_to_query_id_dict",
-    "score_per_query_id",
-    "P10_score",
-    "P10_fn",
-    "P5_score",
-    "P5_fn",
-    "P15_score",
-    "P15_fn",
-    "R_prec_score",
-    "R_prec_fn",
-    "Precision_score",
-    "Precision_fn",
-    "Recall_score",
-    "Recall_fn",
-    "MAP_score",
     "MAP_fn",
-    "PR_AUC_score",
+    "MAP_score",
+    "P5_fn",
+    "P5_score",
+    "P10_fn",
+    "P10_score",
+    "P15_fn",
+    "P15_score",
     "PR_AUC_fn",
-    "ROC_AUC_score",
+    "PR_AUC_score",
+    "Precision_fn",
+    "Precision_score",
     "ROC_AUC_fn",
-    "calculate_nDCG",
-    "nDCG_score",
-    "nDCG_fn",
-    "nDCG5_score",
-    "nDCG5_fn",
-    "nDCG10_score",
-    "nDCG10_fn",
-    "RecRank_score",
+    "ROC_AUC_score",
+    "R_prec_fn",
+    "R_prec_score",
     "RecRank_fn",
-    "extract_numeric_value",
-    "rouge_l",
-    "rouge_l_fn",
-    "_normalize_regression_pairs",
-    "_valid_regression_errors",
-    "mean_absolute_error_fn",
-    "mean_squared_error_fn",
-    "parse_outcome_text",
-    "partial_numeric_match_from_texts",
-    "partial_match_fn",
-    "normalize_span",
-    "span_prf_single",
-    "span_precision_agg",
-    "span_recall_agg",
-    "span_f1_agg",
-    "span_precision_fn",
-    "span_recall_fn",
-    "span_f1_fn",
-    "filter_by_id",
+    "RecRank_score",
+    "Recall_fn",
+    "Recall_score",
     "_base_intervention_id",
+    "_binary_label",
     "_item_identifier",
+    "_normalize_class_label",
+    "_normalize_regression_pairs",
     "_paired_intervention_scores",
+    "_prepare_classification_labels",
+    "_valid_regression_errors",
     "acc_original_agg",
     "acc_original_fn",
     "acc_paraphrase_agg",
     "acc_paraphrase_fn",
+    "augmentation_consistency_agg",
+    "augmentation_consistency_fn",
+    "calculate_nDCG",
+    "consistency_agg",
+    "consistency_fn",
+    "extract_numeric_value",
     "f1_original_agg",
     "f1_original_fn",
     "f1_paraphrase_agg",
     "f1_paraphrase_fn",
     "faithfulness_agg",
     "faithfulness_fn",
-    "augmentation_consistency_agg",
-    "augmentation_consistency_fn",
-    "consistency_agg",
-    "consistency_fn",
+    "filter_by_id",
+    "items_to_query_id_dict",
+    "mean_absolute_error_fn",
+    "mean_squared_error_fn",
+    "nDCG5_fn",
+    "nDCG5_score",
+    "nDCG10_fn",
+    "nDCG10_score",
+    "nDCG_fn",
+    "nDCG_score",
+    "normalize_span",
+    "parse_outcome_text",
+    "partial_match_fn",
+    "partial_numeric_match_from_texts",
+    "rouge_l",
+    "rouge_l_fn",
+    "score_per_query_id",
+    "span_f1_agg",
+    "span_f1_fn",
+    "span_precision_agg",
+    "span_precision_fn",
+    "span_prf_single",
+    "span_recall_agg",
+    "span_recall_fn",
 ]
 
 import logging
@@ -297,10 +297,7 @@ def score_per_query_id(items, score_function_fn, cutoff_fn=None):
     )  # <query_id, (doc, gold, pred, prob_norm[pos_label_index])>
     scores = []
 
-    # print(f"[DEBUG] Using function {score_function_fn.__name__} with cutoff {cutoff_fn.__name__ if cutoff_fn else 'None'}")
-    # print(f"[DEBUG] Total queries: {len(grouped)}, Total items: {len(items)}")
-
-    for _qid, docs in grouped.items():
+    for docs in grouped.values():
         sorted_items = sorted(docs, key=lambda x: x[3], reverse=True)
 
         if cutoff_fn:
@@ -311,12 +308,6 @@ def score_per_query_id(items, score_function_fn, cutoff_fn=None):
         y_pred = [_binary_label(pred) for _, _, pred, _ in sorted_items]
 
         scores.append(score_function_fn(y_true, y_pred, zero_division=0))
-
-        # TO:DO Optional debug prints (remove later)
-        # print(f"[DEBUG] Query {qid} – y_true: {y_true}, y_pred: {y_pred}")
-        # for doc, gold, pred, prob in sorted_items:
-        #    print(f"[DEBUG] doc_id: {doc['doc_id']}, Gold: {gold}, Pred: {pred}, Prob: {prob}")
-        # print(f"[DEBUG] Query {qid} – Score: {scores[-1]}")
 
     return mean(scores) if scores else 0.0
 
@@ -492,7 +483,7 @@ def MAP_score(items):
         items, pos_label_index=1 if len(items[0][3]) == 2 else [1, 2]
     )
     ap_scores = []
-    for _qid, docs in grouped.items():
+    for docs in grouped.values():
         # Sort by descending model confidence score
         sorted_items = sorted(docs, key=lambda x: x[1], reverse=True)
 
@@ -501,7 +492,6 @@ def MAP_score(items):
 
         ap = average_precision_score(y_true, y_score)
         ap_scores.append(ap)
-        # print(f"[DEBUG] Query {qid} – AP: {ap}")
     return mean(ap_scores) if ap_scores else 0.0
 
 
@@ -650,7 +640,7 @@ def calculate_nDCG(items, k=None):
         scores_by_query_id[doc["query_id"]].append((gold, prob_norm[pos_label_index]))
 
     ndcg_scores = []
-    for _, docs in scores_by_query_id.items():
+    for docs in scores_by_query_id.values():
         if len(docs) < 2:
             ndcg_scores.append(0.0)
             continue
@@ -788,8 +778,9 @@ def rouge_l(items):
 
     Higher is better
     """
-    refs = list(zip(*items, strict=False))[0]
-    preds = list(zip(*items, strict=False))[1]
+    pairs = list(zip(*items, strict=False))
+    refs = pairs[0]
+    preds = pairs[1]
 
     scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=True)
 
@@ -953,7 +944,7 @@ def partial_numeric_match_from_texts(
     ref_texts: list[str],
     pred_texts: list[str],
     float_tolerance: float = 1,
-    threshold_counts: list[int] = None,
+    threshold_counts: list[int] | None = None,
 ) -> dict:
     """
     pred_texts: list of free-text outcomes from model

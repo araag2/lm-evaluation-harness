@@ -1,4 +1,4 @@
-"""Offline behavior contracts for carrying OpenCTEval onto newer harness versions."""
+"""Offline regression tests for OpenCTEval extensions."""
 
 import json
 import os
@@ -26,8 +26,10 @@ from tests.test_metrics import MockConfigurableTask
         "from lm_eval.tasks import TaskManager; TaskManager()",
         "from lm_eval.opencteval.metrics import consistency_agg; assert consistency_agg([]) == 0",
         "from lm_eval.api.task import CrossConsistencyCoT",
-        "import multiprocessing as mp; before = mp.get_start_method(allow_none=True); "
-        "import lm_eval.__main__; assert mp.get_start_method(allow_none=True) == before",
+        (
+            "import multiprocessing as mp; before = mp.get_start_method(allow_none=True); "
+            "import lm_eval.__main__; assert mp.get_start_method(allow_none=True) == before"
+        ),
     ],
 )
 def test_fresh_process_imports(statement):
@@ -39,6 +41,7 @@ def test_fresh_process_imports(statement):
     )
     result = subprocess.run(  # noqa: S603 - fixed interpreter and test-owned statements
         [sys.executable, "-c", statement],
+        check=False,
         capture_output=True,
         text=True,
         cwd=Path(__file__).resolve().parents[1],

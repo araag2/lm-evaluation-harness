@@ -1,4 +1,4 @@
-name: OpenCTEval compatibility
+name: OpenCTEval Tests
 
 on:
   push:
@@ -6,28 +6,29 @@ on:
   workflow_dispatch:
 
 jobs:
-  offline-contracts:
+  offline-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       matrix:
         python-version: ["3.10", "3.12"]
     steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.0.1
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: true
+      # Keep the validated dataset baseline; test datasets>=4 separately.
       - name: Install CPU test dependencies
-        run: uv pip install -e . 'pytest>=8' 'datasets>=2.16,<4'
-      - name: Run offline compatibility contracts
+        run: uv pip install -e . 'pytest>=9.0' 'datasets>=2.16,<4'
+      - name: Run offline regression tests
         env:
           HF_HUB_OFFLINE: "1"
           HF_DATASETS_OFFLINE: "1"
           PYTHONDONTWRITEBYTECODE: "1"
         run: >-
           python -m pytest -q -p no:cacheprovider
-          tests/test_opencteval_compat.py
+          tests/test_opencteval.py
           tests/test_intervention_metrics.py
           tests/test_metrics.py
           tests/test_aggregation_pipeline.py

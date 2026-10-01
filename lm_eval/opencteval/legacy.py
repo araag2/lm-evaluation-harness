@@ -6,28 +6,15 @@ from lm_eval.api.task import Task
 
 
 class CrossConsistencyCoT(Task):
+    """Retain the historical prototype API; use reasoning_modes for evaluation."""
+
     OUTPUT_TYPE = "generate_until"  # assuming generation-based prompts
 
     def process_results(self, doc, results):
         for model_id in self.config.model_list:
             print(model_id)
-            # print(get_model(model_id['type'], **model_id['args']))
 
         return 0
-
-        #    model = get_model(model_id['type'], **model_id['args'])
-        #    result = evaluator.simple_evaluate(
-        #        model=model,
-        #        tasks=[self.name],
-        #        num_fewshot=self.num_fewshot,
-        #        limit=1,
-        #        log_samples=False
-        #    )
-        #    chains.append(result[0]['generation'] or result[0]['resps'][0])
-        #
-        # combined = self.integrate_chains(chains)
-        # final = self.extract_final_answer(combined)
-        # return {"chains": chains, "combined_chain": combined, "final_answer": final}
 
     def extract_chain(self, text: str) -> str:
         # Customize (e.g., split from "Answer:" or markers)
