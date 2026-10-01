@@ -37,6 +37,8 @@ pip install -e .
 
 ### Documentation
 
+For updating this fork, see the [upstream migration guide](docs/upstream_migration.md).
+
 | Guide | Description |
 |-------|-------------|
 | [CLI Reference](./docs/interface.md) | Command-line arguments and subcommands |

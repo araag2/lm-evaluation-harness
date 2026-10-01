@@ -1,11 +1,12 @@
 from lm_eval._cli import HarnessCLI
 from lm_eval.utils import setup_logging
 
-import torch.multiprocessing as mp
-mp.set_start_method("spawn", force=True)
 
 def cli_evaluate() -> None:
     """Main CLI entry point."""
+    import multiprocessing as mp
+
+    mp.set_start_method("spawn", force=True)
     setup_logging()
     parser = HarnessCLI()
     args = parser.parse_args()

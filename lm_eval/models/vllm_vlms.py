@@ -19,12 +19,8 @@ from lm_eval.models.utils import (
 from lm_eval.models.vllm_causallms import VLLM
 
 
-eval_logger = logging.getLogger(__name__)
-import torch.multiprocessing as mp
-mp.set_start_method("spawn", force=True)
-
-
-    from lm_eval.api.instance import Instance
+if TYPE_CHECKING:
+    from vllm import RequestOutput
 
 eval_logger = logging.getLogger(__name__)
 

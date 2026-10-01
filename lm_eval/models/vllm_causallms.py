@@ -41,13 +41,6 @@ if parse_version(version("vllm")) >= parse_version("0.8.3"):
     from vllm.entrypoints.chat_utils import resolve_hf_chat_template
 
 try:
-    import ray
-    from vllm import LLM, SamplingParams, TokensPrompt
-    from vllm.lora.request import LoRARequest
-except ImportError:
-    pass
-
-try:
     # Moved since vllm-project/vllm#29793
     from vllm.tokenizers import get_tokenizer  # type: ignore
 except ModuleNotFoundError:
@@ -142,7 +135,7 @@ class VLLM(TemplateLM):
         add_bos_token: bool | None = None,
         prefix_token_id: int | None = None,
         tensor_parallel_size: int = 1,
-        quantization: Optional[str] = None,
+        quantization: str | None = None,
         max_gen_toks: int = 2048,
         swap_space: int = 4,
         batch_size: str | int = "auto",

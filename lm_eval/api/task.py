@@ -42,6 +42,7 @@ from lm_eval.api.utils import (
 from lm_eval.caching.cache import load_from_cache, save_to_cache
 from lm_eval.config.task import TaskConfig
 from lm_eval.filters import build_filter_ensemble
+from lm_eval.opencteval.task_helpers import multiple_choice_metrics, normalize_text
 from lm_eval.prompts import get_prompt
 
 
@@ -1556,16 +1557,7 @@ class ConfigurableTask(Task):
 
             result_dict = {
                 **({"acc": acc} if "acc" in use_metric else {}),
-                **({"acc_original": (doc, gold, pred)} if "acc_original" in use_metric else {}),
-                **({"acc_paraphrase": (doc, gold, pred)} if "acc_paraphrase" in use_metric else {}),
                 **({"f1": (gold, pred)} if "f1" in use_metric else {}),
-                **({"f1_original": (doc, gold, pred)} if "f1_original" in use_metric else {}),
-                **({"f1_paraphrase": (doc, gold, pred)} if "f1_paraphrase" in use_metric else {}),
-                **({"faithfulness": (doc, gold, pred)} if "faithfulness" in use_metric else {}),
-                **({"consistency": (doc, gold, pred)} if "consistency" in use_metric else {}),
-                **({"augmentation_consistency": (doc, gold, pred)} if "augmentation_consistency" in use_metric else {}),
-                **({"Precision": (gold, pred)} if "Precision" in use_metric else {}),
-                **({"Recall": (gold, pred)} if "Recall" in use_metric else {}),
                 **({"mcc": (gold, pred)} if "mcc" in use_metric else {}),
                 **({"acc_norm": acc_norm} if "acc_norm" in use_metric else {}),
                 **({"acc_bytes": acc_bytes} if "acc_bytes" in use_metric else {}),
@@ -1576,16 +1568,9 @@ class ConfigurableTask(Task):
                     else {}
                 ),
                 **({"likelihood": (gold, lls)} if "likelihood" in use_metric else {}),
-                **({"P@5" : (doc, gold, pred, prob_norm)} if "P@5" in use_metric else {}),
-                **({"P@10" : (doc, gold, pred, prob_norm)} if "P@10" in use_metric else {}),
-                **({"P@15" : (doc, gold, pred, prob_norm)} if "P@15" in use_metric else {}),
-                **({"R-Prec": (doc, gold, pred, prob_norm)} if "R-Prec" in use_metric else {}),
-                **({"MAP": (doc, gold, pred, prob_norm)} if "MAP" in use_metric else {}),
-                **({"nDCG": (doc, gold, pred, prob_norm)} if "nDCG" in use_metric else {}),
-                **({"nDCG@5": (doc, gold, pred, prob_norm)} if "nDCG@5" in use_metric else {}),
-                **({"nDCG@10": (doc, gold, pred, prob_norm)} if "nDCG@10" in use_metric else {}),
-                **({"RecRank": (doc, gold, pred, prob_norm)} if "RecRank" in use_metric else {}),
             }
+
+            result_dict.update(multiple_choice_metrics(use_metric, doc, gold, pred, prob_norm))
 
             if "acc_mutual_info" in use_metric:
                 lls_mutual_info = [
@@ -1612,20 +1597,6 @@ class ConfigurableTask(Task):
             ):
                 # cast gold to the same type as result
                 gold = type(result)(gold)
-
-            def normalize_text(s, ignore_case=False, ignore_punctuation=False, ignore_numbers=False):
-                if s is None:
-                    return s
-                s = str(s).strip()
-                if ignore_case:
-                    s = s.lower()
-                if ignore_punctuation:
-                    # remove punctuation (keep alnum and whitespace and underscores)
-                    s = re.sub(r"[^\w\s]", " ", s)
-                if ignore_numbers:
-                    s = re.sub(r"\d+", "", s)
-                s = re.sub(r"\s+", " ", s).strip()
-                return s
 
             for metric in self._metric_fn_list.keys():
                 if self.multiple_target:
@@ -1856,50 +1827,10 @@ class PerplexityTask(Task):
         return len(re.split(r"\s+", doc))
 
 
-from collections import Counter
-from lm_eval import evaluator
-#from lm_eval.models import get_model
+def __getattr__(name):
+    # Compatibility only: active cross-consistency lives in reasoning_modes.
+    if name == "CrossConsistencyCoT":
+        from lm_eval.opencteval.legacy import CrossConsistencyCoT
 
-class CrossConsistencyCoT(Task):
-    OUTPUT_TYPE = "generate_until"  # assuming generation-based prompts
-
-    def process_results(self, doc, results):
-        chains = []
-
-        for model_id in self.config.model_list:
-            print(model_id)
-            #print(get_model(model_id['type'], **model_id['args']))
-
-        return 0
-
-        #    model = get_model(model_id['type'], **model_id['args'])
-        #    result = evaluator.simple_evaluate(
-        #        model=model,
-        #        tasks=[self.name],
-        #        num_fewshot=self.num_fewshot,
-        #        limit=1,
-        #        log_samples=False
-        #    )
-        #    chains.append(result[0]['generation'] or result[0]['resps'][0])
-        #
-        #combined = self.integrate_chains(chains)
-        #final = self.extract_final_answer(combined)
-        #return {"chains": chains, "combined_chain": combined, "final_answer": final}
-
-    def extract_chain(self, text: str) -> str:
-        # Customize (e.g., split from "Answer:" or markers)
-        parts = text.split("Answer:")
-        return parts[0].strip() if len(parts) > 1 else text.strip()
-
-    def extract_final_answer(self, chain: str) -> str:
-        # Simplest heuristic: last non-empty line
-        lines = [l for l in chain.strip().splitlines() if l]
-        return lines[-1] if lines else ""
-
-    def integrate_chains(self, chains: list[str]) -> str:
-        # Example: voting-based consensus + detailed log
-        answers = [self.extract_final_answer(c) for c in chains]
-        most_common = Counter(answers).most_common(1)[0][0]
-        header = f"Consensus answer: {most_common}"
-        body = "\n\n".join(f"Chain {i+1}:\n{c}" for i, c in enumerate(chains))
-        return f"{header}\n\n{body}"
+        return CrossConsistencyCoT
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
