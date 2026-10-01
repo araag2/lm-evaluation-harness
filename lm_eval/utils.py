@@ -154,12 +154,42 @@ def escaped_split(text, sep_char, maxsplit=-1):
 
 
 def handle_arg_string(arg):
-    if arg.lower() == "true":
+    """Attempt to infer and cast the type of a single argument value string.
+
+    Supports:
+    - Booleans: "true"/"false" (case-insensitive)
+    - None: "None" / "none"
+    - Explicit strings: values wrapped in matching quotes are preserved as-is
+      (e.g. ``"123"`` or ``'hello'`` -> str)
+    - Integers: optional sign, digits only (e.g. "42", "-1")
+    - Floats: anything ``float()`` accepts, including scientific notation
+    - Fallback: return as string unchanged
+    """
+    # Strip surrounding whitespace
+    arg = arg.strip()
+
+    # Explicit quoting -> always a string
+    if len(arg) >= 2 and arg[0] == arg[-1] and arg[0] in ("'", '"'):
+        return arg[1:-1]
+
+    lower = arg.lower()
+    if lower == "true":
         return True
-    elif arg.lower() == "false":
+    if lower == "false":
         return False
-    elif arg.isnumeric():
-        return int(arg)
+    if lower == "none":
+        return None
+
+    # Try integer first (supports negative numbers unlike str.isnumeric)
+    try:
+        # Guard against strings like "1e3" being parsed as int via float path
+        # Only pure digit strings (with optional leading sign) should become int
+        if arg.lstrip("+-").isdigit() and arg not in ("", "+", "-"):
+            return int(arg)
+    except ValueError:
+        pass
+
+    # Try float (handles decimals, scientific notation, inf, etc.)
     try:
         return float(arg)
     except ValueError:
@@ -167,8 +197,12 @@ def handle_arg_string(arg):
 
 
 def handle_non_serializable(o):
-    if isinstance(o, (np.int64, np.int32)):
+    if isinstance(o, np.bool_):
+        return bool(o)
+    elif isinstance(o, np.integer):
         return int(o)
+    elif isinstance(o, np.floating):
+        return float(o)
     elif isinstance(o, set):
         return list(o)
     else:
@@ -469,6 +503,7 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
 
     # Build depth map and hierarchical key ordering from group_subtasks
     group_subtasks = result_dict.get("group_subtasks", {})
+    n_shot = result_dict.get("n-shot", {})
     depth_map, hierarchical_keys = _build_hierarchy_info(
         group_subtasks, set(result_dict[column].keys())
     )
@@ -483,7 +518,7 @@ def make_table(result_dict, column: str = "results", sort_results: bool = False)
     for k in keys:
         dic = dict(result_dict[column][k])  # copy — don't mutate original
         version = result_dict["versions"].get(k, "    N/A")
-        n = str(result_dict.get("n-shot", " ").get(k, " "))
+        n = str(n_shot.get(k, " "))
         higher_is_better = result_dict.get("higher_is_better", {}).get(k, {})
 
         display_name = dic.pop("alias", k)
