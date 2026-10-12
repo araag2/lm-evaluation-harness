@@ -61,6 +61,26 @@ Homepage: [TREC](https://www.trec-cds.org/)
 * `TREC_CT_2022_SC`     : `TREC Clinical Trials 2022 in single-turn self-consistency setting`
 * `TREC_CT_2023_SC`     : `TREC Clinical Trials 2023 in single-turn self-consistency setting`
 
+### Labels and metrics
+
+`Label` comes from the TREC qrels: 0 `not relevant`, 1 `possibly relevant`, 2 `definitely relevant`. In the
+track these grades are *not relevant*, *excluded* (the trial is about the patient's condition, but the patient
+fails its eligibility criteria) and *eligible*.
+
+Every task is three-way multiple choice over those labels (`doc_to_choice`).
+
+* `acc`: exact three-way accuracy.
+* `nDCG@10`: per `query_id`, with the graded label as gain and the probability of `definitely relevant` (the
+  last choice) as the ranking score.
+* `P@10`, `RecRank`: per `query_id`, ranked by the same score, with the label collapsed to binary:
+  `possibly relevant` and `definitely relevant` are positive, `not relevant` is negative (`_binary_label` in
+  `lm_eval/opencteval/metrics.py`).
+* The `balanced` tasks (`process_docs_balanced`) keep every pair of either relevant grade and an equal number
+  of `not relevant` pairs, sampled with seed 42.
+
+A pair in which the patient has the trial's condition but fails a criterion is therefore `possibly relevant`
+and counts as positive in the binary metrics.
+
 ### Checklist
 
 For adding novel benchmarks/datasets to the library:
