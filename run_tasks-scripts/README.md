@@ -348,6 +348,22 @@ Then run:
 - Step-by-step configuration
 - Summary and confirmation before execution
 
+## Result tables
+
+```bash
+./extract_results.sh --input ./outputs/my_experiment --output ./outputs/my_experiment_Tables
+python ../scripts/augmentation_breakdown.py --input_folders ./outputs/AugExp --output_dir ./outputs/AugExp_Tables
+```
+
+`extract_results.sh` reads every `results_*.json` and `Summary_*.json` under the input folders and
+keeps one run per task, mode and model: the one on most samples, then the latest (`--all-runs` shows
+all). It writes `<name>.md` (an overview per mode with one metric per task and models as columns, then
+all metrics per dataset, then scores by slice for augmentation tasks), `<name>_sources.md` (the file of
+each score and the runs not shown), `<name>.tex` (the same tables; needs `booktabs` and `adjustbox`),
+`<name>.csv` (one row per task, mode, model, metric and slice) and charts. `†` marks a run on a limited
+number of samples. `augmentation_breakdown.py` gives the detailed tables of augmentation tasks
+(`--task-group AUGMENTATION`), described in `lm_eval/tasks/TREC_CT/README.md`.
+
 ## Output Structure
 
 ```

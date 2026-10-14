@@ -10,6 +10,7 @@ were subsequently removed. Custom task definitions and prompts live in
 | Module | Responsibility |
 | ------ | -------------- |
 | `lm_eval/opencteval/metrics.py` | Clinical, ranking, span, regression and intervention metrics |
+| `lm_eval/opencteval/augmentation.py` | Scores of an augmented dataset by slice (original, augmented, type, label), paired consistency and drop |
 | `lm_eval/opencteval/task_helpers.py` | Document-aware metric payloads and generated-answer normalization |
 | `lm_eval/opencteval/legacy.py` | Historical `CrossConsistencyCoT` import compatibility |
 
@@ -33,6 +34,10 @@ order, reasoning alignment, majority voting, response filters and result files.
 identity. Shared direction expectations live in
 `tests/opencteval_metric_directions.py` and are included in the registry tests.
 Add an explicit direction expectation when registering a new metric.
+`tests/test_augmentation_slices.py` covers the slice scores of augmentation tasks
+(`lm_eval/tasks/TREC_CT/AugExp`), whose aggregations are referenced from the task YAML and
+not registered. `tests/test_extract_results.py` covers `scripts/extract_run-results.py`:
+which run is shown per task, mode and model, names, slices and the written tables.
 
 Run the focused suite from the repository root in the project environment:
 
@@ -40,6 +45,7 @@ Run the focused suite from the repository root in the project environment:
 HF_HUB_OFFLINE=1 HF_DATASETS_OFFLINE=1 PYTHONDONTWRITEBYTECODE=1 \
 python -m pytest -q -p no:cacheprovider \
   tests/test_opencteval.py tests/test_intervention_metrics.py \
+  tests/test_augmentation_slices.py tests/test_extract_results.py \
   tests/test_metrics.py tests/test_aggregation_pipeline.py \
   tests/test_registry.py tests/test_evaluator_utils.py
 ```

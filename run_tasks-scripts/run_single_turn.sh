@@ -77,6 +77,7 @@ while [[ $# -gt 0 ]]; do
                 TRIALPANORAMA) TASKS=("${TRIALPANORAMA_TASKS[@]}") ;;
                 TREC) TASKS=("${TREC_TASKS[@]}") ;;
                 SMALL) TASKS=("${SMALL_TASKS[@]}") ;;
+                AUGMENTATION) TASKS=("${AUGMENTATION_TASKS[@]}") ;;
                 ALL) TASKS=("${ALL_TASKS[@]}") ;;
                 *) log_error "Unknown task group: $2"; exit 1 ;;
             esac

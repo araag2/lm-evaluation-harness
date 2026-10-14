@@ -1,0 +1,3 @@
+task: TREC_CT_AugExp_test_CoT
+test_split: test
+include: _default_TREC_CT_AugExp_CoT.yaml

@@ -1,0 +1,59 @@
+# The published augmentation export to evaluate; change dataset_name for another experiment.
+dataset_path: araag2/TREC_CT_AugExp
+dataset_name: augmentation_augmented_100
+dataset_kwargs:
+  trust_remote_code: true
+doc_to_text: !function utils.doc_to_text_reasoning
+doc_to_target: "{{ Label }}"
+doc_to_choice: ["not relevant", "possibly relevant", "definitely relevant"]
+output_type: generate_until
+generation_kwargs:
+  until:
+    - "<|im_end|>"
+    - "<|endoftext|>"
+    - "<|end_of_text|>"
+    - "<|eot_id|>"
+    - "<end_of_turn>"
+    - "<eos>"
+    - "</s>"
+  do_sample: true
+  temperature: 0.7
+  top_p: 0.9
+  top_k: 50
+filter_list:
+  - name: "score_first"
+    filter:
+    - function: "regex"
+      regex_pattern: "(?s:.*)([Nn]ot relevant|[Pp]ossibly relevant|[Dd]efinitely relevant)"
+    - function: "take_first"
+process_results: !function utils.process_results
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+  - metric: acc@original
+    aggregation: mean
+    higher_is_better: true
+  - metric: acc@augmented
+    aggregation: mean
+    higher_is_better: true
+  - metric: f1
+    aggregation: !function utils.macro_f1
+    higher_is_better: true
+  - metric: f1@original
+    aggregation: !function utils.macro_f1
+    higher_is_better: true
+  - metric: f1@augmented
+    aggregation: !function utils.macro_f1
+    higher_is_better: true
+  - metric: consistency
+    aggregation: !function utils.consistency
+    higher_is_better: true
+  - metric: acc_drop
+    aggregation: !function utils.acc_drop
+    higher_is_better: false
+  - metric: unparsed
+    aggregation: mean
+    higher_is_better: false
+metadata:
+  version: 1.0

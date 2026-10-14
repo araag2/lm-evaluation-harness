@@ -28,11 +28,16 @@ self_refine_refine_prompt = "You are a medical expert tasked with improving a re
 
 relevant_keys = ["Title", "Summary", "Detailed_description", "Eligibility", "Patient", "Reasoning_Chain", "Verified_Reasoning_Chain", "Feedback"]
 
+MAX_FIELD_CHARS = 2000  # a longer field is shown as its first and last halves of this length
+
+def is_truncated(doc) -> bool:
+    return any(len(doc.get(key) or "") > MAX_FIELD_CHARS for key in relevant_keys)
+
 def doc_to_text(doc, prompt = baseline_prompt):
     res = prompt
     for key in relevant_keys:
         if key in doc:
-            res = res.replace(f"{{{{{key}}}}}", doc[key][:1000] + doc[key][-1000:]if len(doc[key]) > 2000 else doc[key])
+            res = res.replace(f"{{{{{key}}}}}", doc[key][:MAX_FIELD_CHARS // 2] + doc[key][-MAX_FIELD_CHARS // 2:] if len(doc[key]) > MAX_FIELD_CHARS else doc[key])
         else:
             res = res.replace(f"{{{{{key}}}}}", "")
     return res

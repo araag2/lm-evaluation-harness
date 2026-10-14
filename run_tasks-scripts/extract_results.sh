@@ -23,6 +23,7 @@ NO_CSV=false
 NO_MARKDOWN=false
 NO_LATEX=false
 NO_CHARTS=false
+ALL_RUNS=false
 DRY_RUN=false
 
 # Parse command line arguments
@@ -65,6 +66,10 @@ while [[ $# -gt 0 ]]; do
             NO_CHARTS=true
             shift
             ;;
+        --all-runs)
+            ALL_RUNS=true
+            shift
+            ;;
         --dry-run)
             DRY_RUN=true
             shift
@@ -87,6 +92,7 @@ Output Options:
   --no-markdown                    Skip Markdown output generation
   --no-latex                       Skip LaTeX output generation
   --no-charts                      Skip chart/visualization generation
+  --all-runs                       Show every run, not one per task, mode and model
 
 Other Options:
   --dry-run                        Show what would be extracted without executing
@@ -108,14 +114,14 @@ Examples:
   # Preview extraction
   $0 --input ./outputs --dry-run
 
+By default one run is kept per task, mode and model: the one on most samples, then the latest.
+
 The script will create (unless disabled):
-  - {output_dir}/{output_name}.csv              (CSV format)
-  - {output_dir}/{output_name}.md               (Markdown format with tables)
-  - {output_dir}/{output_name}.tex              (LaTeX format)
-  - {output_dir}/{output_name}_summary.txt      (Text summary report)
-  - {output_dir}/{output_name}_summary_stats.csv (Summary statistics)
-  - {output_dir}/{output_name}_*_combined.png   (Charts per dataset)
-  - {output_dir}/{output_name}_heatmap_*.png    (Heatmaps per dataset)
+  - {output_dir}/{output_name}.csv              (one row per task, mode, model, metric and slice)
+  - {output_dir}/{output_name}.md               (overview per mode, details per dataset)
+  - {output_dir}/{output_name}_sources.md       (file of each score, runs not shown)
+  - {output_dir}/{output_name}.tex              (the same tables for LaTeX)
+  - {output_dir}/charts/, heatmaps/             (charts and heatmaps per dataset)
 
 EOF
             exit 0
@@ -155,6 +161,7 @@ echo "Skip CSV:        $NO_CSV"
 echo "Skip Markdown:   $NO_MARKDOWN"
 echo "Skip LaTeX:      $NO_LATEX"
 echo "Skip Charts:     $NO_CHARTS"
+echo "All Runs:        $ALL_RUNS"
 echo "Dry Run:         $DRY_RUN"
 print_separator
 
@@ -171,35 +178,16 @@ mkdir -p "$OUTPUT_DIR"
 log_info "Running extraction script..."
 echo ""
 
-# Build Python command with all arguments
-PYTHON_CMD="${SCRIPT_DIR}/../scripts/extract_run-results.py \
-    --output_dir \"$OUTPUT_DIR\" \
-    --output_name \"$OUTPUT_NAME\" \
-    --input_folders ${INPUT_FOLDERS[@]}"
+PYTHON_ARGS=(--output_dir "$OUTPUT_DIR" --output_name "$OUTPUT_NAME" --input_folders "${INPUT_FOLDERS[@]}")
+[ -n "$FILE_FILTER" ] && PYTHON_ARGS+=(--file_filter "$FILE_FILTER")
+[ "$NO_CSV" = true ] && PYTHON_ARGS+=(--no-csv)
+[ "$NO_MARKDOWN" = true ] && PYTHON_ARGS+=(--no-markdown)
+[ "$NO_LATEX" = true ] && PYTHON_ARGS+=(--no-latex)
+[ "$NO_CHARTS" = true ] && PYTHON_ARGS+=(--no-charts)
+[ "$ALL_RUNS" = true ] && PYTHON_ARGS+=(--all-runs)
 
-if [ -n "$FILE_FILTER" ]; then
-    PYTHON_CMD="$PYTHON_CMD --file_filter \"$FILE_FILTER\""
-fi
-
-if [ "$NO_CSV" = true ]; then
-    PYTHON_CMD="$PYTHON_CMD --no-csv"
-fi
-
-if [ "$NO_MARKDOWN" = true ]; then
-    PYTHON_CMD="$PYTHON_CMD --no-markdown"
-fi
-
-if [ "$NO_LATEX" = true ]; then
-    PYTHON_CMD="$PYTHON_CMD --no-latex"
-fi
-
-if [ "$NO_CHARTS" = true ]; then
-    PYTHON_CMD="$PYTHON_CMD --no-charts"
-fi
-
-eval python $PYTHON_CMD
-
-STATUS=$?
+STATUS=0
+python "${SCRIPT_DIR}/../scripts/extract_run-results.py" "${PYTHON_ARGS[@]}" || STATUS=$?
 
 if [ $STATUS -eq 0 ]; then
     echo ""
@@ -216,25 +204,14 @@ if [ $STATUS -eq 0 ]; then
     [ "$NO_LATEX" = false ] && [ -f "${OUTPUT_DIR}/${OUTPUT_NAME}.tex" ] && \
         echo "  - ${OUTPUT_DIR}/${OUTPUT_NAME}.tex"
     
-    [ -f "${OUTPUT_DIR}/${OUTPUT_NAME}_summary.txt" ] && \
-        echo "  - ${OUTPUT_DIR}/${OUTPUT_NAME}_summary.txt"
-    
-    [ -f "${OUTPUT_DIR}/${OUTPUT_NAME}_summary_stats.csv" ] && \
-        echo "  - ${OUTPUT_DIR}/${OUTPUT_NAME}_summary_stats.csv"
-    
+    [ -f "${OUTPUT_DIR}/${OUTPUT_NAME}_sources.md" ] && \
+        echo "  - ${OUTPUT_DIR}/${OUTPUT_NAME}_sources.md"
+
     if [ "$NO_CHARTS" = false ]; then
-        # Count chart files
-        CHART_COUNT=$(ls "${OUTPUT_DIR}/${OUTPUT_NAME}"_*_combined.png 2>/dev/null | wc -l)
-        if [ "$CHART_COUNT" -gt 0 ]; then
-            echo "  - ${CHART_COUNT} combined chart(s)"
-        fi
-        
-        HEATMAP_COUNT=$(ls "${OUTPUT_DIR}/${OUTPUT_NAME}"_heatmap_*.png 2>/dev/null | wc -l)
-        if [ "$HEATMAP_COUNT" -gt 0 ]; then
-            echo "  - ${HEATMAP_COUNT} heatmap(s)"
-        fi
+        echo "  - $(ls "${OUTPUT_DIR}/charts" 2>/dev/null | wc -l) chart(s) in ${OUTPUT_DIR}/charts"
+        echo "  - $(ls "${OUTPUT_DIR}/heatmaps" 2>/dev/null | wc -l) heatmap(s) in ${OUTPUT_DIR}/heatmaps"
     fi
-    
+
     print_separator
 else
     log_error "Results extraction failed with exit code: $STATUS"

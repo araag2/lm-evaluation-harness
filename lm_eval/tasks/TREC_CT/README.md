@@ -81,6 +81,35 @@ Every task is three-way multiple choice over those labels (`doc_to_choice`).
 A pair in which the patient has the trial's condition but fails a criterion is therefore `possibly relevant`
 and counts as positive in the binary metrics.
 
+### Augmentation experiment (`AugExp/`)
+
+`TREC_CT_AugExp_0-shot` and `TREC_CT_AugExp_CoT` evaluate an export of the augmentation pipeline
+(`OpenCTEval-Data-Pipeline`, published with `upload.partition`), with the same prompts as the tasks above.
+Each group has two tasks, `TREC_CT_AugExp_test_*` and `TREC_CT_AugExp_train_*`, one per published split.
+The dataset is set once per mode, in `AugExp/_default_TREC_CT_AugExp_*.yaml` (`dataset_path`,
+`dataset_name`): change `dataset_name` to evaluate another experiment.
+
+Rows are scored by slice (`lm_eval/opencteval/augmentation.py`). `acc@<slice>` is the accuracy of the
+rows in that slice:
+
+| Slice | Rows |
+| --- | --- |
+| `original`, `augmented` | Source pairs; their variants |
+| `type=<mode>`, `side=<patient or trial>`, `effect=<effect>` | Variants by `augmentation.mode`, `.side`, `.effect` |
+| `label=<label>` | Rows with that gold label (its recall) |
+| `truncated=<yes or no>` | Rows in which the prompt cuts a field longer than `MAX_FIELD_CHARS` (2000) to its two ends |
+
+Other metrics: `f1`, `f1@original`, `f1@augmented` (macro F1 over the gold classes); `consistency`
+(share of variants predicted like their own original); `acc_drop` (accuracy of those originals minus
+accuracy of the variants: positive means the variants are harder); `unparsed` (CoT only: answers with
+no label). The last three pair a variant with its original by `source_id`, only when both have the
+same gold label. No ranking metric is reported: variants of one pair would be ranked against each other.
+
+`scripts/augmentation_breakdown.py --input_folders <run output> --output_dir <dir>` reads the logged
+samples and writes, per task and model: every slice with its number of rows, predicted-label shares,
+paired drop, consistency and right→wrong / wrong→right counts; accuracy by type and gold label; and
+confusion matrices for originals and variants.
+
 ### Checklist
 
 For adding novel benchmarks/datasets to the library:

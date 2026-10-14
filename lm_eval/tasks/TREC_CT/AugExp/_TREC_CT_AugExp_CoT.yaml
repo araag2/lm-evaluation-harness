@@ -1,0 +1,6 @@
+group: TREC_CT_AugExp_CoT
+task:
+  - TREC_CT_AugExp_test_CoT
+  - TREC_CT_AugExp_train_CoT
+metadata:
+  version: 1.0

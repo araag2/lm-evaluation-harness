@@ -1,575 +1,578 @@
-import os
-import json
+r"""Collect lm-eval result files into readable tables.
+
+Reads every `results_*.json` (single-turn runs) and `Summary_*.json` (reasoning modes) under the
+input folders, keeps one run per task, mode and model, and writes:
+
+  <name>.csv   one row per task, mode, model, metric and slice (the data behind every table)
+  <name>.md    overview per mode, details per dataset, scores by slice
+  <name>_sources.md   the file of each score, and the runs not shown
+  <name>.tex   the same tables for LaTeX (needs booktabs and adjustbox)
+  charts/, heatmaps/
+
+    python scripts/extract_run-results.py --input_folders outputs/exp1 outputs/exp2 \
+        --output_dir outputs/tables --output_name my_benchmark
+"""
+
 import argparse
-from numbers import Number
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from typing import Dict, List, Any, Optional
-from datetime import datetime
-from pathlib import Path
+import json
+import os
+import re
 import warnings
-warnings.filterwarnings('ignore')
+from collections import defaultdict
+from dataclasses import dataclass, field, replace
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
 
 
-def normalize_metric_name(metric_name: str) -> str:
-    """Normalize metric names by removing suffixes like ',none' and cleaning up."""
-    # Remove common suffixes
-    for suffix in [",none", ",all", "_score"]:
-        if metric_name.endswith(suffix):
-            metric_name = metric_name[:-len(suffix)]
-    return metric_name.strip()
+warnings.filterwarnings("ignore")
 
-SKIP_METRICS = {"name", "sample_len", "samples", "docs", "reasoning_outputs", "reasoning_chains"}
+# Task names end in their inference mode; the longest suffix is tried first.
+MODE_SUFFIXES = ("Para-0-shot", "CoT_SC", "0-shot", "CoT", "SC")
+MODE_ORDER = ["0-shot", "Para-0-shot", "CoT", "SC", "CoT_SC", "multi-turn_CoT",
+              "multi-turn_CoT-SC", "multi-turn_CoT-MBR", "cross-consistency", "self-refine_CoT"]
+MODEL_ORDER = ["Qwen", "deepseek", "DeepSeek", "Mistral", "Llama", "Gemma", "gemma", "Fleming",
+               "Panacea", "II-Medical", "MedReason"]
+# The metric shown for a task in the overview: the first of these it has, else its first metric.
+PRIMARY_METRICS = ("acc", "f1", "span_f1", "rouge_l", "partial_match", "nDCG@10")
+NOT_METRICS = {"name", "alias", "sample_len", "sample_count", "samples", "docs",
+               "reasoning_outputs", "reasoning_chains"}
+UNSCALED_WORDS = ("error", "loss", "perplexity")  # not on a 0-1 scale, and lower is better
+SLICE_SEPARATOR = "@"
+SLICE_PREFIXES = ("original", "augmented", "type=", "side=", "effect=", "label=", "truncated=")
+STAMP = re.compile(r"(\d{4}-\d{2}-\d{2}T[\d.-]*\d)")
+LIMITED_MARK = "†"
+MISSING = "–"
+LARGE_VALUE = 1e4  # an error metric this large is written with three significant digits
 
-def extract_metrics(result_dict: Dict[str, Any], prefix: str = "") -> Dict[str, Any]:
-    """Extract metrics from result dictionary with normalization."""
-    metrics = {}
 
-    for k, v in result_dict.items():
-        # Skip normalized versions and stderr
-        if 'norm' in k or 'stderr' in k or k in SKIP_METRICS:
+@dataclass(frozen=True)
+class Score:
+    metric: str
+    slice: str
+    value: float
+    stderr: float | None
+    higher_is_better: bool
+
+
+@dataclass(frozen=True)
+class Run:
+    """The scores of one task for one model in one file."""
+
+    dataset: str
+    mode: str
+    model: str
+    n: int
+    limited: bool
+    date: str
+    path: str
+    scores: tuple[Score, ...]
+    family: str = ""
+    children: tuple[str, ...] = field(default=(), compare=False)  # datasets of a group's subtasks
+
+    @property
+    def key(self) -> tuple[str, str, str]:
+        return (self.dataset, self.mode, self.model)
+
+    @property
+    def subtask(self) -> str:
+        if self.dataset.startswith(self.family + "_"):
+            return self.dataset[len(self.family) + 1 :]
+        return "all" if self.children else ""
+
+
+# ── collect ──────────────────────────────────────────────────────────────────
+
+def split_task(task: str) -> tuple[str, str]:
+    """`TREC_CT_2021_CoT` -> (`TREC_CT_2021`, `CoT`)."""
+    for suffix in MODE_SUFFIXES:
+        if task.endswith("_" + suffix):
+            return task[: -len(suffix) - 1], suffix
+    return task, "single-turn"
+
+
+def split_metric(name: str) -> tuple[str, str]:
+    """`acc@type=permute` -> (`acc`, `type=permute`); `P@10` stays a metric."""
+    metric, separator, rest = name.partition(SLICE_SEPARATOR)
+    if separator and rest.startswith(SLICE_PREFIXES):
+        return metric, rest
+    return name, ""
+
+
+def is_number(value) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def lower_is_better(metric: str) -> bool:
+    return any(word in metric.lower() for word in UNSCALED_WORDS)
+
+
+def read_scores(result: dict, directions: dict) -> tuple[Score, ...]:
+    """The numeric metrics of one task; `acc,none` and `acc` are both the metric `acc`."""
+    scores, seen = [], set()
+    for key, value in result.items():
+        name, _, filter_name = key.partition(",")
+        if name in NOT_METRICS or name.endswith("_stderr") or not is_number(value) or name in seen:
             continue
-        
-        # Normalize metric name
-        if "," in k:
-            metric_name = normalize_metric_name(k.split(",")[0])
-        else:
-            metric_name = normalize_metric_name(k)
-        
-        metrics[f"{prefix}{metric_name}"] = v
-    
-    return metrics
-
-def is_flat_scalar_metrics_dict(results_dict: Dict[str, Any]) -> bool:
-    """Return True when summary results are a single flat metrics mapping.
-
-    Flat summaries map metric names directly to numeric scalars (e.g. rouge_l).
-    Nested summaries map task/voting names to dictionaries.
-    """
-    if not isinstance(results_dict, dict) or not results_dict:
-        return False
-
-    for value in results_dict.values():
-        if isinstance(value, dict) or isinstance(value, list) or isinstance(value, np.ndarray) or isinstance(value, tuple):
-            print(f"[DEBUG] Found nested value: {value}")
-            return False
-        if value is None:
-            continue
-        #if not isinstance(value, Number):
-        #    print(f"[DEBUG] Found non-numeric value: {value}")
-        #    return False
-
-    return True
-
-def collect_results_from_default_file(path: str) -> List[Dict[str, Any]]:
-    """Extract results from standard lm-eval results file."""
-    try:
-        with open(path, "r") as f:
-            data = json.load(f)
-    except json.JSONDecodeError as e:
-        print(f"[WARNING] Invalid JSON in {path}: {e}")
-        return []
-    except Exception as e:
-        print(f"[ERROR] Failed to load {path}: {e}")
-        return []
-    
-    results = []
-
-    # Try to infer the evaluation mode from the folder path
-    known_modes = ["multi-turn_CoT", "self-refine_CoT", "cross-consistency",
-                   "multi-turn_CoT-SC", "multi-turn_CoT-MBR"]
-    path_str = str(path)
-    inferred_mode = "0-shot"
-    for m in known_modes:
-        if m in path_str:
-            inferred_mode = m
-            break
-    
-    for task_name, result_dict in data.get("results", {}).items():
-        config = data.get("configs", {}).get(task_name, {})
-        model_args = data.get("config", {}).get("model_args", "N/A")
-        pretrained = config.get("metadata", {}).get("pretrained", "N/A")
-        
-        # Extract a cleaner model name
-        model_name = pretrained.split("/")[-1] if "/" in pretrained else pretrained
-        
-        # Get timestamp from file path or metadata
-        timestamp = Path(path).parent.name if Path(path).parent.name.startswith("202") else "N/A"
-
-        result_entry = {
-            "Dataset": task_name,
-            "Mode": inferred_mode,
-            "Model": model_name,
-            "Model_Full": pretrained,
-            "Timestamp": timestamp,
-            "Model Args": model_args,
-            "Path": path
-        }
-
-        result_entry.update(extract_metrics(result_dict))
-        results.append(result_entry)
-
-    return results
-
-def collect_results_from_summary_file(path: str) -> List[Dict[str, Any]]:
-    """Extract results from multi-turn or aggregated summary files."""
-    try:
-        with open(path, "r") as f:
-            data = json.load(f)
-    except json.JSONDecodeError as e:
-        print(f"[WARNING] Invalid JSON in {path}: {e}")
-        return []
-    except Exception as e:
-        print(f"[ERROR] Failed to load {path}: {e}")
-        return []
-    
-    results = []
-
-    mode = data.get("mode", "N/A")
-    reasoning_task = data.get("reasoning_task", "")
-    # Prefer the full reasoning task to keep subtasks distinct (e.g. "TrialPanorama:Arm_Design_CoT")
-    base_dataset = reasoning_task.split(":")[0] if ":" in reasoning_task else reasoning_task
-    dataset_name = reasoning_task or base_dataset
-
-    # Strip HuggingFace org prefix (e.g. "unsloth/Qwen3-8B" → "Qwen3-8B")
-    raw_model = data.get("reasoning_model", "").split(",")[0][11:]
-    model_name = raw_model.split("/")[-1] if "/" in raw_model else raw_model
-
-    results_dict = dict(data.get("results", {}))
-
-    # Some summary files store placeholder values for these two fields.
-    # Replace with useful metadata during extraction.
-    if results_dict.get("name") == 0.0:
-        results_dict["name"] = dataset_name or "N/A"
-    if results_dict.get("sample_len") == 0.0:
-        samples = data.get("samples", {})
-        if isinstance(samples, dict):
-            results_dict["sample_len"] = len(samples)
-        elif isinstance(samples, list):
-            results_dict["sample_len"] = len(samples)
-        else:
-            results_dict["sample_len"] = 0
-
-    if is_flat_scalar_metrics_dict(results_dict) or "acc" in results_dict.keys() or "acc,none" in results_dict.keys():
-        model_args = data.get("config", {}).get("model_args", "N/A")
-
-        result_entry = {
-            "Dataset": dataset_name,
-            "Mode": mode,
-            "Model": model_name,
-            "Model Args": model_args,
-            "Path": path
-        }
-
-        result_entry.update(extract_metrics(results_dict))
-        results.append(result_entry)
-
-    elif "majority" in results_dict.keys() or "rrf" in results_dict.keys() or "condorcet" in results_dict.keys() or "logits" in results_dict.keys() or "borda" in results_dict.keys():
-
-        for voting_method, result_dict in results_dict.items():
-            model_args = data.get("config", {}).get("model_args", "N/A")
-
-            result_entry = {
-                "Dataset": dataset_name,
-                "Mode": mode,
-                "Voting_Method": voting_method,
-                "Model": model_name,
-                "Model Args": model_args,
-                "Path": path
-            }
-
-            if not isinstance(result_dict, dict):
-                print(f"[WARNING] Unexpected non-dict voting result in {path}: {voting_method}")
-                continue
-            result_entry.update(extract_metrics(result_dict))
-            results.append(result_entry)
-
-    else:
-        for task_name, result_dict in results_dict.items():
-            model_args = data.get("config", {}).get("model_args", "N/A")
-
-            result_entry = {
-                "Dataset": task_name,
-                "Mode": mode,
-                "Model": model_name,
-                "Model Args": model_args,
-                "Path": path
-            }
-
-            if not isinstance(result_dict, dict):
-                print(f"[WARNING] Unexpected non-dict task result in {path}: {task_name}")
-                continue
-            result_entry.update(extract_metrics(result_dict))
-            results.append(result_entry)
-
-    return results
+        seen.add(name)
+        stderr = result.get(f"{name}_stderr,{filter_name}" if filter_name else f"{name}_stderr")
+        metric, slice_name = split_metric(name)
+        higher = directions.get(name)
+        if higher is None:
+            higher = not lower_is_better(metric)
+        scores.append(Score(metric, slice_name, float(value), stderr if is_number(stderr) else None, higher))
+    return tuple(scores)
 
 
-def collect_results(folders: List[str], file_filter: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Recursively collect all results from specified folders."""
-    results = []
-    files_processed = 0
-    files_failed = 0
+def file_date(path: str) -> str:
+    match = STAMP.search(Path(path).name)
+    return match.group(1) if match else ""
 
+
+def model_name(*candidates) -> str:
+    """The first usable name, without its organisation: `unsloth/Qwen3-8B` -> `Qwen3-8B`."""
+    for candidate in candidates:
+        if isinstance(candidate, dict):
+            candidate = candidate.get("pretrained")
+        if isinstance(candidate, str):
+            match = re.search(r"pretrained=([^,]+)", candidate)
+            candidate = match.group(1) if match else candidate
+            if candidate and candidate != "N/A" and "=" not in candidate:
+                return candidate.rstrip("/").split("/")[-1]
+    return "unknown model"
+
+
+def read_results_file(path: str) -> list[Run]:
+    data = json.loads(Path(path).read_text(encoding="utf8"))
+    config = data.get("config", {})
+    model = model_name(data.get("model_name"), config.get("model_args"))
+    groups = data.get("group_subtasks", {})
+    group_of = {child: split_task(group)[0] for group, children in groups.items() for child in children}
+    runs = []
+    for task, result in data.get("results", {}).items():
+        dataset, mode = split_task(task)
+        counts = data.get("n-samples", {}).get(task, {})
+        n = counts.get("effective", result.get("sample_len", 0))
+        limited = config.get("limit") is not None or n < counts.get("original", n)
+        runs.append(Run(
+            dataset, mode, model, int(n or 0), limited, file_date(path), path,
+            read_scores(result, data.get("higher_is_better", {}).get(task, {})),
+            family=group_of.get(task, ""),
+            children=tuple(split_task(child)[0] for child in groups.get(task, ())),
+        ))
+    return runs
+
+
+def read_summary_file(path: str) -> list[Run]:
+    """A reasoning-mode summary: flat metrics, or one block per voting method or per task."""
+    data = json.loads(Path(path).read_text(encoding="utf8"))
+    mode = data.get("mode", "unknown mode")
+    family, _, _ = data.get("reasoning_task", "").partition(":")
+    dataset = split_task(data.get("reasoning_task", "").replace(":", "_"))[0]
+    model = model_name(data.get("reasoning_model"), data.get("config", {}).get("model_args"))
+    n = len(data.get("samples") or ())
+    results = data.get("results", {})
+    blocks = {key: value for key, value in results.items() if isinstance(value, dict)}
+
+    def run(name: str, run_mode: str, result: dict) -> Run:
+        return Run(name, run_mode, model, n, False, file_date(path), path,
+                   read_scores(result, {}), family=family)
+
+    if not blocks:
+        return [run(dataset, mode, results)]
+    voting = {"majority", "rrf", "condorcet", "logits", "borda"} & set(blocks)
+    if voting:
+        return [run(dataset, f"{mode} ({method})", block) for method, block in blocks.items()]
+    return [run(split_task(task)[0], mode, block) for task, block in blocks.items()]
+
+
+def collect(folders: list[str], file_filter: str | None = None) -> list[Run]:
+    runs, failed = [], 0
     for folder in folders:
         if not os.path.exists(folder):
             print(f"[WARNING] Folder does not exist: {folder}")
             continue
-            
         for root, _, files in os.walk(folder):
-            for file in files:
-                if not file.endswith(".json"):
+            for name in sorted(files):
+                if not name.endswith(".json") or (file_filter and file_filter not in name):
                     continue
-                    
-                if file_filter and file_filter not in file:
+                reader = (read_results_file if name.startswith("results_")
+                          else read_summary_file if name.startswith("Summary_") else None)
+                if reader is None:
                     continue
-                
-                file_path = os.path.join(root, file)
-                
-                if file.startswith("results_"):
-                    file_results = collect_results_from_default_file(file_path)
-                    if file_results:
-                        results.extend(file_results)
-                        files_processed += 1
-                    else:
-                        files_failed += 1
-                        
-                elif file.startswith("Summary_"):
-                    file_results = collect_results_from_summary_file(file_path)
-                    if file_results:
-                        results.extend(file_results)
-                        files_processed += 1
-                    else:
-                        files_failed += 1
-    
-    print(f"\n[INFO] Processed {files_processed} files successfully, {files_failed} failed")
-    print(f"[INFO] Collected {len(results)} result entries\n")
-    return results
+                try:
+                    runs.extend(reader(os.path.join(root, name)))
+                except (json.JSONDecodeError, OSError, AttributeError, TypeError) as error:
+                    failed += 1
+                    print(f"[WARNING] Could not read {os.path.join(root, name)}: {error}")
+    print(f"[INFO] {len(runs)} task results read, {failed} files failed")
+    return [run for run in runs if run.scores]
 
 
-def compute_summary_statistics(df: pd.DataFrame) -> pd.DataFrame:
-    """Compute summary statistics (mean, median, std) for each model across all tasks."""
-    if "Model" not in df.columns:
-        return pd.DataFrame()
-    
-    # Identify numeric metric columns (exclude metadata)
-    reserved_cols = {"Dataset", "Model", "Model_Full", "Timestamp", "Model Args", "Path", "Voting_Method"}
-    numeric_cols = [col for col in df.columns 
-                   if col not in reserved_cols 
-                   and pd.api.types.is_numeric_dtype(df[col])
-                   and not col.endswith("_stderr")
-                   and not col.endswith("_rank")]
-    
-    if not numeric_cols:
-        return pd.DataFrame()
-    
-    # Group by model and compute statistics
-    summary = df.groupby("Model")[numeric_cols].agg(['mean', 'median', 'std', 'min', 'max'])
-    summary = summary.round(4)
-    
-    return summary
+def with_families(runs: list[Run]) -> list[Run]:
+    """Give each run its family: the group that lists it as a subtask, else the longest known
+    family its name starts with (`TrialBench_x` -> `TrialBench`), else the family its file
+    names, else itself.
+    """
+    family_of = {child: run.dataset for run in runs for child in run.children}
+    parents = set(family_of.values())
+    known = sorted(parents | {run.family for run in runs if run.family}, key=len, reverse=True)
+    out = []
+    for run in runs:
+        family = family_of.get(run.dataset) or next(
+            (f for f in known if run.dataset == f or run.dataset.startswith(f + "_")),
+            run.family or run.dataset)
+        out.append(replace(run, family=family,
+                           children=run.children or (("-",) if run.dataset in parents else ())))
+    return out
 
-def add_rankings(df: pd.DataFrame) -> pd.DataFrame:
-    """Add ranking columns for each metric (1 = best)."""
-    reserved_cols = {"Dataset", "Mode", "Model", "Model_Full", "Timestamp", "Model Args", "Path", "Voting_Method"}
-    numeric_cols = [col for col in df.columns 
-                   if col not in reserved_cols 
-                   and pd.api.types.is_numeric_dtype(df[col])]
 
-    # Group rankings within the same dataset+mode combination when available
-    group_cols = [c for c in ["Dataset", "Mode", "Voting_Method"] if c in df.columns]
-    if not group_cols:
-        group_cols = ["Dataset"]
-    
-    for col in numeric_cols:
-        # Assume higher is better for most metrics (acc, f1, etc.)
-        # Lower is better for loss, perplexity
-        if any(x in col.lower() for x in ['loss', 'perplexity', 'error']):
-            df[f"{col}_rank"] = df.groupby(group_cols)[col].rank(ascending=True, method='min')
+# ── select ───────────────────────────────────────────────────────────────────
+
+def mark_partial_summaries(runs: list[Run]) -> list[Run]:
+    """Mark a summary run as limited when another model has more samples for the same task
+    and mode: a summary file does not record a sample limit.
+    """
+    largest = defaultdict(int)
+    for run in runs:
+        largest[run.dataset, run.mode] = max(largest[run.dataset, run.mode], run.n)
+    return [replace(run, limited=run.limited or run.n < largest[run.dataset, run.mode])
+            if Path(run.path).name.startswith("Summary_") else run for run in runs]
+
+
+def select(runs: list[Run], all_runs: bool = False) -> tuple[list[Run], list[tuple[Run, str]]]:
+    """One run per task, mode and model: the one on most samples, then the latest.
+
+    Returns the runs to show and the others with the reason. With `all_runs` nothing is
+    dropped; the others are shown as separate models named with their date.
+    """
+    best: dict[tuple, Run] = {}
+    for run in runs:
+        current = best.get(run.key)
+        if current is None or (run.n, run.date) > (current.n, current.date):
+            best[run.key] = run
+    shown, hidden = [], []
+    for run in runs:
+        chosen = best[run.key]
+        if run is chosen:
+            shown.append(run)
+        elif all_runs:
+            shown.append(replace(run, model=f"{run.model} [{run.date}]"))
         else:
-            df[f"{col}_rank"] = df.groupby(group_cols)[col].rank(ascending=False, method='min')
-    
-    return df
-
-def save_csv(df: pd.DataFrame, path: Path):
-    """Save results to CSV with proper ordering."""
-    # Reorder columns: Dataset, Model, metrics, then metadata
-    priority_cols = ["Dataset", "Model"]
-    metadata_cols = ["Model_Full", "Timestamp", "Model Args", "Path"]
-    
-    existing_priority = [col for col in priority_cols if col in df.columns]
-    existing_metadata = [col for col in metadata_cols if col in df.columns]
-    metric_cols = [col for col in df.columns if col not in existing_priority + existing_metadata]
-    
-    ordered_cols = existing_priority + metric_cols + existing_metadata
-    df = df[ordered_cols]
-    
-    df.to_csv(path, index=False)
-    print(f"    - Saved CSV to:     {path}")
+            hidden.append((run, "fewer samples" if run.n < chosen.n else "older run"))
+    return shown, hidden
 
 
-def _format_group_table(
-    group_df: pd.DataFrame,
-    numeric_cols: List[str],
-    non_rank_numeric: List[str],
-    drop_cols: List[str],
-) -> pd.DataFrame:
-    """Format a single group dataframe for Markdown output (in-place formatting)."""
+# ── tables ───────────────────────────────────────────────────────────────────
 
-    def to_ordinal(n: float) -> str:
-        if pd.isna(n):
-            return "N/A"
-        n = int(n)
-        suffix = 'th' if 10 <= n % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
-        return f"{n}{suffix}"
+def order_of(name: str, order: list[str]) -> tuple[int, str]:
+    position = next((i for i, key in enumerate(order) if key in name), len(order))
+    return (position, name)
 
-    group_df = group_df.copy()
 
-    # Always drop Dataset (redundant — table header carries that info) plus caller-specified cols
-    group_df = group_df.drop(columns=list(set(drop_cols) | {"Dataset"}), errors="ignore")
+def slice_order(name: str) -> tuple[int, str]:
+    return (next(i for i, prefix in enumerate(SLICE_PREFIXES) if name.startswith(prefix)), name)
 
-    # Filter columns where all values are NaN
-    cols_to_keep = []
-    for col in group_df.columns:
-        if col in numeric_cols:
-            if not group_df[col].isna().all():
-                cols_to_keep.append(col)
-        else:
-            cols_to_keep.append(col)
-    group_df = group_df[cols_to_keep]
 
-    # Drop 'alias' (lm-eval task alias) — table header already carries dataset context
-    group_df = group_df.drop(columns=["alias"], errors="ignore")
+def mode_order(mode: str) -> tuple[int, str]:
+    return (MODE_ORDER.index(mode) if mode in MODE_ORDER else len(MODE_ORDER), mode)
 
-    # Column ordering: Model first, then Path, then metrics
-    fixed_first = [c for c in ["Model"] if c in group_df.columns]
-    fixed_last  = [c for c in ["Path"] if c in group_df.columns]
-    metric_order = [c for c in group_df.columns if c not in fixed_first + fixed_last]
-    group_df = group_df[fixed_first + metric_order + fixed_last]
 
-    # Highlight best per metric and format as percentage
-    current_non_rank = [c for c in non_rank_numeric if c in group_df.columns]
-    for metric in current_non_rank:
-        higher_is_better = not any(x in metric.lower() for x in ['loss', 'perplexity', 'error'])
-        subset = group_df[metric]
-        if subset.isna().all() or len(subset) == 0:
+@dataclass(frozen=True)
+class Row:
+    """One line of a table: a label per leading column and the run of each model."""
+
+    labels: tuple[str, ...]
+    metric: str
+    slice: str
+    runs: dict[str, Run]
+
+    def score(self, model: str) -> Score | None:
+        run = self.runs.get(model)
+        return next((s for s in run.scores if (s.metric, s.slice) == (self.metric, self.slice)),
+                    None) if run else None
+
+    def best(self, models: list[str]) -> float | None:
+        scores = [s for s in map(self.score, models) if s]
+        if len(scores) < 2:
+            return None
+        values = [s.value for s in scores]
+        if len(set(values)) == 1:
+            return None
+        return max(values) if scores[0].higher_is_better else min(values)
+
+    def n(self) -> int:
+        return max((run.n for run in self.runs.values()), default=0)
+
+
+def number(score: Score) -> str:
+    if lower_is_better(score.metric):
+        return f"{score.value:.3g}" if abs(score.value) >= LARGE_VALUE else f"{score.value:.3f}"
+    return f"{score.value * 100:.2f}"
+
+
+def cells(row: Row, models: list[str], bold: str, limited_mark: str) -> list[str]:
+    best, out = row.best(models), []
+    for model in models:
+        score = row.score(model)
+        if score is None:
+            out.append(MISSING)
             continue
-        try:
-            best_idx = subset.idxmax() if higher_is_better else subset.idxmin()
-            if pd.isna(best_idx):
-                raise ValueError
-            for idx in subset.index:
-                val = group_df.loc[idx, metric]
-                if pd.notna(val):
-                    fmt = f"{val * 100:.2f}"
-                    group_df.loc[idx, metric] = f"**{fmt}**" if idx == best_idx else fmt
-                else:
-                    group_df.loc[idx, metric] = "N/A"
-        except (ValueError, TypeError):
-            for idx in subset.index:
-                val = group_df.loc[idx, metric]
-                group_df.loc[idx, metric] = f"{val * 100:.2f}" if pd.notna(val) else "N/A"
-
-    # Format paths as links
-    if "Path" in group_df.columns:
-        group_df["Path"] = group_df["Path"].apply(
-            lambda x: f"[📁]({x})" if pd.notna(x) else ""
-        )
-
-    # Format rank columns as ordinals
-    for rank_col in [c for c in group_df.columns if c.endswith("_rank")]:
-        group_df[rank_col] = group_df[rank_col].apply(to_ordinal)
-
-    return group_df
+        text = number(score)
+        if best is not None and score.value == best:
+            text = bold.format(text)
+        out.append(text + (limited_mark if row.runs[model].limited else ""))
+    return out
 
 
-def save_markdown(df: pd.DataFrame, path: Path):
-    """Save results to Markdown with separate tables per (Dataset, Mode) group,
-    followed by combined per-dataset tables."""
-    df = df.copy()
-    df = df.drop(columns=["Model Args", "Model_Full", "Timestamp"], errors="ignore")
-
-    # ── model sort order ─────────────────────────────────────────────────────
-    model_order = ["Qwen", "deepseek", "DeepSeek", "Mistral", "Llama", "Gemma", "gemma", "Fleming", "Panacea", "II-Medical", "MedReason" ]
-
-    def get_model_priority(model_name: str) -> int:
-        for i, key in enumerate(model_order):
-            if key in str(model_name):
-                return i
-        return len(model_order)
-
-    # Sort entire dataframe: Dataset → Mode → Model
-    sort_keys = [c for c in ["Dataset", "Mode"] if c in df.columns]
-    if "Model" in df.columns:
-        df = df.sort_values(
-            by=sort_keys + ["Model"],
-            key=lambda col: col.map(get_model_priority) if col.name == "Model" else col,
-        )
-
-    # ── numeric column sets ───────────────────────────────────────────────────
-    numeric_cols = list(df.select_dtypes(include=["float", "int"]).columns)
-    non_rank_numeric = [c for c in numeric_cols if not c.endswith("_rank")]
-
-    markdown_content = ["# Evaluation Results\n\n"]
-
-    if "Dataset" not in df.columns:
-        # Fallback: single table
-        formatted = _format_group_table(df, numeric_cols, non_rank_numeric,
-                                        drop_cols=[])
-        markdown_content.append(formatted.to_markdown(index=False, disable_numparse=True))
-        markdown_content.append("\n\n")
-    else:
-        has_mode = "Mode" in df.columns
-
-        # ── Section 1: one table per (Dataset, Mode) ─────────────────────────
-        markdown_content.append("## Results by Mode\n\n")
-
-        if has_mode:
-            groups = df.groupby(["Dataset", "Mode"], sort=False)
-            group_keys = sorted(groups.groups.keys())  # sort by (dataset, mode)
-        else:
-            groups = df.groupby(["Dataset"], sort=False)
-            group_keys = sorted(groups.groups.keys())
-
-        for key in group_keys:
-            group_df = groups.get_group(key).copy()
-            if has_mode:
-                dataset, mode = key
-                header = f"### {dataset} — {mode}"
-                drop_cols = ["Dataset", "Mode"]
-            else:
-                dataset = key
-                header = f"### {dataset}"
-                drop_cols = ["Dataset"]
-
-            markdown_content.append(f"{header}\n\n")
-            formatted = _format_group_table(
-                group_df, numeric_cols, non_rank_numeric, drop_cols=drop_cols
-            )
-            markdown_content.append(formatted.to_markdown(index=False, disable_numparse=True))
-            markdown_content.append("\n\n")
-
-        # ── Section 2: combined table per base Dataset (strips _0-shot suffix) ─
-        markdown_content.append("---\n\n## Combined Results by Dataset\n\n")
-
-        def _base_dataset(name: str) -> str:
-            """Normalise dataset name: strip trailing _0-shot so CoT and 0-shot rows share a group."""
-            return name.removesuffix("_0-shot") if isinstance(name, str) else name
-
-        df["_BaseDataset"] = df["Dataset"].apply(_base_dataset)
-
-        rank_cols_global = [c for c in df.columns if c.endswith("_rank")]
-
-        for base_ds in sorted(df["_BaseDataset"].unique()):
-            markdown_content.append(f"### {base_ds} (all modes)\n\n")
-            combined_df = df[df["_BaseDataset"] == base_ds].copy()
-
-            # Drop stale per-mode ranks and recompute fresh across all rows in this group
-            combined_df = combined_df.drop(columns=rank_cols_global, errors="ignore")
-            combined_df = combined_df.drop(columns=["_BaseDataset"], errors="ignore")
-            fresh_metric_cols = [
-                c for c in combined_df.columns
-                if c not in {"Dataset", "Mode", "Model", "Model_Full", "Timestamp",
-                             "Model Args", "Path", "Voting_Method"}
-                and pd.api.types.is_numeric_dtype(combined_df[c])
-            ]
-            for col in fresh_metric_cols:
-                ascending = any(x in col.lower() for x in ['loss', 'perplexity', 'error'])
-                combined_df[f"{col}_rank"] = combined_df[col].rank(
-                    ascending=ascending, method='min'
-                )
-
-            # Recompute numeric_cols / non_rank_numeric for this combined slice
-            comb_numeric = list(combined_df.select_dtypes(include=["float", "int"]).columns)
-            comb_non_rank = [c for c in comb_numeric if not c.endswith("_rank")]
-
-            # Keep Mode column so rows are distinguishable
-            formatted = _format_group_table(
-                combined_df, comb_numeric, comb_non_rank,
-                drop_cols=[]  # Dataset already dropped inside _format_group_table
-            )
-            # Ensure Mode is the first column after Model
-            if "Mode" in formatted.columns and "Model" in formatted.columns:
-                other_cols = [c for c in formatted.columns if c not in ("Model", "Mode")]
-                formatted = formatted[["Model", "Mode"] + other_cols]
-
-            markdown_content.append(formatted.to_markdown(index=False, disable_numparse=True))
-            markdown_content.append("\n\n")
-
-        # Clean up helper column
-        df.drop(columns=["_BaseDataset"], errors="ignore", inplace=True)
-
-    # Write to file
-    with open(path, 'w') as f:
-        f.write(''.join(markdown_content))
-
-    print(f"    - Saved Markdown to:{path}")
+def primary_metric(runs: list[Run]) -> str:
+    metrics = [s.metric for run in runs for s in run.scores if not s.slice]
+    return next((m for m in PRIMARY_METRICS if m in metrics), metrics[0])
 
 
-def save_latex(df, path):
-    # ── Drop metadata / rank columns that mustn't appear in the table ────────
-    rank_cols = [c for c in df.columns if c.endswith("_rank")]
-    df = df.drop(
-        columns=["Model Args", "Path", "Timestamp", "Mode"] + rank_cols,
-        errors="ignore",
-    )
+class Report:
+    """The selected runs, arranged for the writers."""
 
-    # Multiply only true metric columns (float/int) by 100 → percentages
-    numeric_cols = list(df.select_dtypes(include=["float", "int"]).columns)
-    df[numeric_cols] = df[numeric_cols] * 100
+    def __init__(self, runs: list[Run]):
+        self.runs = runs
+        self.models = sorted({run.model for run in runs}, key=lambda m: order_of(m, MODEL_ORDER))
+        self.modes = sorted({run.mode for run in runs}, key=mode_order)
+        self.families = sorted({run.family for run in runs})
 
-    has_voting = "Voting_Method" in df.columns
+    def of(self, family: str | None = None, mode: str | None = None) -> dict[str, dict[str, Run]]:
+        """Runs of a family and a mode, as dataset -> model -> run."""
+        table = defaultdict(dict)
+        for run in self.runs:
+            if family in (None, run.family) and mode in (None, run.mode):
+                table[run.dataset][run.model] = run
+        return dict(sorted(table.items(), key=lambda item: self._dataset_order(item[1])))
 
-    def _pivot_and_format(sub: pd.DataFrame, index_cols: list) -> str:
-        """Pivot sub-df and return a LaTeX tabular string."""
-        # Remove index cols from the pivot value columns
-        value_cols = [c for c in sub.columns if c not in index_cols + ["Dataset"]]
-        piv = sub.pivot_table(
-            index=index_cols,
-            columns="Dataset",
-            values=value_cols,
-            aggfunc="first",
-        )
-        # Flatten MultiIndex columns: metric_Dataset
-        piv.columns = [f"{metric}_{ds}" for metric, ds in piv.columns]
-        piv = piv.reset_index()
-        return piv.to_latex(index=False, float_format="%.2f", escape=False, na_rep="---")
+    @staticmethod
+    def _dataset_order(by_model: dict[str, Run]) -> tuple[int, str]:
+        run = next(iter(by_model.values()))
+        return (0 if run.subtask in ("", "all") else 1, run.dataset)
 
-    blocks: list[str] = []
+    def models_of(self, rows: list[Row]) -> list[str]:
+        return [model for model in self.models if any(model in row.runs for row in rows)]
 
-    if has_voting:
-        # ── Table 1: aggregated / voting results ──────────────────────────────
-        # Rows without Voting_Method are non-voting runs; split them out.
-        voting_df    = df[df["Voting_Method"].notna()].copy()
-        no_voting_df = df[df["Voting_Method"].isna()].drop(columns=["Voting_Method"], errors="ignore").copy()
+    def overview(self, mode: str) -> list[Row]:
+        """The primary metric of each task; a group stands for its subtasks."""
+        rows = []
+        for family in self.families:
+            datasets = self.of(family, mode)
+            grouped = [d for d, by_model in datasets.items()
+                       if next(iter(by_model.values())).subtask == "all"]
+            for dataset in grouped or datasets:
+                by_model = datasets[dataset]
+                metric = primary_metric(list(by_model.values()))
+                rows.append(Row((dataset, metric), metric, "", by_model))
+        return rows
 
-        if not voting_df.empty:
-            # Include Mode in the index so the same (Model, Voting_Method) pair
-            # from different pipelines (CoT-SC vs cross-consistency) stays distinct.
-            index_cols = []
-            for c in ["Model", "Mode", "Voting_Method"]:
-                if c in voting_df.columns:
-                    index_cols.append(c)
-            blocks.append("% --- Voting / aggregation results ---\n")
-            blocks.append(_pivot_and_format(voting_df, index_cols))
+    def details(self, family: str, mode: str) -> list[Row]:
+        """Every metric of every task of a family; empty when the overview already shows it all."""
+        rows = []
+        for by_model in self.of(family, mode).values():
+            metrics = dict.fromkeys(s.metric for run in by_model.values() for s in run.scores if not s.slice)
+            subtask = next(iter(by_model.values())).subtask
+            rows += [Row((subtask or MISSING, metric), metric, "", by_model) for metric in metrics]
+        return rows if len(rows) > 1 else []
 
-        if not no_voting_df.empty:
-            index_cols = [c for c in ["Model"] if c in no_voting_df.columns]
-            blocks.append("\n% --- Single-pass results (no voting) ---\n")
-            blocks.append(_pivot_and_format(no_voting_df, index_cols))
+    def sliced(self, family: str, mode: str) -> dict[str, list[Row]]:
+        """One row per slice and metric for each task that reports slices, by dataset."""
+        tables = {}
+        for dataset, by_model in self.of(family, mode).items():
+            pairs = dict.fromkeys((s.metric, s.slice) for run in by_model.values()
+                                  for s in run.scores if s.slice)
+            ordered = sorted(pairs, key=lambda pair: (slice_order(pair[1]), pair[0]))
+            if ordered:
+                tables[dataset] = [Row((name, metric), metric, name, by_model) for metric, name in ordered]
+        return tables
 
-    else:
-        # No Voting_Method column at all — single table indexed by Model
-        index_cols = [c for c in ["Model"] if c in df.columns]
-        blocks.append(_pivot_and_format(df, index_cols))
+    def mean_ranks(self, rows: list[Row], models: list[str]) -> tuple[int, list[str]]:
+        """Mean rank of each model over the rows where every listed model has a score, and
+        the number of those rows.
+        """
+        ranks = defaultdict(list)
+        for row in rows:
+            scores = {model: row.score(model) for model in models}
+            if not all(scores.values()):
+                continue
+            higher = next(iter(scores.values())).higher_is_better
+            ordered = sorted({s.value for s in scores.values()}, reverse=higher)
+            for model, score in scores.items():
+                ranks[model].append(ordered.index(score.value) + 1)
+        covered = len(next(iter(ranks.values()), ()))
+        return covered, [f"{sum(ranks[m]) / len(ranks[m]):.2f}" if ranks[m] else MISSING for m in models]
 
-    latex_output = "\n".join(blocks)
 
-    with open(path, "w") as f:
-        f.write(latex_output)
-    print(f"    - Saved LaTeX to:   {path}")
+# ── writers ──────────────────────────────────────────────────────────────────
+
+def tidy_frame(runs: list[Run]) -> pd.DataFrame:
+    return pd.DataFrame([
+        {"Family": run.family, "Dataset": run.dataset, "Subtask": run.subtask, "Mode": run.mode,
+         "Model": run.model, "Metric": score.metric, "Slice": score.slice, "Value": score.value,
+         "Stderr": score.stderr, "N": run.n, "Limited": run.limited,
+         "Higher_is_better": score.higher_is_better, "Date": run.date, "Path": run.path}
+        for run in runs for score in run.scores
+    ])
+
+
+def used_labels(heads: list[str], rows: list[Row]) -> tuple[list[str], list[tuple[str, ...]]]:
+    """The label columns without those that are empty in every row."""
+    keep = [i for i in range(len(heads)) if any(row.labels[i] != MISSING for row in rows)]
+    return [heads[i] for i in keep], [tuple(row.labels[i] for i in keep) for row in rows]
+
+
+def markdown_table(header: list[str], body: list[list[str]], numeric_from: int) -> str:
+    align = [":--" if i < numeric_from else "--:" for i in range(len(header))]
+    lines = [header, align, *body]
+    return "\n".join("| " + " | ".join(line) + " |" for line in lines) + "\n\n"
+
+
+def markdown_rows(report: Report, rows: list[Row], heads: list[str], with_n: bool = True) -> str:
+    models = report.models_of(rows)
+    heads, labels = used_labels(heads, rows)
+    body = [[*label, *([str(row.n())] if with_n else []), *cells(row, models, "**{}**", LIMITED_MARK)]
+            for label, row in zip(labels, rows, strict=True)]
+    header = [*heads, *(["n"] if with_n else []), *models]
+    return markdown_table(header, body, len(heads))
+
+
+def save_markdown(report: Report, hidden: list[tuple[Run, str]], path: Path) -> None:
+    sources = path.with_name(f"{path.stem}_sources.md")
+    out = [
+        "# Evaluation results\n\n",
+        (
+            f"{len(report.runs)} task results from {len(report.models)} models. Scores are "
+            "percentages, except error metrics, which keep their unit. The best score of a row is "
+            f"in bold. `{LIMITED_MARK}` marks a run on a limited number of samples; `n` is the "
+            "largest number of samples in the row. The file of each score, and "
+            f"{len(hidden)} other runs of the same task, mode and model that are not shown, are "
+            f"listed in `{sources.name}`.\n\n"
+        ),
+        (
+            "## Overview\n\nOne metric per task. A group of subtasks is shown as its aggregate; "
+            "the subtasks are under Details.\n\n"
+        ),
+    ]
+    for mode in report.modes:
+        rows = report.overview(mode)
+        models = report.models_of(rows)
+        out.append(f"### {mode}\n\n")
+        table = markdown_rows(report, rows, ["Task", "Metric"])
+        if len(models) > 1:
+            covered, ranks = report.mean_ranks(rows, models)
+            line = ["**Mean rank**", f"{covered} tasks all models have", "", *ranks]
+            table = table.rstrip("\n") + "\n| " + " | ".join(line) + " |\n\n"
+        out.append(table)
+
+    out.append("## Details\n\n")
+    for family in report.families:
+        section = []
+        for mode in report.modes:
+            rows = report.details(family, mode)
+            if rows:
+                section += [f"#### {mode}\n\n", markdown_rows(report, rows, ["Subtask", "Metric"])]
+            for dataset, slice_rows in report.sliced(family, mode).items():
+                section += [f"#### {dataset}, {mode}: by slice\n\n",
+                            markdown_rows(report, slice_rows, ["Slice", "Metric"], with_n=False)]
+        if section:
+            out += [f"### {family}\n\n", *section]
+
+    path.write_text("".join(out), encoding="utf8")
+    out = ["# Sources\n\n"]
+    body = [[run.dataset, run.mode, run.model, str(run.n), "yes" if run.limited else "", run.date,
+             f"`{run.path}`"] for run in sorted(report.runs, key=lambda r: (r.dataset, mode_order(r.mode), r.model))]
+    out.append(markdown_table(["Task", "Mode", "Model", "n", "Limited", "Date", "File"], body, 7))
+    if hidden:
+        out.append("## Runs not shown\n\n")
+        body = [[run.dataset, run.mode, run.model, str(run.n), reason, run.date, f"`{run.path}`"]
+                for run, reason in sorted(hidden, key=lambda p: (p[0].dataset, p[0].mode, p[0].model, p[0].date))]
+        out.append(markdown_table(["Task", "Mode", "Model", "n", "Why", "Date", "File"], body, 7))
+    sources.write_text("".join(out), encoding="utf8")
+    print(f"    - Saved Markdown to: {path}, {sources.name}")
+
+
+LATEX_SPECIALS = {"\\": r"\textbackslash{}", "&": r"\&", "%": r"\%", "$": r"\$", "#": r"\#",
+                  "_": r"\_", "{": r"\{", "}": r"\}", "~": r"\textasciitilde{}", "^": r"\^{}"}
+
+
+HEADER_ANGLE = 70  # model names are written at this angle so a wide table keeps narrow columns
+
+
+def latex_escape(text: str) -> str:
+    return "".join(LATEX_SPECIALS.get(char, char) for char in str(text))
+
+
+def latex_table(report: Report, heads: list[str], by_mode: dict[str, list[Row]], caption: str,
+                label: str) -> str:
+    """One table: label columns, then a group of model columns per mode."""
+    by_mode = {mode: rows for mode, rows in by_mode.items() if rows}
+    all_rows = [row for rows in by_mode.values() for row in rows]
+    keep = [i for i in range(len(heads)) if any(row.labels[i] != MISSING for row in all_rows)]
+    heads = [heads[i] for i in keep]
+    models = {mode: report.models_of(rows) for mode, rows in by_mode.items()}
+    keys = list(dict.fromkeys((row.labels, row.metric, row.slice) for rows in by_mode.values() for row in rows))
+    lookup = {mode: {(row.labels, row.metric, row.slice): row for row in rows} for mode, rows in by_mode.items()}
+    width = sum(len(m) for m in models.values())
+    lines = [r"\begin{table}[p]", r"\centering", r"\small", rf"\caption{{{latex_escape(caption)}}}",
+             rf"\label{{tab:{label}}}", r"\begin{adjustbox}{max width=\textwidth}",
+             rf"\begin{{tabular}}{{{'l' * len(heads)}{'r' * width}}}", r"\toprule"]
+    if len(by_mode) > 1:
+        groups, rules, start = [""] * len(heads), [], len(heads) + 1
+        for mode, names in models.items():
+            groups.append(rf"\multicolumn{{{len(names)}}}{{c}}{{{latex_escape(mode)}}}")
+            rules.append(rf"\cmidrule(lr){{{start}-{start + len(names) - 1}}}")
+            start += len(names)
+        lines += [" & ".join(groups) + r" \\", " ".join(rules)]
+    header = [*heads, *[rf"\rotatebox{{{HEADER_ANGLE}}}{{{latex_escape(name)}}}"
+                        for names in models.values() for name in names]]
+    lines += [" & ".join(header) + r" \\", r"\midrule"]
+    for key in keys:
+        line = [latex_escape(key[0][i]) for i in keep]
+        for mode, names in models.items():
+            row = lookup[mode].get(key)
+            line += cells(row, names, r"\textbf{{{}}}", r"$^\dagger$") if row else [MISSING] * len(names)
+        lines.append(" & ".join(line).replace(MISSING, "--") + r" \\")
+    lines += [r"\bottomrule", r"\end{tabular}", r"\end{adjustbox}", r"\end{table}", ""]
+    return "\n".join(lines)
+
+
+def save_latex(report: Report, path: Path) -> None:
+    tables = [
+        (
+            "% Generated by scripts/extract_run-results.py. Needs \\usepackage{booktabs,adjustbox}.\n"
+            "% Scores are percentages (error metrics keep their unit); bold = best of the row within a\n"
+            "% mode; a dagger marks a run on a limited number of samples.\n"
+        ),
+        latex_table(report, ["Task", "Metric"], {mode: report.overview(mode) for mode in report.modes},
+                    "Primary metric of each task.", "overview"),
+    ]
+    for family in report.families:
+        details = {mode: report.details(family, mode) for mode in report.modes}
+        if any(details.values()):
+            tables.append(latex_table(report, ["Subtask", "Metric"], details,
+                                      f"{family}: all metrics.", f"{family}-details"))
+        sliced = defaultdict(dict)
+        for mode in report.modes:
+            for dataset, rows in report.sliced(family, mode).items():
+                sliced[dataset][mode] = rows
+        for dataset, by_mode in sliced.items():
+            tables.append(latex_table(report, ["Slice", "Metric"], by_mode,
+                                      f"{dataset}: scores by slice.", f"{dataset}-slices"))
+    path.write_text("\n".join(tables), encoding="utf8")
+    print(f"    - Saved LaTeX to:    {path}")
+
+
+def wide_frame(runs: list[Run]) -> pd.DataFrame:
+    """One row per task, mode and model with a column per metric, for the charts."""
+    return pd.DataFrame([
+        {"Dataset": run.dataset, "Mode": run.mode, "Model": run.model,
+         **{score.metric: score.value for score in run.scores if not score.slice}}
+        for run in runs
+    ])
 
 
 def save_visualizations(df: pd.DataFrame, output_dir: Path, output_name: str):
@@ -758,187 +761,50 @@ def save_visualizations(df: pd.DataFrame, output_dir: Path, output_name: str):
 
     df.drop(columns=["_BaseDataset", "_Label", "_ModeRank"], errors="ignore", inplace=True)
 
-def generate_summary_report(df: pd.DataFrame, output_path: Path):
-    """Generate a text summary report of key findings."""
-    with open(output_path, 'w') as f:
-        f.write("="*80 + "\n")
-        f.write("EVALUATION RESULTS SUMMARY\n")
-        f.write("="*80 + "\n\n")
-        
-        # Overall statistics
-        f.write(f"Total Evaluations: {len(df)}\n")
-        if "Model" in df.columns:
-            f.write(f"Models Evaluated:  {df['Model'].nunique()}\n")
-            f.write(f"  - {', '.join(df['Model'].unique())}\n")
-        if "Dataset" in df.columns:
-            f.write(f"Datasets:          {df['Dataset'].nunique()}\n")
-        f.write("\n" + "-"*80 + "\n\n")
-        
-        # Best performing model per dataset
-        if "Dataset" in df.columns and "Model" in df.columns:
-            reserved_cols = {"Dataset", "Model", "Model_Full", "Timestamp", "Model Args", "Path"}
-            metric_cols = [col for col in df.columns 
-                          if col not in reserved_cols 
-                          and pd.api.types.is_numeric_dtype(df[col])
-                          and not col.endswith("_rank")]
-            
-            if metric_cols:
-                f.write("TOP PERFORMING MODELS BY DATASET\n")
-                f.write("-"*80 + "\n\n")
-                
-                for dataset in sorted(df["Dataset"].unique()):
-                    f.write(f"📊 {dataset}:\n")
-                    dataset_df = df[df["Dataset"] == dataset]
-                    
-                    for metric in metric_cols[:3]:  # Top 3 metrics
-                        if metric not in dataset_df.columns:
-                            continue
-                        
-                        # Skip if all values are NaN
-                        if dataset_df[metric].isna().all():
-                            continue
-                        
-                        best_idx = dataset_df[metric].idxmax()
-                        
-                        # Check if best_idx is valid (not NaN)
-                        if pd.isna(best_idx):
-                            continue
-                        
-                        best_model = dataset_df.loc[best_idx, "Model"]
-                        best_score = dataset_df.loc[best_idx, metric] * 100
-                        f.write(f"  • {metric:20s}: {best_model:30s} ({best_score:.2f}%)\n")
-                    f.write("\n")
-        
-        f.write("\n" + "-"*80 + "\n\n")
-        
-        # Overall best models
-        summary = compute_summary_statistics(df)
-        if not summary.empty:
-            f.write("OVERALL MODEL RANKINGS (by mean performance)\n")
-            f.write("-"*80 + "\n\n")
-            
-            # Get mean scores for each metric
-            for metric in summary.columns.get_level_values(0).unique()[:5]:
-                f.write(f"\n{metric}:\n")
-                metric_means = summary[(metric, 'mean')].sort_values(ascending=False)
-                for i, (model, score) in enumerate(metric_means.head(5).items(), 1):
-                    f.write(f"  {i}. {model:30s}: {score*100:.2f}%\n")
-        
-        f.write("\n" + "="*80 + "\n")
-    
-    print(f"    - Saved summary:    {output_path}")
 
-def save_outputs(results: List[Dict], output_dir: str, output_name: str, 
-                output_csv: bool = True, output_md: bool = True, 
-                output_latex: bool = True, output_charts: bool = True,
-                output_summary: bool = True):
-    """Save results in multiple formats with comprehensive reporting."""
-    if not results:
-        print("[WARNING] No results to save!")
-        return
-    
-    df = pd.DataFrame(results)
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
+def save_outputs(runs: list[Run], hidden: list[tuple[Run, str]], output_dir: str, output_name: str,
+                 output_csv: bool = True, output_md: bool = True, output_latex: bool = True,
+                 output_charts: bool = True) -> None:
+    output = Path(output_dir)
+    output.mkdir(parents=True, exist_ok=True)
+    report = Report(runs)
     print("\n[INFO] Generating outputs...\n")
-    
-    # Add rankings
-    df = add_rankings(df)
-    
-    # Save main outputs
     if output_csv:
-        save_csv(df, output_dir / f"{output_name}.csv")
-    
+        tidy_frame(runs).to_csv(output / f"{output_name}.csv", index=False)
+        print(f"    - Saved CSV to:      {output / f'{output_name}.csv'}")
     if output_md:
-        save_markdown(df, output_dir / f"{output_name}.md")
-    
+        save_markdown(report, hidden, output / f"{output_name}.md")
     if output_latex:
-        save_latex(df, output_dir / f"{output_name}.tex")
-    
-    # Save summary statistics
-    summary = compute_summary_statistics(df)
-    if not summary.empty:
-        summary.to_csv(output_dir / f"{output_name}_summary_stats.csv")
-        print(f"    - Saved statistics: {output_dir / f'{output_name}_summary_stats.csv'}")
-    
-    if output_summary:
-        generate_summary_report(df, output_dir / f"{output_name}_summary.txt")
-    
+        save_latex(report, output / f"{output_name}.tex")
     if output_charts:
-        charts_dir   = output_dir / "charts"
-        heatmaps_dir = output_dir / "heatmaps"
-        charts_dir.mkdir(parents=True, exist_ok=True)
-        heatmaps_dir.mkdir(parents=True, exist_ok=True)
-        save_visualizations(df, output_dir, output_name)
-    
-    print("\n[SUCCESS] All outputs generated successfully!\n")
+        save_visualizations(wide_frame(runs), output, output_name)
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Extract evaluation results from lm-harness runs to various formats.",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Example usage:
-  python extract_run-results.py --input_folders ./outputs/exp1 ./outputs/exp2 \\
-                                --output_dir ./results --output_name my_benchmark
 
-  python extract_run-results.py --input_folders ./outputs \\
-                                --output_dir ./results --output_name filtered \\
-                                --file_filter "Qwen"
-        """
-    )
-
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--input_folders", nargs="+", required=True,
-                       help="One or more folders to search recursively for JSON result files")
-    parser.add_argument("--output_dir", required=True,
-                       help="Directory to save outputs")
-    parser.add_argument("--output_name", required=True,
-                       help="Base name for output files (no extension)")
+                        help="Folders searched recursively for results_*.json and Summary_*.json")
+    parser.add_argument("--output_dir", required=True)
+    parser.add_argument("--output_name", required=True, help="Base name of the output files")
     parser.add_argument("--file_filter", default=None,
-                       help="Only process JSON files whose name contains this string")
-    parser.add_argument("--no-csv", action="store_true",
-                       help="Skip CSV output")
-    parser.add_argument("--no-markdown", action="store_true",
-                       help="Skip Markdown output")
-    parser.add_argument("--no-latex", action="store_true",
-                       help="Skip LaTeX output")
-    parser.add_argument("--no-summary", action="store_true",
-                       help="Skip plain-text summary report")
-    parser.add_argument("--no-charts", action="store_true",
-                       help="Skip chart generation")
-
+                        help="Only read JSON files whose name contains this text")
+    parser.add_argument("--all-runs", action="store_true",
+                        help="Show every run instead of one per task, mode and model")
+    parser.add_argument("--no-csv", action="store_true")
+    parser.add_argument("--no-markdown", action="store_true")
+    parser.add_argument("--no-latex", action="store_true")
+    parser.add_argument("--no-charts", action="store_true")
     args = parser.parse_args()
 
-    print("\n" + "="*80)
-    print("RESULTS EXTRACTION SCRIPT")
-    print("="*80)
-    print(f"\nInput folders: {', '.join(args.input_folders)}")
-    print(f"Output:        {args.output_dir}/{args.output_name}.*")
-    if args.file_filter:
-        print(f"Filter:        {args.file_filter}")
-    print("\n" + "-"*80 + "\n")
+    runs = mark_partial_summaries(with_families(collect(args.input_folders, args.file_filter)))
+    if not runs:
+        raise SystemExit("[ERROR] No results found: check the input folders and the file filter")
+    shown, hidden = select(runs, args.all_runs)
+    print(f"[INFO] {len(shown)} results shown, {len(hidden)} older or smaller runs not shown")
+    save_outputs(shown, hidden, args.output_dir, args.output_name, not args.no_csv,
+                 not args.no_markdown, not args.no_latex, not args.no_charts)
+    print(f"\n[SUCCESS] Results written to {args.output_dir}/\n")
 
-    results = collect_results(args.input_folders, args.file_filter)
-    
-    if not results:
-        print("[ERROR] No results found! Check your input folders and file patterns.")
-        return
-    
-    save_outputs(
-        results,
-        args.output_dir,
-        args.output_name,
-        output_csv=not args.no_csv,
-        output_md=not args.no_markdown,
-        output_latex=not args.no_latex,
-        output_summary=not args.no_summary,
-        output_charts=not args.no_charts,
-    )
-    
-    print("="*80)
-    print(f"✅ Results extracted successfully to {args.output_dir}/")
-    print("="*80 + "\n")
 
 if __name__ == "__main__":
     main()
