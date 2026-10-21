@@ -49,6 +49,14 @@ Homepage: [GitHub Pages](https://sites.google.com/view/nli4ct/)
 
 * `SemEval_NLI4CT_2023` : `The 2023 SemEval NLI4CT task`
 * `SemEval_NLI4CT_2024` : `The 2024 SemEval NLI4CT task`
+* `SemEval_NLI4CT_AugExp` (0-shot): the 20% test part of
+  [SemEval_NLI4CT_Augmented](https://huggingface.co/datasets/araag2/SemEval_NLI4CT_Augmented) (`2024_augmented`):
+  340 statements of the 2024 train split, each with its OpenCTEval variants (recast, substitute-syntactic,
+  negation with the label flipped by rule, numeric and biomedical changes with a validated label); the other 80%
+  is the `train` split, for fine-tuning. Split by statement: no statement or variant is in both. Reports `acc`
+  and `f1` overall, `@original` and `@augmented`, slices per type (`acc@type=recast`), per label and per
+  single/comparison statement (`acc@trials=single`), `consistency` (variants predicted like their original,
+  only variants that keep the original's label) and `acc_drop`.
 
 ### Checklist
 
@@ -65,3 +73,10 @@ If other tasks on this dataset are already supported:
 * [ ] Have you noted which, if any, published evaluation setups are matched by this variant?
 
 ### Changelog
+
+* 2026-10-21: prompt fix for every NLI4CT task. `Secondary_Section` was missing from the substituted keys, so
+  comparison prompts showed the literal `{{Secondary_Section}}` instead of the second trial; and since every row
+  has the column (empty for single-trial statements), every statement got the comparison prompt. Single-trial
+  statements now get the one-section prompt and comparison statements see both trials (`is_comparison` in
+  `utils.py`). Results from before this date are not comparable; rerun them.
+

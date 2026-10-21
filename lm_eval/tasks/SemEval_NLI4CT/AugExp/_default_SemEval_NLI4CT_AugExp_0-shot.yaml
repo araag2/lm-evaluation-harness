@@ -1,0 +1,37 @@
+# The published NLI4CT augmentation (train 80% / test 20% of the 2024 train statements, split by statement).
+dataset_path: araag2/SemEval_NLI4CT_Augmented
+dataset_name: 2024_augmented
+dataset_kwargs:
+  trust_remote_code: true
+output_type: multiple_choice
+doc_to_text: !function utils.doc_to_text
+doc_to_target: "{{ Label }}"
+doc_to_choice: ["Contradiction", "Entailment"]
+process_results: !function utils.process_results
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+  - metric: acc@original
+    aggregation: mean
+    higher_is_better: true
+  - metric: acc@augmented
+    aggregation: mean
+    higher_is_better: true
+  - metric: f1
+    aggregation: !function utils.macro_f1
+    higher_is_better: true
+  - metric: f1@original
+    aggregation: !function utils.macro_f1
+    higher_is_better: true
+  - metric: f1@augmented
+    aggregation: !function utils.macro_f1
+    higher_is_better: true
+  - metric: consistency
+    aggregation: !function utils.consistency
+    higher_is_better: true
+  - metric: acc_drop
+    aggregation: !function utils.acc_drop
+    higher_is_better: false
+metadata:
+  version: 1.0

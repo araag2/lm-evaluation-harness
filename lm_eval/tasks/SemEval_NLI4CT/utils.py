@@ -58,7 +58,11 @@ single_self_refine_refine_prompt = "You are a medical expert tasked with improvi
 comparison_self_refine_feedback_prompt = replace_prompt_parts(single_self_refine_feedback_prompt)
 comparison_self_refine_refine_prompt = replace_prompt_parts(single_self_refine_refine_prompt)
 
-relevant_keys = ["Section_id", "Primary_Section", "Statement", "Reasoning_Chain", "Verified_Reasoning_Chain", "Feedback"]
+relevant_keys = ["Section_id", "Primary_Section", "Secondary_Section", "Statement", "Reasoning_Chain", "Verified_Reasoning_Chain", "Feedback"]
+
+def is_comparison(doc) -> bool:
+    """Every row carries a Secondary_Section column; single-trial statements have it empty."""
+    return bool(doc.get("Secondary_Section"))
 
 def doc_to_text_process(doc, prompt):
     res = prompt
@@ -68,22 +72,22 @@ def doc_to_text_process(doc, prompt):
     return res
 
 def doc_to_text(doc):
-    return doc_to_text_process(doc, single_baseline_prompt if "Secondary_Section" not in doc else comparison_baseline_prompt)
+    return doc_to_text_process(doc, comparison_baseline_prompt if is_comparison(doc) else single_baseline_prompt)
 
 def doc_to_text_reasoning(doc):
-    return doc_to_text_process(doc, single_reasoning_prompt if "Secondary_Section" not in doc else comparison_reasoning_prompt)
+    return doc_to_text_process(doc, comparison_reasoning_prompt if is_comparison(doc) else single_reasoning_prompt)
 
 def doc_to_text_answer_selection(doc):
-    return doc_to_text_process(doc, single_answer_selection_prompt if "Secondary_Section" not in doc else comparison_answer_selection_prompt)
+    return doc_to_text_process(doc, comparison_answer_selection_prompt if is_comparison(doc) else single_answer_selection_prompt)
 
 def doc_to_text_verify_reasoning(doc):
-    return doc_to_text_process(doc, single_verify_reasoning_prompt if "Secondary_Section" not in doc else comparison_verify_reasoning_prompt)
+    return doc_to_text_process(doc, comparison_verify_reasoning_prompt if is_comparison(doc) else single_verify_reasoning_prompt)
 
 def doc_to_text_answer_selection_after_verify_reasoning(doc):
-    return doc_to_text_process(doc, single_answer_selection_after_verification_prompt if "Secondary_Section" not in doc else comparison_answer_selection_after_verification_prompt)
+    return doc_to_text_process(doc, comparison_answer_selection_after_verification_prompt if is_comparison(doc) else single_answer_selection_after_verification_prompt)
 
 def doc_to_text_self_refine_feedback(doc):
-    return doc_to_text_process(doc, single_self_refine_feedback_prompt if "Secondary_Section" not in doc else comparison_self_refine_feedback_prompt)
+    return doc_to_text_process(doc, comparison_self_refine_feedback_prompt if is_comparison(doc) else single_self_refine_feedback_prompt)
 
 def doc_to_text_self_refine_refine(doc):
-    return doc_to_text_process(doc, single_self_refine_refine_prompt if "Secondary_Section" not in doc else comparison_self_refine_refine_prompt)
+    return doc_to_text_process(doc, comparison_self_refine_refine_prompt if is_comparison(doc) else single_self_refine_refine_prompt)
