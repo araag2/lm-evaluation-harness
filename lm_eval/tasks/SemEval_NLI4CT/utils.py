@@ -1,10 +1,15 @@
 from sklearn.metrics import precision_score, recall_score
 
+
 def precision_fn(refs, preds, **kwargs):
-    return {"precision": precision_score(refs, preds, average="weighted", zero_division=0)}
-    
+    return {
+        "precision": precision_score(refs, preds, average="weighted", zero_division=0)
+    }
+
+
 def recall_fn(refs, preds, **kwargs):
     return {"recall": recall_score(refs, preds, average="weighted", zero_division=0)}
+
 
 # ====================
 # Single Prompts
@@ -24,70 +29,148 @@ single_answer_selection_after_verification_prompt = "You are a medical expert ta
 # Comparison Prompts
 # ====================
 
-replace_pairs = [("a section", "two sections"), ("a section (the premise you will base your judgement in)", "two sections (the premises you will base your judgement in)"), ("{{Primary_Section}}", "{{Primary_Section}}\n\nSecondary CTR Section: \n\n{{Secondary_Section}}")]
+replace_pairs = [
+    ("a section", "two sections"),
+    (
+        "a section (the premise you will base your judgement in)",
+        "two sections (the premises you will base your judgement in)",
+    ),
+    (
+        "{{Primary_Section}}",
+        "{{Primary_Section}}\n\nSecondary CTR Section: \n\n{{Secondary_Section}}",
+    ),
+]
+
 
 def replace_prompt_parts(prompt: str) -> str:
     for old, new in replace_pairs:
         prompt = prompt.replace(old, new)
     return prompt
 
+
 comparison_baseline_prompt = replace_prompt_parts(single_baseline_prompt)
 
 comparison_reasoning_prompt = replace_prompt_parts(single_reasoning_prompt)
 
-comparison_answer_selection_prompt = replace_prompt_parts(single_answer_selection_prompt)
+comparison_answer_selection_prompt = replace_prompt_parts(
+    single_answer_selection_prompt
+)
 
-comparison_verify_reasoning_prompt = replace_prompt_parts(single_verify_reasoning_prompt)
+comparison_verify_reasoning_prompt = replace_prompt_parts(
+    single_verify_reasoning_prompt
+)
 
-comparison_answer_selection_after_verification_prompt = replace_prompt_parts(single_answer_selection_after_verification_prompt)
+comparison_answer_selection_after_verification_prompt = replace_prompt_parts(
+    single_answer_selection_after_verification_prompt
+)
 
 # ====================
 
 pos_answers = ["Contradiction", "Entailment"]
 
+
 def label_to_index(doc) -> int:
     return pos_answers.index(doc["Label"])
 
+
 def format_sections(sections):
-   return '\n'.join(sections) if sections else ""
+    return "\n".join(sections) if sections else ""
+
 
 single_self_refine_feedback_prompt = "You are a medical expert reviewing a reasoning chain that determines the semantic entailment relationship between a section of a Clinical Trial Report (CTR) and a clinical statement.\n\nSection Name:\n\n{{Section_id}}\n\nCTR Section: \n\n{{Primary_Section}}\n\nHypothesis: {{Statement}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nCritique this reasoning chain. Identify any logical gaps, unsupported conclusions, unclear steps, or factual inaccuracies.\n\nProvide at least 2-3 specific points of improvement.\nFeedback: "
 
 single_self_refine_refine_prompt = "You are a medical expert tasked with improving a reasoning chain that determines the semantic entailment relationship between a section of a Clinical Trial Report (CTR) and a clinical statement. The task is to classify the relationship as one of the following: Entailment (supported by the CTR) or Contradiction (in conflict with the CTR).\n\nSection Name:\n\n{{Section_id}}\n\nCTR Section: \n\n{{Primary_Section}}\n\nHypothesis: {{Statement}}\n\nReasoning Chain: {{Reasoning_Chain}}\n\nFeedback: {{Feedback}}\n\nGiven the feedback above, revise the reasoning chain to:\n1 - Fill logical gaps with evidence from the CTR section.\n2 - Clarify unclear reasoning steps.\n3 - Ensure all conclusions are directly supported.\nLet's think step by step, and at the very end write your answer in the form: \nAnswer: [Entailment / Contradiction] <END>"
 
-comparison_self_refine_feedback_prompt = replace_prompt_parts(single_self_refine_feedback_prompt)
-comparison_self_refine_refine_prompt = replace_prompt_parts(single_self_refine_refine_prompt)
+comparison_self_refine_feedback_prompt = replace_prompt_parts(
+    single_self_refine_feedback_prompt
+)
+comparison_self_refine_refine_prompt = replace_prompt_parts(
+    single_self_refine_refine_prompt
+)
 
-relevant_keys = ["Section_id", "Primary_Section", "Secondary_Section", "Statement", "Reasoning_Chain", "Verified_Reasoning_Chain", "Feedback"]
+relevant_keys = [
+    "Section_id",
+    "Primary_Section",
+    "Secondary_Section",
+    "Statement",
+    "Reasoning_Chain",
+    "Verified_Reasoning_Chain",
+    "Feedback",
+]
+
 
 def is_comparison(doc) -> bool:
     """Every row carries a Secondary_Section column; single-trial statements have it empty."""
     return bool(doc.get("Secondary_Section"))
 
+
 def doc_to_text_process(doc, prompt):
     res = prompt
     for key in relevant_keys:
         if key in doc:
-            res = res.replace(f"{{{{{key}}}}}", format_sections(doc[key]) if key in ["Primary_Section", "Secondary_Section"] else doc[key])
+            res = res.replace(
+                f"{{{{{key}}}}}",
+                format_sections(doc[key])
+                if key in ["Primary_Section", "Secondary_Section"]
+                else doc[key],
+            )
     return res
 
+
 def doc_to_text(doc):
-    return doc_to_text_process(doc, comparison_baseline_prompt if is_comparison(doc) else single_baseline_prompt)
+    return doc_to_text_process(
+        doc,
+        comparison_baseline_prompt if is_comparison(doc) else single_baseline_prompt,
+    )
+
 
 def doc_to_text_reasoning(doc):
-    return doc_to_text_process(doc, comparison_reasoning_prompt if is_comparison(doc) else single_reasoning_prompt)
+    return doc_to_text_process(
+        doc,
+        comparison_reasoning_prompt if is_comparison(doc) else single_reasoning_prompt,
+    )
+
 
 def doc_to_text_answer_selection(doc):
-    return doc_to_text_process(doc, comparison_answer_selection_prompt if is_comparison(doc) else single_answer_selection_prompt)
+    return doc_to_text_process(
+        doc,
+        comparison_answer_selection_prompt
+        if is_comparison(doc)
+        else single_answer_selection_prompt,
+    )
+
 
 def doc_to_text_verify_reasoning(doc):
-    return doc_to_text_process(doc, comparison_verify_reasoning_prompt if is_comparison(doc) else single_verify_reasoning_prompt)
+    return doc_to_text_process(
+        doc,
+        comparison_verify_reasoning_prompt
+        if is_comparison(doc)
+        else single_verify_reasoning_prompt,
+    )
+
 
 def doc_to_text_answer_selection_after_verify_reasoning(doc):
-    return doc_to_text_process(doc, comparison_answer_selection_after_verification_prompt if is_comparison(doc) else single_answer_selection_after_verification_prompt)
+    return doc_to_text_process(
+        doc,
+        comparison_answer_selection_after_verification_prompt
+        if is_comparison(doc)
+        else single_answer_selection_after_verification_prompt,
+    )
+
 
 def doc_to_text_self_refine_feedback(doc):
-    return doc_to_text_process(doc, comparison_self_refine_feedback_prompt if is_comparison(doc) else single_self_refine_feedback_prompt)
+    return doc_to_text_process(
+        doc,
+        comparison_self_refine_feedback_prompt
+        if is_comparison(doc)
+        else single_self_refine_feedback_prompt,
+    )
+
 
 def doc_to_text_self_refine_refine(doc):
-    return doc_to_text_process(doc, comparison_self_refine_refine_prompt if is_comparison(doc) else single_self_refine_refine_prompt)
+    return doc_to_text_process(
+        doc,
+        comparison_self_refine_refine_prompt
+        if is_comparison(doc)
+        else single_self_refine_refine_prompt,
+    )

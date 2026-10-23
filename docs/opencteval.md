@@ -50,12 +50,10 @@ python -m pytest -q -p no:cacheprovider \
   tests/test_registry.py tests/test_evaluator_utils.py
 ```
 
-The `OpenCTEval Tests` workflow in `.github/workflows/opencteval.yml` runs this
-suite on Python 3.10 and 3.12, without model or dataset downloads during tests.
-It uses pytest 9 or later, matching `pyproject.toml`, and retains `datasets<4`
-as the validated data-loading baseline. That CI constraint does not change
-package dependencies. Validate remote dataset configurations separately before
-updating the baseline.
+These tests run locally only; there is no GitHub Actions workflow for them.
+They need no model or dataset downloads. They were validated with pytest 9 or
+later, matching `pyproject.toml`, and `datasets<4`. Validate remote dataset
+configurations separately before moving to `datasets>=4`.
 
 Use the Ruff version pinned in `.pre-commit-config.yaml` for formatting and lint:
 

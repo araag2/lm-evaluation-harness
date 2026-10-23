@@ -23,14 +23,20 @@ def load_changed_files(file_path: str) -> list[str]:
 # if the config task is a list, it's a group config.
 def parser(full_path: list[str]) -> list[str]:
     _output = set()
+    in_groups = set()
     for x in full_path:
         if x.endswith(".yaml") and os.path.exists(x):
             config = load_yaml(x, resolve_func=False)
+            # Shared templates (included by task configs) have no task of their own.
+            if "task" not in config:
+                continue
             if isinstance(config["task"], str):
                 _output.add(config["task"])
             elif isinstance(config["task"], list):
                 _output.add(config["group"])
-    return list(_output)
+                in_groups.update(t for t in config["task"] if isinstance(t, str))
+    # A changed group already loads its tasks; listing them again is a duplicate.
+    return list(_output - in_groups)
 
 
 def new_tasks() -> list[str] | None:

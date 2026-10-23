@@ -1,5 +1,13 @@
-from lm_eval.opencteval.augmentation import acc_drop, consistency, macro_f1, sliced_results
-from lm_eval.tasks.SemEval_NLI4CT.utils import *
+# Task YAMLs load their functions from this module, so it re-exports the base
+# task utils and the augmentation aggregations.
+from lm_eval.opencteval.augmentation import (  # noqa: F401
+    acc_drop,
+    consistency,
+    macro_f1,
+    sliced_results,
+)
+from lm_eval.tasks.SemEval_NLI4CT.utils import *  # noqa: F403
+from lm_eval.tasks.SemEval_NLI4CT.utils import is_comparison, pos_answers
 
 
 def process_results(doc, results):

@@ -79,4 +79,3 @@ If other tasks on this dataset are already supported:
   has the column (empty for single-trial statements), every statement got the comparison prompt. Single-trial
   statements now get the one-section prompt and comparison statements see both trials (`is_comparison` in
   `utils.py`). Results from before this date are not comparable; rerun them.
-
