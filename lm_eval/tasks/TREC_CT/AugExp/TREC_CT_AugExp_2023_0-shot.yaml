@@ -1,0 +1,6 @@
+# TREC CT 2023 consistency test set: 300 seeded-random 2023 pairs (no training patient), augmented with the
+# trec_ct_augmented_1000.yaml recipe; unlabeled rows left out (2,499 rows).
+task: TREC_CT_AugExp_2023_0-shot
+dataset_name: augmentation_test_2023_300
+test_split: test
+include: _default_TREC_CT_AugExp_0-shot.yaml

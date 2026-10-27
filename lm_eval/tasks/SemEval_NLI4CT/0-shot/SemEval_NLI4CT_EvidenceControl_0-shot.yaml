@@ -1,0 +1,13 @@
+task: SemEval_NLI4CT_EvidenceControl_0-shot
+# Matched control for SemEval_NLI4CT_EvidenceAblation: the 205 statements with partial evidence, each with as many
+# random non-evidence lines removed as the evidence has (evidence kept, gold label). Build the data first:
+#   python scripts/build_evidence_control.py
+# Scored with SemEval_NLI4CT_EvidenceAblation samples by scripts/evidence_control_scores.py.
+include: _default_SemEval_NLI4CT_0-shot.yaml
+dataset_path: json
+dataset_name: null
+dataset_kwargs:
+  data_files:
+    test: data/nli4ct_evidence_ablation/control.jsonl
+metadata:
+  version: 1.0

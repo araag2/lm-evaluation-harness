@@ -1,0 +1,30 @@
+task: SemEval_NLI4CT_EvidenceAblation_0-shot
+# The 500 SemEval-2024 base statements (= the 2023 test, which has gold evidence indices), each with its full
+# CTR section(s) and, when the evidence is partial (205), with only the evidence and with the evidence
+# removed (label Contradiction: unsupported). Build the data from the harness root first:
+#   python scripts/build_evidence_ablation.py
+include: _default_SemEval_NLI4CT_0-shot.yaml
+dataset_path: json
+dataset_name: null
+dataset_kwargs:
+  data_files:
+    test: data/nli4ct_evidence_ablation/test.jsonl
+process_results: !function utils.process_results_evidence
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+  - metric: f1
+    aggregation: f1
+    higher_is_better: true
+  - metric: sufficiency
+    aggregation: !function utils.consistency
+    higher_is_better: true
+  - metric: faithfulness
+    aggregation: !function utils.faithfulness
+    higher_is_better: true
+  - metric: necessity
+    aggregation: !function utils.necessity
+    higher_is_better: true
+metadata:
+  version: 2.0

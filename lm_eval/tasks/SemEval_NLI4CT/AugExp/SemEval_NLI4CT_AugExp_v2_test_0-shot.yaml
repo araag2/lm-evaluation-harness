@@ -1,0 +1,5 @@
+# v2 adds append_definition variants (a UMLS definition before or after the statement); same statements per split.
+task: SemEval_NLI4CT_AugExp_v2_test_0-shot
+dataset_name: 2024_augmented_v2
+test_split: test
+include: _default_SemEval_NLI4CT_AugExp_0-shot.yaml

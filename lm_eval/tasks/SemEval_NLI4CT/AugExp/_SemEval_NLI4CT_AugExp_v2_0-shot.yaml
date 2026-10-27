@@ -1,0 +1,5 @@
+group: SemEval_NLI4CT_AugExp_v2_0-shot
+task:
+  - SemEval_NLI4CT_AugExp_v2_test_0-shot
+metadata:
+  version: 2.0

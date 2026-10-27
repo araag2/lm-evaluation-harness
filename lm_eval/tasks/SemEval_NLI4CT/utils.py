@@ -15,7 +15,7 @@ def recall_fn(refs, preds, **kwargs):
 # Single Prompts
 # ====================
 
-single_baseline_prompt = "You are a medical expert tasked with determining semantic entailment relationships between a section of a Clinical Trial Report (CTR) and a clinical statement provided by a domain expert. \n\nEach input will consist of a statement (the hypothesis to evaluate) and a section (the premise you will base your judgement in) from a Clinical Trial Report (CTR). The task is to classify the relationship as one of the following: Entailment (supported by the CTR) or Contradiction (in conflict with the CTR).\n\nSection Name:\n\n{{Section_id}}\n\nCTR Section: \n\n{{Primary_Section}}\n\nHypothesis: {{Statement}}\n\nPlease provide your judgement in a single word (Entailment or Contradiction), corresponding to the correct option that associates the CTR Section and the Hypothesis.\nAnswer: "
+single_baseline_prompt = "You are a medical expert tasked with determining semantic entailment relationships between a section of a Clinical Trial Report (CTR) and a clinical statement provided by a domain expert. \n\nEach input will consist of a statement (the hypothesis to evaluate) and a section (the premise you will base your judgement in) from a Clinical Trial Report (CTR). The task is to classify the relationship as one of the following: Entailment (the CTR supports the statement) or Contradiction (the CTR contradicts the statement or does not support it).\n\nSection Name:\n\n{{Section_id}}\n\nCTR Section: \n\n{{Primary_Section}}\n\nHypothesis: {{Statement}}\n\nPlease provide your judgement in a single word (Entailment or Contradiction), corresponding to the correct option that associates the CTR Section and the Hypothesis.\nAnswer:"
 
 single_reasoning_prompt = "You are a medical expert tasked with determining semantic entailment relationships between a section of a Clinical Trial Report (CTR) and a clinical statement provided by a domain expert. \n\nEach input will consist of a statement (the hypothesis to evaluate) and a section (the premise you will base your judgement in) from a Clinical Trial Report (CTR). The task is to classify the relationship as one of the following: Entailment (supported by the CTR) or Contradiction (in conflict with the CTR).\n\nSection Name:\n\n{{Section_id}}\n\nCTR Section: \n\n{{Primary_Section}}\n\nHypothesis: {{Statement}}\n\nPlease provide your judgement in a single word (Entailment or Contradiction), corresponding to the correct option that describes the logical relationship betweeb the CTR and the Hypotheesis. Let's think step by step, and at the very end write your answer in the form: \nAnswer: [Entailment / Contradiction] <END>"
 
@@ -48,7 +48,13 @@ def replace_prompt_parts(prompt: str) -> str:
     return prompt
 
 
-comparison_baseline_prompt = replace_prompt_parts(single_baseline_prompt)
+# The baseline (0-shot) prompt names the primary trial, which statements refer to; the other prompts keep
+# their wording so earlier CoT results stay comparable.
+comparison_baseline_prompt = (
+    replace_prompt_parts(single_baseline_prompt)
+    .replace("\n\nCTR Section: \n\n", "\n\nPrimary Trial CTR Section: \n\n")
+    .replace("Secondary CTR Section:", "Secondary Trial CTR Section:")
+)
 
 comparison_reasoning_prompt = replace_prompt_parts(single_reasoning_prompt)
 

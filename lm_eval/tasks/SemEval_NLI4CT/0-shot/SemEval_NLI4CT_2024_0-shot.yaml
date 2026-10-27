@@ -2,5 +2,30 @@ task: SemEval_NLI4CT_2024_0-shot
 dataset_path: araag2/SemEval_NLI4CT
 dataset_name: 2024_processed
 include: _default_SemEval_NLI4CT_0-shot.yaml
+process_results: !function utils.process_results_2024
+# acc and f1 cover all 5,500 rows (kept for comparability). The official SemEval-2024 metrics are f1_control
+# (binary Entailment F1 on the 500 base statements), faithfulness, consistency and their mean, semeval_score.
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+  - metric: f1
+    aggregation: f1
+    higher_is_better: true
+  - metric: f1_control
+    aggregation: !function utils.positive_f1
+    higher_is_better: true
+  - metric: faithfulness
+    aggregation: !function utils.faithfulness
+    higher_is_better: true
+  - metric: consistency
+    aggregation: !function utils.consistency
+    higher_is_better: true
+  - metric: acc_drop
+    aggregation: !function utils.acc_drop
+    higher_is_better: false
+  - metric: semeval_score
+    aggregation: !function utils.semeval_score
+    higher_is_better: true
 metadata:
-  version: 1.0
+  version: 2.0

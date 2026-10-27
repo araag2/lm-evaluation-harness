@@ -30,8 +30,11 @@ metric_list:
   - metric: consistency
     aggregation: !function utils.consistency
     higher_is_better: true
+  - metric: faithfulness
+    aggregation: !function utils.faithfulness
+    higher_is_better: true
   - metric: acc_drop
     aggregation: !function utils.acc_drop
     higher_is_better: false
 metadata:
-  version: 1.0
+  version: 2.0

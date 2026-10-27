@@ -1,0 +1,19 @@
+task: TREC_CT_Probe_2023_0-shot
+# TREC CT 2023 necessity probe: the eligible pairs of the 300-pair 2023 test set, each with flip_criterion views
+# (a criterion the patient now fails: possibly relevant) and subset_criteria views (half the criteria: still
+# definitely relevant). Build the data from the harness root first: python scripts/build_trec_probe.py
+# Scored by scripts/trec_probe_scores.py.
+include: _default_TREC_CT_AugExp_0-shot.yaml
+dataset_path: json
+dataset_name: null
+dataset_kwargs:
+  data_files:
+    test: data/trec_ct_probe/test.jsonl
+test_split: test
+process_results: null
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  version: 1.0

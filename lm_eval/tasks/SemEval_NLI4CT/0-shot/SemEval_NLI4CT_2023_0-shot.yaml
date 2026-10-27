@@ -3,4 +3,4 @@ dataset_path: araag2/SemEval_NLI4CT
 dataset_name: 2023_processed
 include: _default_SemEval_NLI4CT_0-shot.yaml
 metadata:
-  version: 1.0
+  version: 2.0

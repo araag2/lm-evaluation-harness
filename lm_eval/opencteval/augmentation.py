@@ -138,3 +138,55 @@ def flips(items: Iterable[tuple]) -> dict[str, int]:
         elif after and not before:
             counts["wrong_to_correct"] += 1
     return {key: counts[key] for key in ("correct_to_wrong", "wrong_to_correct")}
+
+
+def altered_pairs(items: Iterable[tuple]) -> list[tuple[tuple, tuple]]:
+    """(original, variant) for each variant whose gold label differs from its original's."""
+    items = list(items)
+    originals = {item[0]: item for item in items if item[1]}
+    return [
+        (originals[item[0]], item)
+        for item in items
+        if not item[1] and item[0] in originals and originals[item[0]][2] != item[2]
+    ]
+
+
+def faithfulness(items: Iterable[tuple]) -> float:
+    """Share of label-altering variants whose prediction moved off the original's gold label.
+
+    SemEval-2024 NLI4CT's Faithfulness; an unparsed answer did not move.
+    """
+    return _mean(
+        [float(v[3] is not None and v[3] != o[2]) for o, v in altered_pairs(items)]
+    )
+
+
+def necessity(items: Iterable[tuple]) -> float:
+    """Faithfulness among the label-altering variants whose original was predicted right.
+
+    With NLI4CT evidence views: the share of Entailment statements, predicted Entailment with their
+    full section, that are no longer predicted Entailment once the gold evidence is removed.
+    """
+    return _mean(
+        [
+            float(v[3] is not None and v[3] != o[2])
+            for o, v in altered_pairs(items)
+            if o[3] == o[2]
+        ]
+    )
+
+
+def positive_f1(pairs: Iterable[tuple[int, int | None]], positive: int = 1) -> float:
+    """Binary F1 of one class (SemEval NLI4CT: Entailment, index 1)."""
+    pairs = list(pairs)
+    hits = sum(gold == positive and pred == positive for gold, pred in pairs)
+    predicted = sum(pred == positive for _, pred in pairs)
+    actual = sum(gold == positive for gold, _ in pairs)
+    return 2 * hits / (predicted + actual) if predicted + actual else float("nan")
+
+
+def semeval_score(items: Iterable[tuple]) -> float:
+    """SemEval-2024 NLI4CT leaderboard average: F1 on the originals, Faithfulness, Consistency."""
+    items = list(items)
+    control = [(item[2], item[3]) for item in items if item[1]]
+    return (positive_f1(control) + faithfulness(items) + consistency(items)) / 3
