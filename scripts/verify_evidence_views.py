@@ -6,7 +6,7 @@ still support the statement through another line. The judge reads the statement 
 and answers SUPPORTED or NOT_SUPPORTED. The full view is judged too, as a check on the judge itself.
 Verdicts are appended as they come, so a rerun only asks for the rows still missing; a row whose call keeps
 failing is left out and retried on the next run. `--data` also takes an augmentation export with evidence views
-(`OpenCTEval-Data-Pipeline/scripts/augmentation/build_evidence_views.py`); `--views` limits what is judged.
+(`OpenCTEval-Data-Pipeline/configs/augmentation/nli4ct_evidence_views.yaml`); `--views` limits what is judged.
 
     python scripts/verify_evidence_views.py --env ../OpenCTEval-Data-Pipeline/configs/gemma4.env
 """
@@ -53,7 +53,7 @@ def as_view_row(row: dict) -> dict:
         return row
     aug = row["augmentation"]
     view = FULL if aug["mode"] == "original" else aug["mode"]
-    return {**row, "view": view, "Gold_Label": aug.get("source_label", row["Label"])}
+    return {**row, "view": view, "Gold_Label": aug.get("source_label") or row.get("Source_Label") or row["Label"]}
 
 
 def read_env(path: Path) -> dict:
