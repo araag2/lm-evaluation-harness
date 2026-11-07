@@ -1,0 +1,10 @@
+# AugExp v3 test with each statement replaced by its extracted claim (H1, statement bottleneck). Data:
+# python -m scripts.training.build_nli4ct_claims in OpenCTEval-Data-Pipeline.
+task: SemEval_NLI4CT_AugExp_v3_test_claims_0-shot
+include: _default_SemEval_NLI4CT_AugExp_0-shot.yaml
+dataset_path: json
+dataset_name: null
+dataset_kwargs:
+  data_files:
+    test: data/nli4ct_claims/augexp_v3_test.jsonl
+test_split: test

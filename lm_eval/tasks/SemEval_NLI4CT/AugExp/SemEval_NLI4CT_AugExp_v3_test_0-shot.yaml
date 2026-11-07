@@ -1,0 +1,10 @@
+# v3 = the v2 test part plus contrary and numeric minimal-pair variants of the same statements (held-out recipe-family
+# protocol). Build the data from the harness root first: python scripts/build_augexp_v3.py
+task: SemEval_NLI4CT_AugExp_v3_test_0-shot
+include: _default_SemEval_NLI4CT_AugExp_0-shot.yaml
+dataset_path: json
+dataset_name: null
+dataset_kwargs:
+  data_files:
+    test: data/nli4ct_augexp_v3/test.jsonl
+test_split: test
