@@ -20,6 +20,10 @@ reads that run's `*_claims` tasks). The transfer
 ratio of family f is T_f = (held-out - BASE) / (ALL - BASE), where held-out is the fold that leaves f out. With two
 maps, the difference of their held-out scores gets a 95% CI from resampling base statements.
 
+Budget forcing (`generate.py`, 2026-11-11): rows whose thought hit the token limit can carry a forced answer
+(`"forced": true`). They count as answered by default; `--strict` scores them as unparsed (the rule before
+forcing), and the "forced" column shows their share per family in the held-out arm.
+
     python scripts/family_scores.py --map ce:BASE=pilot-ce-base,ALL=pilot-ce-all+pilot-ce-all-s7,A=...,B=...,C=... \
         [--map vrex:...] [--output report.md]
 """
@@ -87,8 +91,11 @@ def unsupported_negations(path: Path) -> set[str]:
         return {r["id"] for r in map(json.loads, lines) if r["verdict"] != "YES"}
 
 
-def read(run: str, source: str, official, drop: frozenset = frozenset()) -> dict[str, list[tuple]]:
-    """Rows grouped by base statement: (is_original, gold, pred, family or None, mode); `drop`: row ids left out."""
+def read(run: str, source: str, official, drop: frozenset = frozenset(), strict: bool = False) -> dict[str, list[tuple]]:
+    """Rows grouped by base statement: (is_original, gold, pred, family or None, mode, forced).
+
+    `drop`: row ids left out; `strict`: a budget-forced answer counts as unparsed.
+    """
     run, _, variant = run.partition("@")  # "run@claims" reads the *_claims tasks (H1, statement bottleneck)
     task = TASK_OF[source] + (f"_{variant}" if variant else "")
     files = sorted(glob.glob(f"{ROOT}{run}/samples_{task}_0-shot_*.jsonl"))
@@ -98,7 +105,9 @@ def read(run: str, source: str, official, drop: frozenset = frozenset()) -> dict
     with open(files[-1]) as lines:
         for line in lines:
             sample = json.loads(line)
-            doc, resps = sample["doc"], sample["filtered_resps"]
+            doc, resps, forced = sample["doc"], sample["filtered_resps"], sample.get("forced", False)
+            if strict and forced:
+                resps = [""]
             if source == "official":
                 item, kind = official(doc, resps)["consistency"], doc["Intervention"]
             elif source == "evidence":
@@ -107,7 +116,7 @@ def read(run: str, source: str, official, drop: frozenset = frozenset()) -> dict
                 if doc["id"] in drop:
                     continue
                 item, kind = sliced_results(doc, resps, pos_answers)["consistency"], doc["augmentation"]["mode"]
-            groups[item[0]].append((item[1], item[2], item[3], FAMILY_OF[source].get(kind), kind))
+            groups[item[0]].append((item[1], item[2], item[3], FAMILY_OF[source].get(kind), kind, forced))
     return groups
 
 
@@ -119,7 +128,7 @@ def family_scores(groups: dict, keys: list[str], by_mode: bool = False) -> dict[
         original = next((r for r in rows if r[0]), None)
         if original is None:
             continue
-        for is_original, gold, pred, family, mode in rows:
+        for is_original, gold, pred, family, mode, _ in rows:
             if is_original or family is None:
                 continue
             group = mode if by_mode else family
@@ -128,6 +137,11 @@ def family_scores(groups: dict, keys: list[str], by_mode: bool = False) -> dict[
             else:
                 hits[group].append(float(pred is not None and pred != original[1]))
     return {f: statistics.fmean(v) for f, v in hits.items() if v}
+
+
+def forced_share(groups: dict, keys: list[str], family: str) -> float:
+    rows = [r for key in keys for r in groups[key] if not r[0] and r[3] == family]
+    return sum(r[5] for r in rows) / len(rows) if rows else 0.0
 
 
 def held_out(arms: dict, family: str) -> list:
@@ -146,7 +160,8 @@ def map_scores(arms: dict, source: str, keys: list[str]) -> dict[str, dict[str, 
         held = mean(held_out(arms, family))[family]
         gain = full[family] - base[family]
         ratio = (held - base[family]) / gain if abs(gain) >= 0.02 else float("nan")
-        out[family] = {"BASE": base[family], "ALL": full[family], "held": held, "T": ratio}
+        forced = statistics.fmean(forced_share(g, keys, family) for g in held_out(arms, family))
+        out[family] = {"BASE": base[family], "ALL": full[family], "held": held, "T": ratio, "forced": forced}
     return out
 
 
@@ -157,6 +172,7 @@ def main():
     parser.add_argument("--output", type=Path)
     parser.add_argument("--negate-false-verdicts", type=Path, default=NEGATE_FALSE_VERDICTS)
     parser.add_argument("--all-negations", action="store_true", help="keep unsupported negate_false rows (pre-a1)")
+    parser.add_argument("--strict", action="store_true", help="budget-forced answers count as unparsed")
     args = parser.parse_args()
 
     official = load_process_results()
@@ -168,17 +184,17 @@ def main():
     lines = []
     for source in args.sources:
         data = {
-            name: {arm: [read(r, source, official, drop) for r in runs] for arm, runs in arms.items()}
+            name: {arm: [read(r, source, official, drop, args.strict) for r in runs] for arm, runs in arms.items()}
             for name, arms in maps.items()
         }
         keys = sorted(next(iter(next(iter(data.values())).values()))[0])
-        lines += [f"\n### {source} ({len(keys)} base statements)", "", "| map | family | BASE | ALL | held-out | T |", "|-|-|-|-|-|-|"]
+        lines += [f"\n### {source} ({len(keys)} base statements)", "", "| map | family | BASE | ALL | held-out | T | forced |", "|-|-|-|-|-|-|-|"]
         scores = {name: map_scores(arms, source, keys) for name, arms in data.items()}
         for name, fams in scores.items():
             for f in FAMILIES:
                 if f in fams:
                     s = fams[f]
-                    lines.append(f"| {name} | {f} | {s['BASE']:.3f} | {s['ALL']:.3f} | {s['held']:.3f} | {s['T']:.2f} |")
+                    lines.append(f"| {name} | {f} | {s['BASE']:.3f} | {s['ALL']:.3f} | {s['held']:.3f} | {s['T']:.2f} | {s['forced']:.3f} |")
         if PROBES.get(source):
             lines += ["", "R4 probe, per recipe (seed means):", "", "| map | arm | mode | score |", "|-|-|-|-|"]
             for name, arms in data.items():
